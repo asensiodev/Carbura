@@ -1,0 +1,340 @@
+# Carbura — Toolchain y Procedimiento de Desarrollo
+
+> Documento de referencia del entorno de desarrollo y metodología de trabajo.
+> Proyecto: Carbura · TFM AI4Devs · Mayo 2026
+
+---
+
+## Stack de herramientas
+
+| Herramienta | Rol | Para qué se usa en Carbura |
+|---|---|---|
+| **Android Studio** | IDE principal | Compilar, Gradle, emulador Android, debug KMP, plugin KMP oficial |
+| **VS Code** | Editor secundario | Edición de ficheros, navegación del proyecto, extensión OpenCode |
+| **Warp** | Terminal inteligente | Correr OpenCode, OpenSpec CLI, Git, comandos de build |
+| **OpenCode** | Agente de IA | Generación y modificación de código asistida por IA |
+| **OpenSpec** | Framework de specs | Gestión de especificaciones versionadas, metodología SDD |
+
+---
+
+## Metodología: SDD sobre TDD
+
+El proyecto combina dos metodologías complementarias en capas:
+
+```
+┌─────────────────────────────────────────────┐
+│              SDD (capa superior)            │
+│  Specification-Driven Development           │
+│  OpenSpec define QUÉ construir y POR QUÉ   │
+│  Las specs son la fuente de verdad          │
+└─────────────────────────────────────────────┘
+                     ↓
+┌─────────────────────────────────────────────┐
+│              TDD (capa inferior)            │
+│  Test-Driven Development                    │
+│  Los tests definen CÓMO se implementa       │
+│  Red → Green → Refactor por cada tarea      │
+└─────────────────────────────────────────────┘
+```
+
+### SDD (Specification-Driven Development)
+- Las specs de OpenSpec definen el **comportamiento esperado** antes de escribir código o tests.
+- Cada spec incluye criterios de aceptación que se traducen directamente en tests.
+- OpenCode usa las specs como contexto para generar código y tests coherentes.
+
+### TDD (Test-Driven Development)
+- Dentro de cada tarea del `/openspec-apply`, se sigue el ciclo **Red → Green → Refactor**:
+  1. **Red**: escribir el test que falla (a partir de los criterios de aceptación de la spec).
+  2. **Green**: escribir el código mínimo para que el test pase.
+  3. **Refactor**: mejorar el código sin romper los tests.
+- Los tests son la red de seguridad que garantiza que el código cumple la spec.
+
+### Flujo combinado SDD + TDD
+
+```
+Spec (OpenSpec)
+     ↓
+Criterios de aceptación
+     ↓
+Tests (TDD Red) ← OpenCode genera propuesta de tests desde la spec
+     ↓
+Código mínimo (TDD Green) ← OpenCode implementa para pasar los tests
+     ↓
+Refactor (TDD Refactor) ← OpenCode o dev mejora el código
+     ↓
+Archive (OpenSpec) ← spec actualizada, cambio cerrado
+```
+
+---
+
+## Cómo encajan las herramientas
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    ANDROID STUDIO                       │
+│  Compilar · Gradle · Emulador Android · Debug KMP      │
+│  Plugin KMP oficial · Recarga automática de ficheros   │
+│  Ejecutar tests (unitarios, instrumentados)            │
+└─────────────────────────────────────────────────────────┘
+         ↕ mismo directorio del proyecto
+┌──────────────────────┐    ┌───────────────────────────┐
+│      VS CODE         │    │          WARP             │
+│  Editar ficheros     │    │  Terminal inteligente     │
+│  Extensión OpenCode  │    │  Integración nativa       │
+│  Navegar el proyecto │    │  con OpenCode             │
+└──────────────────────┘    └───────────────────────────┘
+         ↕                           ↕
+┌─────────────────────────────────────────────────────────┐
+│                     OPENCODE                            │
+│  Agente de IA · Lee y modifica ficheros del repo       │
+│  Genera tests a partir de specs · Implementa código    │
+│  Trabaja contra las specs de OpenSpec                  │
+└─────────────────────────────────────────────────────────┘
+         ↕
+┌─────────────────────────────────────────────────────────┐
+│                     OPENSPEC                            │
+│  Specs versionadas · Fuente de verdad del proyecto     │
+│  /openspec-proposal · /openspec-apply · /openspec-archive│
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Procedimiento de desarrollo
+
+---
+
+### Fase 1 — PRD y especificación inicial
+
+**Herramientas:** VS Code + OpenSpec
+
+1. Inicializar OpenSpec en el repo:
+   ```bash
+   openspec init
+   ```
+   Esto crea la estructura:
+   ```
+   openspec/
+     project.md      ← contexto general del proyecto
+     prd.md          ← PRD completo del producto
+     specs/          ← specs activas (fuente de verdad)
+     changes/        ← propuestas en curso
+     archive/        ← historial de cambios completados
+     agents.md       ← instrucciones para el agente (no editar a mano)
+   ```
+2. Escribir el **PRD** en `openspec/prd.md` y mantener `openspec/project.md` como contexto breve del proyecto:
+   - Descripción del producto y visión.
+   - Stack tecnológico (KMP, Supabase, SQLDelight, Compose).
+   - Convenciones de código y arquitectura.
+   - Principios de diseño (local-first, simplicidad, privacidad).
+   - **Metodología: SDD + TDD** (cada spec debe incluir criterios de aceptación verificables).
+3. Escribir las **specs iniciales** en `openspec/specs/`:
+   - Una spec por caso de uso (UC-01 a UC-09).
+   - Cada spec incluye obligatoriamente una sección **"Criterios de aceptación"** que se usará para generar los tests TDD.
+   - Spec del modelo de datos (`data-model.md`).
+   - Spec del backend Supabase (`backend.md`).
+
+---
+
+### Fase 2 — Implementación iterativa con SDD + TDD
+
+**Herramientas:** Warp (OpenCode) + VS Code + Android Studio
+
+Para cada feature o caso de uso:
+
+#### Paso 1 — Proposal (planificación SDD)
+Desde Warp, lanzar OpenCode y ejecutar:
+```
+/openspec-proposal
+```
+El agente:
+- Lee el `project.md`, el `prd.md` y las specs relevantes.
+- Hace preguntas si necesita aclarar algo.
+- Genera una propuesta de implementación con tareas desglosadas.
+- **Incluye los tests TDD a escribir** basados en los criterios de aceptación de la spec.
+- Guarda la propuesta en `openspec/changes/`.
+
+#### Paso 2 — Revisión humana
+- Revisar la propuesta en VS Code: tareas de implementación **y** tests propuestos.
+- Aprobar, rechazar o ajustar.
+- El humano siempre decide; el agente siempre propone.
+
+#### Paso 3 — Apply: TDD Red (tests primero)
+```
+/openspec-apply
+```
+El agente implementa **primero los tests**:
+- Genera los tests unitarios a partir de los criterios de aceptación de la spec.
+- Los tests deben **fallar** en este punto (Red): verificar en Android Studio.
+  ```bash
+  ./gradlew test
+  # Expected: tests failing ✗
+  ```
+
+#### Paso 4 — Apply: TDD Green (código mínimo)
+El agente implementa el código mínimo necesario para que los tests pasen:
+- ViewModels, Use Cases, Repositories, DTOs, etc.
+- Compilar y ejecutar tests:
+  ```bash
+  ./gradlew test
+  # Expected: tests passing ✓
+  ```
+
+#### Paso 5 — TDD Refactor
+- Revisar el código generado con criterio de senior.
+- Refactorizar sin romper tests (OpenCode puede ayudar).
+- Re-ejecutar tests para confirmar que siguen en verde:
+  ```bash
+  ./gradlew test
+  # Expected: tests still passing ✓
+  ```
+
+#### Paso 6 — Compilar y testear en dispositivo
+- Android Studio recarga los ficheros modificados automáticamente.
+- Compilar y lanzar en emulador:
+  ```bash
+  ./gradlew assembleDebug
+  ./gradlew desktopRun
+  ```
+- Verificar el flujo visualmente en emulador Android y Desktop.
+
+#### Paso 7 — Archive (cierre del cambio SDD)
+```
+/openspec-archive
+```
+El agente:
+- Actualiza la spec fuente de verdad en `openspec/specs/`.
+- Mueve el cambio completado a `openspec/archive/`.
+- Limpia `openspec/changes/`.
+
+#### Paso 8 — Commit
+```bash
+git add .
+git commit -m "feat(vehicles): implement UC-02 add vehicle flow with tests"
+git push
+```
+
+---
+
+### Fase 3 — Configuración del backend (Supabase)
+
+**Herramientas:** Warp + VS Code (para la spec) + Dashboard de Supabase
+
+1. Crear proyecto en Supabase.
+2. Crear las tablas según `openspec/specs/data-model.md`:
+   - `families`, `users`, `vehicles`, `maintenance_types`, `maintenance_records`, `reminders`.
+3. Configurar **Row Level Security (RLS)** por `family_id` para cada tabla.
+4. Configurar **Google OAuth** en Supabase Auth.
+5. Añadir las variables de entorno a `local.properties`:
+   ```
+   SUPABASE_URL=https://xxxx.supabase.co
+   SUPABASE_ANON_KEY=xxxx
+   GOOGLE_CLIENT_ID=xxxx
+   ```
+6. Verificar conectividad desde la app.
+7. Escribir tests de integración para el módulo de sync (TDD sobre el SyncManager).
+
+---
+
+### Fase 4 — Refinado y pulido
+
+**Herramientas:** todas
+
+1. Revisar UX en emulador Android y en Desktop.
+2. Revisar cobertura de tests (`./gradlew koverReport`).
+3. Añadir tests de integración para flujos críticos (auth, sync, reminders).
+4. Pulir animaciones, estados vacíos, estados de error, estados de carga.
+5. Revisar el flujo de sincronización (offline → online → sync).
+
+---
+
+### Fase 5 — Documentación y memoria del TFM
+
+**Herramientas:** VS Code + OpenCode
+
+1. Generar **README.md** con:
+   - Nombre + slogan ("Tu garaje, siempre a punto").
+   - Screenshots o GIFs de la app.
+   - Stack tecnológico y metodología (SDD + TDD).
+   - Sección "AI-assisted development": cómo se usó IA en cada fase.
+   - Instrucciones de setup con `local.properties.example`.
+2. Documentar el proceso AI + SDD + TDD en la **memoria del TFM**:
+   - Usar el historial de `openspec/archive/` como evidencia de SDD.
+   - Mostrar trazabilidad: spec → criterios de aceptación → tests (Red) → código (Green) → refactor.
+   - Incluir métricas de cobertura de tests como indicador de calidad.
+3. Preparar el guion de la **demo final**.
+
+---
+
+## Convenciones de commits
+
+Usar **Conventional Commits** para mantener el historial limpio y legible:
+
+```
+feat(vehicles): implement UC-02 add vehicle flow with tests
+test(maintenance): add TDD tests for MaintenanceRecord validation
+fix(sync): resolve conflict on simultaneous offline edits
+docs(specs): update UC-05 reminder completion flow
+refactor(domain): extract VehicleValidator use case
+chore(deps): update supabase-kt to 3.x
+```
+
+Formato: `tipo(scope): descripción breve`
+
+Tipos: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `style`
+
+---
+
+## Estructura del repositorio
+
+```
+carbura/
+├── openspec/
+│   ├── project.md              ← contexto breve del proyecto para OpenCode
+│   ├── prd.md                  ← PRD completo del producto
+│   ├── agents.md               ← instrucciones para el agente (no editar)
+│   ├── specs/                  ← fuente de verdad viva
+│   │   ├── auth/
+│   │   │   └── UC-01-signin.md ← incluye criterios de aceptación para TDD
+│   │   ├── vehicles/
+│   │   ├── maintenance/
+│   │   ├── reminders/
+│   │   ├── sync/
+│   │   ├── data-model.md
+│   │   └── backend.md
+│   ├── changes/                ← propuestas en curso
+│   └── archive/                ← historial de cambios completados
+├── shared/                     ← KMP commonMain (lógica compartida)
+│   ├── domain/
+│   ├── data/
+│   ├── presentation/
+│   └── test/                   ← tests unitarios commonTest (TDD)
+├── androidApp/                 ← UI Android (Compose)
+│   └── test/                   ← tests instrumentados Android
+├── desktopApp/                 ← UI Desktop (Compose Desktop)
+│   └── test/                   ← tests Desktop
+├── local.properties.example
+├── README.md
+└── .gitignore
+```
+
+---
+
+## Flujo diario de trabajo (resumen)
+
+```
+1. Abrir Android Studio con el proyecto Carbura
+2. Abrir Warp en el directorio del proyecto
+3. (Opcional) Abrir VS Code en el mismo directorio
+4. En Warp: lanzar `opencode`
+5. /openspec-proposal → revisar propuesta + tests TDD → aprobar
+6. /openspec-apply (tests primero: Red) → verificar que fallan
+7. /openspec-apply (código: Green) → verificar que pasan
+8. Refactor → re-ejecutar tests → compilar en Android Studio → testear
+9. /openspec-archive → commit → push
+10. Repetir por cada feature o caso de uso
+```
+
+---
+
+*Documento sujeto a revisión iterativa durante el desarrollo del proyecto.*
