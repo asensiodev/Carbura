@@ -102,11 +102,13 @@
 
 > Documenta 3 de las historias de usuario principales utilizadas durante el desarrollo, teniendo en cuenta las buenas prácticas de producto al respecto.
 
-**Historia de Usuario 1**
+Las historias de usuario completas del MVP estan documentadas en [`docs/user-stories.md`](docs/user-stories.md).
 
-**Historia de Usuario 2**
+Historias principales seleccionadas para la entrega:
 
-**Historia de Usuario 3**
+- **US-02 - Anadir vehiculo al garaje**: representa el core de gestion del dominio.
+- **US-04 - Registrar mantenimiento o averia**: demuestra el valor principal del producto.
+- **US-06 - Generar recordatorio automatico tras registrar ITV o seguro**: conecta historial con prevencion.
 
 ---
 
@@ -131,4 +133,3 @@
 **Pull Request 2**
 
 **Pull Request 3**
-
