@@ -6,25 +6,40 @@ Este documento deriva las historias de usuario principales desde el PRD (`opensp
 
 | Prioridad | Significado |
 |---|---|
-| P0 | Imprescindible para que el MVP demuestre el valor principal. |
-| P1 | Importante para completar la experiencia MVP, pero puede implementarse despues de P0. |
-| P2 | MVP extendido o mejora si hay tiempo. |
+| Must-Have | Imprescindible para el flujo E2E prioritario de la entrega. |
+| Should-Have | Importante, pero opcional si el tiempo obliga a recortar alcance. |
+| Could-Have | Mejora de MVP extendido o post-MVP. |
 
 ## Epicas MVP
 
 | Epica | Descripcion | Prioridad |
 |---|---|---|
-| E01 - Onboarding y garaje familiar | Acceso con Google y creacion del espacio familiar. | P0 |
-| E02 - Gestion de vehiculos | Alta y consulta de vehiculos del garaje. | P0 |
-| E03 - Mantenimientos e historial | Registro de eventos, costes, kilometros e historial. | P0 |
-| E04 - Recordatorios | Recordatorios por fecha/km y avisos locales. | P0 |
-| E05 - Offline-first y sincronizacion | Uso sin conexion y sincronizacion eventual. | P1 |
-| E06 - Colaboracion familiar | Invitaciones para compartir el garaje. | P1 |
-| E07 - Exportacion | Exportar historial de vehiculo. | P2 |
+| E01 - Onboarding y garaje familiar | Acceso con Google y creacion del espacio familiar. | Must-Have |
+| E02 - Gestion de vehiculos | Alta y consulta de vehiculos del garaje. | Must-Have |
+| E03 - Mantenimientos e historial | Registro de eventos, costes, kilometros e historial. | Must-Have |
+| E04 - Recordatorios | Recordatorios por fecha/km y avisos locales. | Must-Have |
+| E05 - Offline-first y sincronizacion | Uso sin conexion y sincronizacion eventual. | Should-Have |
+| E06 - Colaboracion familiar | Invitaciones para compartir el garaje. | Could-Have |
+| E07 - Exportacion | Exportar historial de vehiculo. | Could-Have |
 
 ---
 
-## P0 - MVP estricto
+## Flujo E2E prioritario de la entrega
+
+El flujo E2E prioritario que crea valor completo para la entrega es:
+
+```text
+Usuario inicia sesion
+  -> crea su garaje familiar
+  -> anade un vehiculo
+  -> registra una ITV o mantenimiento
+  -> consulta el historial del vehiculo
+  -> ve un recordatorio automatico del proximo vencimiento
+```
+
+Para cumplir las instrucciones del proyecto, este flujo se planifica con 5 historias Must-Have y 2 Should-Have.
+
+## Must-Have - Entrega E2E
 
 ### US-01 - Crear cuenta y garaje familiar
 
@@ -57,21 +72,6 @@ Este documento deriva las historias de usuario principales desde el PRD (`opensp
 - Dado que el usuario esta offline, cuando guarda un vehiculo, entonces queda disponible localmente y pendiente de sincronizacion.
 
 **Datos minimos del MVP:** nombre, tipo, matricula opcional, kilometros actuales.
-
-### US-03 - Ver listado y detalle de vehiculos
-
-**Como** miembro de la familia,
-**quiero** ver los vehiculos del garaje y abrir el detalle de cada uno,
-**para** consultar rapidamente su informacion y estado de mantenimiento.
-
-**Trazabilidad:** UC-02, UC-04, PRD objetivos 1 y 4.
-
-**Criterios de aceptacion:**
-
-- Dado un garaje con vehiculos, cuando el usuario abre la app, entonces ve una lista de vehiculos disponibles.
-- Dado un vehiculo de la lista, cuando el usuario lo selecciona, entonces ve su detalle.
-- Dado un vehiculo sin mantenimientos, cuando el usuario abre su detalle, entonces ve un estado vacio claro.
-- Dado que no hay vehiculos, cuando el usuario abre el garaje, entonces la app muestra una accion principal para anadir el primer vehiculo.
 
 ### US-04 - Registrar mantenimiento o averia
 
@@ -120,6 +120,10 @@ Este documento deriva las historias de usuario principales desde el PRD (`opensp
 - Dado un recordatorio automatico, cuando se crea, entonces usa 30 dias de antelacion por defecto.
 - Dado un vehiculo con recordatorio creado, cuando el usuario abre la pantalla de recordatorios, entonces el recordatorio aparece visible.
 
+---
+
+## Should-Have - Opcionales de la entrega
+
 ### US-07 - Ver proximos recordatorios
 
 **Como** miembro de la familia,
@@ -152,7 +156,22 @@ Este documento deriva las historias de usuario principales desde el PRD (`opensp
 
 ---
 
-## P1 - MVP completo
+## Could-Have - Backlog MVP extendido
+
+### US-03 - Ver listado y detalle de vehiculos
+
+**Como** miembro de la familia,
+**quiero** ver los vehiculos del garaje y abrir el detalle de cada uno,
+**para** consultar rapidamente su informacion y estado de mantenimiento.
+
+**Trazabilidad:** UC-02, UC-04, PRD objetivos 1 y 4.
+
+**Criterios de aceptacion:**
+
+- Dado un garaje con vehiculos, cuando el usuario abre la app, entonces ve una lista de vehiculos disponibles.
+- Dado un vehiculo de la lista, cuando el usuario lo selecciona, entonces ve su detalle.
+- Dado un vehiculo sin mantenimientos, cuando el usuario abre su detalle, entonces ve un estado vacio claro.
+- Dado que no hay vehiculos, cuando el usuario abre el garaje, entonces la app muestra una accion principal para anadir el primer vehiculo.
 
 ### US-09 - Actualizar odometro rapidamente
 
@@ -200,8 +219,6 @@ Este documento deriva las historias de usuario principales desde el PRD (`opensp
 
 ---
 
-## P2 - MVP extendido
-
 ### US-12 - Exportar historial de un vehiculo
 
 **Como** miembro de la familia,
@@ -231,4 +248,4 @@ Para la entrega academica, las 3 historias principales recomendadas son:
 
 ## Siguiente paso
 
-Convertir estas historias en specs OpenSpec por capacidad, empezando por `vehicles`, `maintenance-records` y `reminders`. Despues, derivar tickets tecnicos y tests TDD desde los criterios de aceptacion.
+Convertir las historias Must-Have en specs OpenSpec por capacidad, empezando por `vehicles`, `maintenance-records` y `reminders`. Despues, derivar tickets tecnicos y tests TDD desde los criterios de aceptacion.

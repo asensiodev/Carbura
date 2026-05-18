@@ -61,3 +61,6 @@ temp/
 *.tmp
 *.swp
 *.swo
+
+# Local instructions
+instructions/instructions.md

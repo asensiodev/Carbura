@@ -207,12 +207,21 @@ El agente:
 - Mueve el cambio completado a `openspec/archive/`.
 - Limpia `openspec/changes/`.
 
-#### Paso 8 — Commit
+#### Paso 8 — Commit local
 ```bash
 git add .
 git commit -m "feat(vehicles): implement UC-02 add vehicle flow with tests"
-git push
 ```
+
+Los cambios se agrupan en las Pull Requests oficiales de entrega, no en una PR independiente por cada feature pequeña.
+
+Ramas y PRs oficiales:
+
+| Entrega | Rama | Contenido |
+|---|---|---|
+| Entrega 1 | `feature-entrega1-AAC` | Documentacion tecnica: README, prompts, PRD, user stories, arquitectura, modelo de datos, API y tickets. |
+| Entrega 2 | `feature-entrega2-AAC` | MVP funcional casi completo: frontend, backend/datos, base de datos y flujo principal. |
+| Entrega final | `finalproject-AAC` | Version final con flujo E2E, tests, despliegue/evidencia y documentacion cerrada. |
 
 ---
 
@@ -331,8 +340,8 @@ carbura/
 6. /openspec-apply (tests primero: Red) → verificar que fallan
 7. /openspec-apply (código: Green) → verificar que pasan
 8. Refactor → re-ejecutar tests → compilar en Android Studio → testear
-9. /openspec-archive → commit → push
-10. Repetir por cada feature o caso de uso
+9. /openspec-archive → commit local
+10. Agrupar cambios en la PR oficial correspondiente a la entrega
 ```
 
 ---

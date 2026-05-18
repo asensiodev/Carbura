@@ -26,7 +26,7 @@ Actua como product manager senior. Ayudame a definir un PRD para Carbura, una ap
 
 ### Prompt 2 - Revision de alcance MVP
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Revisa el PRD de Carbura desde el punto de vista de un MVP realista para un TFM. Identifica riesgos de alcance, funcionalidades que deberian ser P0/P1/P2, dependencias entre funcionalidades y que partes podrian posponerse sin romper el valor principal del producto.
@@ -34,7 +34,7 @@ Revisa el PRD de Carbura desde el punto de vista de un MVP realista para un TFM.
 
 ### Prompt 3 - Sintesis para README
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 A partir del PRD de Carbura, genera una descripcion clara para el README del proyecto. Debe explicar el problema, la solucion, el publico objetivo, las funcionalidades principales del MVP y el valor diferencial en un lenguaje entendible para evaluadores tecnicos y no tecnicos.
@@ -48,7 +48,7 @@ A partir del PRD de Carbura, genera una descripcion clara para el README del pro
 
 #### Prompt 1 - Arquitectura inicial
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Actua como arquitecto software senior especializado en Kotlin Multiplatform. Propon una arquitectura para Carbura usando Compose Multiplatform, SQLDelight, Ktor, Koin y Supabase. Debe ser offline-first, seguir Clean Architecture y separar claramente presentation, domain, data, local datasource, remote datasource y sincronizacion.
@@ -56,7 +56,7 @@ Actua como arquitecto software senior especializado en Kotlin Multiplatform. Pro
 
 #### Prompt 2 - Diagrama Mermaid
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Genera un diagrama Mermaid de alto nivel para la arquitectura de Carbura. Debe mostrar Android App, Desktop App, shared commonMain, SQLDelight local database, Ktor client, Supabase Auth, Supabase PostgreSQL, Supabase Storage y SyncManager. Incluye una breve explicacion de cada flujo.
@@ -64,7 +64,7 @@ Genera un diagrama Mermaid de alto nivel para la arquitectura de Carbura. Debe m
 
 #### Prompt 3 - Revision de tradeoffs
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Revisa esta arquitectura de Carbura y analiza tradeoffs. Evalua especialmente offline-first, sincronizacion last-write-wins, uso de Supabase, KMP commonMain, tests, seguridad y complejidad para un MVP. Indica riesgos y mitigaciones.
@@ -74,7 +74,7 @@ Revisa esta arquitectura de Carbura y analiza tradeoffs. Evalua especialmente of
 
 #### Prompt 1 - Componentes por capa
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Describe los componentes principales de Carbura por capas: UI Compose, ViewModels/UiState, Use Cases, entidades de dominio, Repositories, LocalDataSource SQLDelight, RemoteDataSource Supabase/Ktor y SyncManager. Explica responsabilidades, dependencias permitidas y que codigo deberia vivir en commonMain.
@@ -82,7 +82,7 @@ Describe los componentes principales de Carbura por capas: UI Compose, ViewModel
 
 #### Prompt 2 - Responsabilidades del SyncManager
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Define las responsabilidades del SyncManager de Carbura para un MVP offline-first. Incluye sincronizacion de vehiculos, mantenimientos y recordatorios, deteccion de cambios locales, subida/bajada desde Supabase, estrategia last-write-wins y tratamiento de errores de red.
@@ -90,7 +90,7 @@ Define las responsabilidades del SyncManager de Carbura para un MVP offline-firs
 
 #### Prompt 3 - Seguridad por componente
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Analiza los componentes de Carbura desde seguridad. Explica como deben manejarse autenticacion Google, tokens Supabase, Row Level Security por family_id, almacenamiento local, secretos de desarrollo y permisos de notificaciones.
@@ -100,7 +100,7 @@ Analiza los componentes de Carbura desde seguridad. Explica como deben manejarse
 
 #### Prompt 1 - Estructura KMP
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Propon una estructura de carpetas para Carbura como proyecto Kotlin Multiplatform con Android y Desktop. Debe incluir modulos o carpetas para shared/commonMain, commonTest, androidApp, desktopApp, SQLDelight, documentacion, OpenSpec y configuracion local segura.
@@ -108,7 +108,7 @@ Propon una estructura de carpetas para Carbura como proyecto Kotlin Multiplatfor
 
 #### Prompt 2 - Convenciones de paquetes
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Define convenciones de paquetes y nombres para Carbura siguiendo Clean Architecture en Kotlin Multiplatform. Incluye ejemplos para features de vehicles, maintenance-records, reminders y sync.
@@ -178,7 +178,7 @@ Revisa el repositorio antes de hacer commit y busca patrones de secretos o crede
 
 #### Prompt 1 - Estrategia TDD
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Define una estrategia de tests TDD para Carbura. A partir de las specs OpenSpec y criterios de aceptacion, indica que tests unitarios, de integracion y de UI deberian escribirse para vehicles, maintenance-records, reminders, sync y auth.
@@ -206,7 +206,7 @@ Con los tests ya en verde, revisa esta implementacion de Carbura y propon refact
 
 ### Prompt 1 - Modelo conceptual
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 A partir del PRD de Carbura, disena el modelo de datos conceptual del MVP. Incluye entidades, atributos principales, relaciones y restricciones para Family, User, Vehicle, MaintenanceType, MaintenanceRecord y Reminder.
@@ -214,7 +214,7 @@ A partir del PRD de Carbura, disena el modelo de datos conceptual del MVP. Inclu
 
 ### Prompt 2 - Diagrama entidad-relacion
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Genera un diagrama Mermaid ER para el modelo de datos de Carbura. Incluye claves primarias, claves foraneas, cardinalidades, campos obligatorios, timestamps de sincronizacion y family_id para aislamiento multiusuario.
@@ -222,7 +222,7 @@ Genera un diagrama Mermaid ER para el modelo de datos de Carbura. Incluye claves
 
 ### Prompt 3 - SQLDelight y Supabase
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Convierte el modelo de datos de Carbura en una propuesta compatible con SQLDelight local y Supabase PostgreSQL remoto. Explica diferencias necesarias, campos de sincronizacion, indices recomendados y restricciones de integridad.
@@ -234,7 +234,7 @@ Convierte el modelo de datos de Carbura en una propuesta compatible con SQLDelig
 
 ### Prompt 1 - API via Supabase
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Describe como Carbura consume Supabase como backend. Aunque no haya una API REST propia, documenta los principales contratos de datos y operaciones remotas para vehiculos, mantenimientos, recordatorios y familias. Limita la documentacion a los 3 endpoints/operaciones mas relevantes para el MVP.
@@ -250,7 +250,7 @@ Si Carbura necesitara una API propia ademas de Supabase, genera una especificaci
 
 ### Prompt 3 - Contratos de sincronizacion
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Define los contratos de sincronizacion entre cliente KMP y Supabase para Carbura. Incluye payloads esperados, campos de control, timestamps, deleted_at si aplica, resolucion last-write-wins y errores recuperables.
@@ -290,7 +290,7 @@ Revisa estas user stories de Carbura y mejora sus criterios de aceptacion para q
 
 ### Prompt 1 - Tickets desde user stories
 
-**Estado:** plantilla.
+**Estado:** usado parcialmente.
 
 ```text
 Convierte las historias US-02, US-04 y US-06 de Carbura en tickets tecnicos accionables. Necesito un ticket de frontend, uno de backend/datos y uno de base de datos. Cada ticket debe incluir contexto, objetivo, alcance, fuera de alcance, tareas, criterios de aceptacion, tests TDD y riesgos.
@@ -321,7 +321,7 @@ Para este ticket de Carbura, desglosa el trabajo en pasos TDD. Primero lista los
 **Estado:** plantilla.
 
 ```text
-Genera la descripcion de un Pull Request para este cambio de Carbura. Incluye resumen, user story/spec relacionada, decisiones tecnicas, tests ejecutados, screenshots si aplica, riesgos y checklist de revision.
+Genera la descripcion de una de las 3 Pull Requests oficiales de Carbura. Indica si corresponde a Entrega 1, Entrega 2 o Entrega final. Incluye resumen, historias/tickets relacionados, decisiones tecnicas, tests ejecutados, evidencia visual o despliegue si aplica, riesgos y checklist de revision.
 ```
 
 ### Prompt 2 - Revision previa al PR
