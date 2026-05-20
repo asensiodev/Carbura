@@ -166,7 +166,10 @@ SyncManager (commonMain) - gestiona conflictos last-write-wins
 
 - **SDD (Specification-Driven Development)** con OpenSpec: las specs son la fuente de verdad. Todo cambio pasa por `/openspec-proposal` -> `/openspec-apply` -> `/openspec-archive`.
 - **TDD (Test-Driven Development)** dentro de cada tarea: Red -> Green -> Refactor.
+- **DDD ligero (Domain-Driven Design)** para modelar el dominio principal sin sobrediseñar el MVP: entidades, use cases, repositorios como contratos y value objects solo cuando aporten claridad.
 - **Agente de IA**: OpenCode como copiloto en todas las fases (analisis, diseno, implementacion, tests, documentacion).
+- **Principios de diseño**: SOLID y CUPID aplicados de forma pragmatica durante el refactor, priorizando testabilidad, claridad de dominio y simplicidad.
+- **BDD fuera de alcance**: los criterios de aceptacion se mantendran en OpenSpec sin incorporar una metodologia o herramienta BDD adicional.
 - **Convenciones de commits**: Conventional Commits (`feat`, `fix`, `test`, `refactor`, `docs`, `chore`).
 
 ---

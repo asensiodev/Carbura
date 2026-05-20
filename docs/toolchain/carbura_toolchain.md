@@ -17,9 +17,9 @@
 
 ---
 
-## Metodología: SDD sobre TDD
+## Metodología: SDD sobre TDD + DDD ligero
 
-El proyecto combina dos metodologías complementarias en capas:
+El proyecto combina metodologías complementarias en capas, manteniendo el alcance acotado al MVP:
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -35,6 +35,12 @@ El proyecto combina dos metodologías complementarias en capas:
 │  Los tests definen CÓMO se implementa       │
 │  Red → Green → Refactor por cada tarea      │
 └─────────────────────────────────────────────┘
+                     ↓
+┌─────────────────────────────────────────────┐
+│          DDD ligero (diseño de dominio)      │
+│  Modelo explícito del garaje familiar        │
+│  Entidades, casos de uso y repositorios      │
+└─────────────────────────────────────────────┘
 ```
 
 ### SDD (Specification-Driven Development)
@@ -49,12 +55,30 @@ El proyecto combina dos metodologías complementarias en capas:
   3. **Refactor**: mejorar el código sin romper los tests.
 - Los tests son la red de seguridad que garantiza que el código cumple la spec.
 
-### Flujo combinado SDD + TDD
+### DDD ligero (Domain-Driven Design)
+
+- Se aplicará DDD de forma pragmática para modelar el dominio principal de Carbura: familia, vehículo, mantenimiento, recordatorio y sincronización.
+- El dominio se expresará mediante entidades, value objects solo cuando aporten claridad, use cases y repositorios como contratos.
+- La UI no debería depender directamente de Supabase, SQLDelight ni detalles de red/local storage.
+- No se aplicará DDD táctico pesado si introduce complejidad innecesaria para el MVP.
+
+### Principios de diseño de código: SOLID + CUPID
+
+Durante el paso de refactor se aplicarán principios de diseño pragmáticos, sin sobrediseñar el MVP:
+
+- **SOLID** para mantener responsabilidades claras, dependencias invertidas hacia interfaces y unidades de código fáciles de testear.
+- **CUPID** para favorecer código composable, predecible, idiomático, de dominio claro y simple.
+- La aplicación de estos principios se validará con tests verdes, revisión humana y consistencia con las specs OpenSpec.
+- No se crearán abstracciones preventivas si no hay una necesidad concreta en el MVP.
+
+### Flujo combinado SDD + TDD + DDD ligero
 
 ```
 Spec (OpenSpec)
      ↓
 Criterios de aceptación
+     ↓
+Modelo de dominio mínimo (DDD ligero)
      ↓
 Tests (TDD Red) ← OpenCode genera propuesta de tests desde la spec
      ↓
@@ -64,6 +88,8 @@ Refactor (TDD Refactor) ← OpenCode o dev mejora el código
      ↓
 Archive (OpenSpec) ← spec actualizada, cambio cerrado
 ```
+
+BDD queda fuera del alcance metodológico del MVP para evitar duplicar documentación de comportamiento y mantener el proceso simple.
 
 ---
 

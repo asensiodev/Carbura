@@ -251,11 +251,12 @@ El despliegue del backend se apoya en Supabase. No se prevé servidor propio par
 
 ### **2.6. Tests**
 
-La estrategia de calidad combina SDD con OpenSpec y TDD durante la implementación:
+La estrategia de calidad combina SDD con OpenSpec, TDD durante la implementación y DDD ligero para el diseño del dominio:
 
 ```text
 Spec OpenSpec
   -> criterios de aceptación
+  -> modelo de dominio mínimo
   -> tests que fallan
   -> código mínimo
   -> refactor
@@ -269,6 +270,25 @@ Tests previstos:
 - Tests de sincronización para cambios offline y resolución `last-write-wins`.
 - Tests de validación de formularios y estados vacíos.
 - Tests instrumentados o manuales para notificaciones locales según plataforma.
+
+El TDD se aplicará durante la implementación de cada spec OpenSpec: primero se escribirán tests que fallen, después el código mínimo para pasarlos y finalmente refactor seguro.
+
+### **2.7. Diseño de dominio y principios de código**
+
+Carbura aplicará DDD ligero para mantener un modelo de dominio claro sin sobrediseñar el MVP:
+
+- Entidades principales: `Family`, `UserProfile`, `Vehicle`, `MaintenanceType`, `MaintenanceRecord` y `Reminder`.
+- Use cases explícitos para operaciones del dominio: alta de vehículo, registro de mantenimiento, generación de recordatorio y sincronización.
+- Repositorios como contratos entre dominio y fuentes de datos locales/remotas.
+- Value objects solo cuando aporten claridad o validación real, por ejemplo identificadores, kilometraje o importes.
+
+El código del MVP seguirá SOLID y CUPID como criterios de diseño pragmáticos:
+
+- **SOLID**: responsabilidades acotadas, dependencias hacia contratos, entidades de dominio protegidas y casos de uso fáciles de probar.
+- **CUPID**: componentes composables, comportamiento predecible, código idiomático Kotlin, lenguaje de dominio claro y soluciones simples.
+- Estos principios se aplicarán especialmente en use cases, repositorios, view models, modelos de dominio y fuentes de datos.
+- No se introducirán capas o abstracciones innecesarias si no aportan testabilidad, claridad o desacoplamiento real para el MVP.
+- BDD queda fuera del alcance metodológico del MVP para evitar duplicar criterios de aceptación y mantener el proceso simple.
 
 ---
 

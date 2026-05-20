@@ -46,8 +46,11 @@ SyncManager (commonMain)
 
 - SDD con OpenSpec: proposal -> apply -> archive.
 - TDD dentro de cada tarea: Red -> Green -> Refactor.
+- DDD ligero para modelar entidades, use cases y repositorios sin sobredisenar el MVP.
+- SOLID y CUPID durante el refactor, priorizando testabilidad, claridad y simplicidad.
 - Las specs son la fuente de verdad funcional.
 - Los criterios de aceptacion de historias/specs deben traducirse en tests.
+- BDD queda fuera del alcance metodologico del MVP.
 - Commits con Conventional Commits: `feat`, `fix`, `test`, `refactor`, `docs`, `chore`.
 
 ## Reglas de seguridad
