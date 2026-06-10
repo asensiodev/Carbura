@@ -482,7 +482,28 @@ Historias principales seleccionadas para la entrega:
 
 ## 6. Tickets de Trabajo
 
-### **Ticket 1 - Frontend: alta de vehículo en el garaje**
+Los tickets de trabajo se derivan de las historias Must-Have y Should-Have del flujo E2E. En la primera entrega se documenta el backlog inicial; los tickets se implementarán progresivamente en las siguientes entregas usando OpenSpec y TDD.
+
+El backlog completo y detallado está en [`docs/backlog.md`](docs/backlog.md). El orden recomendado prioriza datos, dominio/backend y después frontend/plataforma para reducir dependencias bloqueantes.
+
+### **6.1. Backlog inicial derivado de user stories**
+
+| Ticket | Área | Historia relacionada | Prioridad | Estimación | Resultado esperado |
+|---|---|---|---|---|---|
+| T-01 | Datos | US-01, US-02, US-04, US-06 | Must | 8 SP | Esquema local/remoto con familias, vehículos, mantenimientos y recordatorios. |
+| T-02 | Auth / onboarding | US-01 | Must | 5 SP | Usuario autenticado con Google y garaje familiar creado. |
+| T-03 | Dominio / datos | US-02 | Must | 5 SP | Caso de uso y repositorio para crear vehículo offline-first. |
+| T-04 | Dominio / datos | US-04, US-05 | Must | 8 SP | Registro persistido e historial ordenado por vehículo. |
+| T-05 | Dominio / recordatorios | US-06 | Must | 5 SP | Creación automática de recordatorio tras ITV o seguro. |
+| T-06 | Sincronización | US-02, US-04 | Must | 8 SP | Cambios locales marcados como pendientes y preparados para sync. |
+| T-07 | Frontend / presentación | US-02 | Must | 5 SP | Formulario de alta de vehículo con validaciones y estados. |
+| T-08 | Frontend / presentación | US-04, US-05 | Must | 8 SP | Formulario de mantenimiento e historial por vehículo. |
+| T-09 | Frontend / recordatorios | US-07 | Should | 5 SP | Pantalla de próximos recordatorios con estados vacío/vencido. |
+| T-10 | Plataforma / notificaciones | US-08 | Should | 5 SP | Notificación local previa a vencimientos configurados. |
+
+### **6.2. Tickets principales detallados para la entrega**
+
+#### **Ticket 1 - Frontend: alta de vehículo en el garaje**
 
 **Tipo:** frontend / shared presentation
 
@@ -525,7 +546,7 @@ Historias principales seleccionadas para la entrega:
 - Test de envío correcto que invoca el caso de uso.
 - Test de estado de éxito tras alta completada.
 
-### **Ticket 2 - Backend/datos: registro de mantenimiento e historial**
+#### **Ticket 2 - Backend/datos: registro de mantenimiento e historial**
 
 **Tipo:** backend/datos / dominio / repositorio
 
@@ -569,7 +590,7 @@ Historias principales seleccionadas para la entrega:
 - Test de historial ordenado por fecha descendente.
 - Test de registro creado con estado pendiente de sincronización.
 
-### **Ticket 3 - Base de datos: esquema local y remoto del MVP**
+#### **Ticket 3 - Base de datos: esquema local y remoto del MVP**
 
 **Tipo:** base de datos / infraestructura
 
@@ -620,8 +641,10 @@ Historias principales seleccionadas para la entrega:
 
 Esta sección se completará con exactamente 3 Pull Requests, alineadas con las entregas oficiales del proyecto.
 
+Para la Entrega 1 se crea una rama `dev` como base de comparación porque la documentación inicial ya fue sincronizada previamente en `main`. La PR oficial de Entrega 1 se abrirá desde `feature-entrega1-AAC` hacia `dev` para que GitHub muestre correctamente el diff documental. A partir de la Entrega 2, el flujo vuelve al esquema normal: trabajar solo en ramas feature y abrir PR hacia `main`.
+
 PRs previstas:
 
-- **PR 1 - Entrega 1 / Documentación técnica:** PR desde `feature-entrega1-AAC` con PRD, user stories, arquitectura, modelo de datos, API, tickets y prompts iniciales.
-- **PR 2 - Entrega 2 / MVP funcional:** PR desde `feature-entrega2-AAC` con backend, frontend, base de datos y flujo principal casi completo.
-- **PR 3 - Entrega final:** PR desde `finalproject-AAC` con flujo E2E completo, tests, despliegue/evidencia y documentación cerrada.
+- **PR 1 - Entrega 1 / Documentación técnica:** PR desde `feature-entrega1-AAC` hacia `dev` con PRD, user stories, arquitectura, modelo de datos, API, tickets y prompts iniciales.
+- **PR 2 - Entrega 2 / MVP funcional:** PR desde `feature-entrega2-AAC` hacia `main` con backend, frontend, base de datos y flujo principal casi completo.
+- **PR 3 - Entrega final:** PR desde `finalproject-AAC` hacia `main` con flujo E2E completo, tests, despliegue/evidencia y documentación cerrada.

@@ -246,6 +246,23 @@ Para la entrega academica, las 3 historias principales recomendadas son:
 | US-04 - Registrar mantenimiento o averia | Demuestra el valor principal del producto. |
 | US-06 - Generar recordatorio automatico tras registrar ITV o seguro | Conecta historial con prevencion, que es el principal diferenciador del MVP. |
 
+## Backlog inicial de tickets
+
+Los tickets se derivan de las historias Must-Have y Should-Have. Cada ticket debera convertirse en una propuesta OpenSpec antes de implementarse y debera incluir tests TDD asociados a sus criterios de aceptacion. El detalle completo vive en `docs/backlog.md`.
+
+| Ticket | Area | Historias | Prioridad | Estimacion | Criterio principal de aceptacion |
+|---|---|---|---|---|---|
+| T-01 - Esquema local/remoto | Datos | US-01, US-02, US-04, US-06 | Must | 8 SP | Datos quedan relacionados por familia, vehiculo, mantenimiento y recordatorio. |
+| T-02 - Auth y garaje familiar | Auth / onboarding | US-01 | Must | 5 SP | Usuario autenticado puede crear y cargar su garaje familiar. |
+| T-03 - Crear vehiculo offline-first | Dominio / datos | US-02 | Must | 5 SP | Vehiculo valido queda guardado localmente y pendiente de sync si no hay conexion. |
+| T-04 - Registro e historial | Dominio / datos | US-04, US-05 | Must | 8 SP | Historial muestra mantenimientos ordenados por fecha descendente. |
+| T-05 - Recordatorio automatico | Dominio | US-06 | Must | 5 SP | ITV o seguro generan recordatorio asociado con antelacion por defecto. |
+| T-06 - Preparacion de sync | Sincronizacion | US-02, US-04 | Must | 8 SP | Cambios offline conservan estado pendiente y timestamps de sincronizacion. |
+| T-07 - Formulario alta vehiculo | Frontend | US-02 | Must | 5 SP | Usuario puede introducir datos minimos y ver validaciones. |
+| T-08 - Formulario mantenimiento e historial | Frontend | US-04, US-05 | Must | 8 SP | Usuario puede registrar mantenimiento y consultar historial. |
+| T-09 - Lista de recordatorios | Frontend | US-07 | Should | 5 SP | Recordatorios se muestran ordenados por proximidad con estado vacio. |
+| T-10 - Notificaciones locales | Plataforma | US-08 | Should | 5 SP | Aviso local se muestra sin depender del backend cuando llega la fecha. |
+
 ## Siguiente paso
 
 Convertir las historias Must-Have en specs OpenSpec por capacidad, empezando por `vehicles`, `maintenance-records` y `reminders`. Despues, derivar tickets tecnicos y tests TDD desde los criterios de aceptacion.
