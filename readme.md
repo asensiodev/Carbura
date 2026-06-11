@@ -494,6 +494,8 @@ errors:
 Los 3 endpoints HTTP principales que consume la app, en formato OpenAPI 3.0. Todas las peticiones a PostgREST incluyen la cabecera `apikey` y el token JWT del usuario, de forma que Row Level Security filtra automáticamente por `family_id`.
 
 > **Nota de alcance:** se documentan únicamente estos 3 endpoints como simplificación intencional para la entrega (la plantilla pide un máximo de 3). PostgREST expone el mismo patrón `GET`/`POST` para el resto de tablas del modelo (`maintenance_records` en lectura, `reminders`, `maintenance_types`, `families`, `user_profiles`), que siguen exactamente la misma semántica de seguridad, filtro incremental por `updated_at` y upsert. El ciclo completo de sincronización está descrito en el contrato lógico `syncGarageData` (sección 4.2).
+>
+> **Documentación completa:** Supabase genera automáticamente la especificación OpenAPI de todas las tablas expuestas en `GET /rest/v1/` (con la cabecera `apikey` del proyecto). El contrato detallado para implementación —tablas, RLS, cabeceras de upsert y filtros de sync— se documentará en `openspec/specs/backend.md` durante la Entrega 2, siguiendo el flujo SDD con OpenSpec.
 
 ```yaml
 openapi: 3.0.3
