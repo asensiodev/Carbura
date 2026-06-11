@@ -18,7 +18,7 @@
 
 ### Prompt 1 - PRD inicial
 
-**Estado:** usado / base documental.
+**Estado:** usado.
 
 ```text
 Actua como product manager senior. Ayudame a definir un PRD para Carbura, una aplicacion multiplataforma Android y Desktop para gestionar el mantenimiento de vehiculos familiares. El documento debe incluir vision del producto, problema, usuarios, objetivos del MVP, alcance, fuera de alcance, casos de uso principales, requisitos no funcionales, stack tecnologico, arquitectura de alto nivel, modelo de datos resumido, metodologia de desarrollo y criterios de exito del MVP.
