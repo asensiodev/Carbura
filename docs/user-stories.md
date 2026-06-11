@@ -160,6 +160,8 @@ Para cumplir las instrucciones del proyecto, este flujo se planifica con 5 histo
 
 ### US-03 - Ver listado y detalle de vehiculos
 
+> **Nota de alcance:** la version minima de esta historia (lista basica del garaje y acceso al detalle) queda absorbida por el flujo E2E Must-Have y se implementa dentro de los tickets T-07 y T-08, ya que sin lista de vehiculos no se puede completar el flujo principal. Lo que permanece como Could-Have es el refinamiento: estado resumido por vehiculo, proximos avisos en la tarjeta y detalle enriquecido.
+
 **Como** miembro de la familia,
 **quiero** ver los vehiculos del garaje y abrir el detalle de cada uno,
 **para** consultar rapidamente su informacion y estado de mantenimiento.
@@ -262,6 +264,8 @@ Los tickets se derivan de las historias Must-Have y Should-Have. Cada ticket deb
 | T-08 - Formulario mantenimiento e historial | Frontend | US-04, US-05 | Must | 8 SP | Usuario puede registrar mantenimiento y consultar historial. |
 | T-09 - Lista de recordatorios | Frontend | US-07 | Should | 5 SP | Recordatorios se muestran ordenados por proximidad con estado vacio. |
 | T-10 - Notificaciones locales | Plataforma | US-08 | Should | 5 SP | Aviso local se muestra sin depender del backend cuando llega la fecha. |
+| T-11 - CI/CD, release y evidencia de despliegue | Infraestructura | Transversal | Must (final) | 5 SP | Pipeline CI con tests en verde, secretos fuera del repo y release con artefactos instalables. |
+| T-12 - Test E2E del flujo principal | Calidad | US-01 a US-06 | Must (final) | 5 SP | Un test automatizado recorre el flujo completo hasta verificar el recordatorio. |
 
 ## Siguiente paso
 

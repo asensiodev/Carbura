@@ -1,0 +1,11 @@
+# Carbura - Configuracion local de desarrollo
+#
+# Copia este archivo como `local.properties` y completa los valores reales.
+# `local.properties` NUNCA se versiona (ver .gitignore).
+
+# Proyecto Supabase (Dashboard -> Project Settings -> API)
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_ANON_KEY=xxxx
+
+# OAuth de Google configurado en Supabase Auth (Google Cloud Console -> Credentials)
+GOOGLE_CLIENT_ID=xxxx
