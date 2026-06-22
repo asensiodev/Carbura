@@ -167,6 +167,8 @@ Cada change debe tener:
 
 ## 8. Orden de implementacion tecnico
 
+Antes de empezar con codigo, revisar la guia de lecturas previas en [`docs/entrega2-reading-list.md`](entrega2-reading-list.md). La lectura debe ser selectiva: KMP, OpenCode/OpenSpec y Supabase minimo, sin entrar aun en documentacion avanzada.
+
 ### Paso 1 - Preparar rama y entorno
 
 - Confirmar rama `feature-entrega2-AAC`.
