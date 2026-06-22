@@ -307,40 +307,176 @@ La entrega se considera lista si cumple esto:
 | Demasiado scope de sync | Alto | Usar `pending_sync` y `updated_at`; sync avanzada queda para final. |
 | UI consume demasiado tiempo | Medio | Priorizar pantallas funcionales y estados claros, no pulido visual final. |
 
-## 11. Checklist semanal sugerido
+## 11. Plan diario hasta el 5 de julio
 
-### Semana 1
+Objetivo interno: tener el MVP Android terminado el **5 de julio**. Del **6 al 10 de julio** queda reservado para bugs, integracion, documentacion, evidencia de entrega y Desktop opcional si el MVP Android esta estable.
 
-- Rama `feature-entrega2-AAC` creada.
-- OpenSpec `bootstrap-kmp-project` creado y aplicado.
-- Proyecto KMP compila en Android.
-- Estructura `shared` definida.
-- `local.properties.example` creado.
+### 22 junio - Preparacion de Entrega 2
 
-### Semana 2
+- Confirmar rama `feature-entrega2-AAC`.
+- Revisar `docs/entrega2-plan.md`, `docs/backlog.md`, `readme.md` y `openspec/prd.md`.
+- Crear el primer cambio OpenSpec: `bootstrap-kmp-project`.
+- Definir en la spec la estructura minima KMP y los comandos de verificacion esperados.
 
-- Supabase creado.
-- Tablas principales definidas.
-- Entidades y use cases iniciales con tests.
-- Primer flujo vertical de vehiculo funcionando con repo fake/local.
+Resultado esperado: plan operativo claro y cambio OpenSpec listo para iniciar el proyecto.
 
-### Semana 3
+### 23 junio - Bootstrap KMP
 
-- Registro de mantenimiento funcionando.
-- Historial por vehiculo funcionando.
-- Recordatorio automatico basico funcionando.
-- Persistencia local/remota conectada parcialmente.
+- Crear el proyecto Kotlin Multiplatform con Android como target principal.
+- Crear estructura base `shared` y `androidApp`.
+- Dejar `desktopApp` solo si el template lo facilita sin bloquear.
+- Confirmar que Gradle lista tareas correctamente.
+- Crear `local.properties.example` si todavia no existe.
 
-### Semana final antes del 10 de julio
+Resultado esperado: proyecto KMP inicial compila o, como minimo, Gradle esta configurado y desbloqueado.
 
-- Build limpio.
-- Tests clave pasan.
-- README actualizado.
-- `prompts.md` actualizado.
-- PR abierta contra `main`.
-- Evidencia minima: capturas o video corto del flujo Android.
+### 24 junio - Build Android estable
 
-## 12. Primer paso recomendado
+- Resolver errores de Gradle/KMP.
+- Ejecutar `./gradlew test` y `./gradlew assembleDebug`.
+- Crear pantalla Android minima de arranque.
+- Archivar OpenSpec `bootstrap-kmp-project` si el scaffold queda estable.
+
+Resultado esperado: app Android abre una pantalla basica.
+
+### 25 junio - Modelo de datos y dominio base
+
+- Crear OpenSpec `add-initial-data-model`.
+- Definir entidades de dominio: `Family`, `UserProfile`, `Vehicle`, `MaintenanceType`, `MaintenanceRecord`, `Reminder`.
+- Crear contratos de repositorio.
+- Escribir primeros tests TDD de validacion de dominio.
+
+Resultado esperado: dominio base en `shared` con tests unitarios iniciales.
+
+### 26 junio - Supabase minimo
+
+- Crear proyecto Supabase.
+- Crear tablas principales en PostgreSQL.
+- Activar RLS.
+- Preparar policies iniciales por `family_id`.
+- Documentar SQL o pasos relevantes en la repo si aplica.
+
+Resultado esperado: backend remoto minimo creado y alineado con el modelo de datos.
+
+### 27 junio - Auth y garaje familiar
+
+- Crear OpenSpec `add-auth-family-garage`.
+- Configurar Google OAuth en Supabase si es viable.
+- Implementar estado de sesion/onboarding minimo.
+- Crear flujo para cargar o crear garaje familiar.
+- Añadir tests de casos de uso o repositorio con fakes.
+
+Resultado esperado: base de auth/onboarding preparada, aunque la integracion Google pueda requerir ajuste final.
+
+### 28 junio - Alta de vehiculo dominio/datos
+
+- Crear OpenSpec `add-vehicle-management` si no se creo antes.
+- Implementar `CreateVehicleUseCase` con TDD.
+- Implementar repositorio fake/local para vehiculos.
+- Preparar persistencia local o puente hacia Supabase si ya esta desbloqueado.
+
+Resultado esperado: vehiculo se puede crear desde dominio/repositorio con tests verdes.
+
+### 29 junio - Alta de vehiculo UI Android
+
+- Crear pantalla de garaje vacio.
+- Crear formulario de alta de vehiculo.
+- Conectar UI con ViewModel/use case.
+- Mostrar validaciones, loading, error y exito basicos.
+
+Resultado esperado: primer flujo vertical Android funciona: garaje vacio -> anadir vehiculo -> ver lista.
+
+### 30 junio - Registro de mantenimiento dominio/datos
+
+- Crear OpenSpec `add-maintenance-history`.
+- Implementar `CreateMaintenanceRecordUseCase` con TDD.
+- Implementar validaciones de tipo, fecha, kilometros y coste.
+- Implementar consulta de historial ordenado por fecha.
+
+Resultado esperado: mantenimientos se crean y el historial se consulta desde dominio/repositorio.
+
+### 1 julio - Registro de mantenimiento UI Android
+
+- Crear detalle de vehiculo.
+- Crear formulario de mantenimiento/ITV.
+- Conectar formulario con use case.
+- Mostrar historial por vehiculo.
+- Validar estados vacios y errores.
+
+Resultado esperado: segundo flujo vertical funciona: vehiculo -> registrar mantenimiento -> ver historial.
+
+### 2 julio - Recordatorio automatico basico
+
+- Crear OpenSpec `add-automatic-reminders`.
+- Implementar `CreateAutomaticReminderUseCase`.
+- Crear recordatorio al registrar ITV o seguro con fecha de vencimiento.
+- Mostrar recordatorio basico en detalle o pantalla simple.
+
+Resultado esperado: registrar ITV/seguro genera un recordatorio visible.
+
+### 3 julio - Persistencia real e integracion
+
+- Sustituir fakes por persistencia local/remota donde sea viable.
+- Confirmar que vehiculos y mantenimientos sobreviven al reinicio si hay persistencia local.
+- Confirmar conexion real con Supabase para al menos auth/perfil o datos principales.
+- Mantener fakes solo donde sean necesarios para no bloquear el flujo.
+
+Resultado esperado: backend/base de datos conectados al flujo principal o integracion parcial documentada.
+
+### 4 julio - Calidad y estabilizacion
+
+- Ejecutar build y tests.
+- Corregir bugs del flujo principal.
+- Completar tests unitarios clave.
+- Revisar OpenSpec archives pendientes.
+- Revisar que no haya secretos en Git.
+
+Resultado esperado: MVP Android estable para demo interna.
+
+### 5 julio - Cierre interno del MVP Android
+
+- Ejecutar flujo completo en emulador o dispositivo.
+- Actualizar `readme.md` con instrucciones reales de ejecucion.
+- Actualizar `prompts.md` con prompts usados en Entrega 2.
+- Preparar capturas o video corto del flujo.
+- Revisar diff y abrir PR draft si ya tiene sentido.
+
+Resultado esperado: Entrega 2 funcionalmente cerrada antes del colchon.
+
+## 12. Colchon del 6 al 10 de julio
+
+### 6 julio - Bugs e integracion
+
+- Corregir bugs detectados en demo interna.
+- Simplificar scope si alguna integracion no es estable.
+- Asegurar que Android sigue compilando limpio.
+
+### 7 julio - Supabase y seguridad
+
+- Revisar RLS y policies.
+- Verificar variables locales y `local.properties.example`.
+- Documentar pasos de Supabase pendientes o definitivos.
+
+### 8 julio - Desktop opcional o pulido Android
+
+- Si Android esta estable, probar Desktop.
+- Si Desktop bloquea, no incluirlo.
+- Si no se hace Desktop, pulir UI Android y estados vacios/error.
+
+### 9 julio - Preparacion PR
+
+- Actualizar README, prompts y evidencia.
+- Ejecutar checks disponibles.
+- Revisar PR description.
+- Confirmar trazabilidad tickets -> OpenSpec -> tests/codigo.
+
+### 10 julio - Entrega
+
+- Abrir o finalizar PR `feature-entrega2-AAC` -> `main`.
+- Enviar URL de PR en Typeform.
+- Guardar notas de riesgos conocidos para Entrega Final.
+
+## 13. Primer paso recomendado
 
 El primer cambio OpenSpec deberia ser:
 
