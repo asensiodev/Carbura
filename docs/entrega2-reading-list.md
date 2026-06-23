@@ -94,13 +94,15 @@ Documentacion oficial:
 - Create your Kotlin Multiplatform app: <https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-multiplatform-create-first-app.html>
 - Kotlin Multiplatform project structure: <https://www.jetbrains.com/help/kotlin-multiplatform-dev/multiplatform-discover-project.html>
 - Android Studio KMP plugin: <https://plugins.jetbrains.com/plugin/14936-kotlin-multiplatform>
+- Gradle convention plugins: <https://docs.gradle.org/current/samples/sample_convention_plugins.html>
 
 Lectura minima:
 
 - Como crear un proyecto KMP desde Android Studio o template oficial.
 - Que es `commonMain` y `commonTest`.
-- Que codigo vive en `shared` y que codigo vive en `androidApp`.
+- Que codigo vive en modulos `core:*`, `feature:*` y `app:*`.
 - Como compilar Android desde Gradle.
+- Como funcionan los convention plugins en `build-logic`.
 
 No hace falta leer ahora:
 
@@ -111,9 +113,11 @@ No hace falta leer ahora:
 Decision Carbura:
 
 ```text
-shared = dominio, use cases, repositorios, modelos, tests.
-androidApp = UI Android, permisos, navegacion y codigo especifico de Android.
-desktopApp = opcional si Android queda estable.
+core:* = dominio, modelos, datos, auth, design system, testing y contratos compartidos.
+feature:* = funcionalidades verticales como onboarding, garage, maintenance y reminders.
+app:android = UI Android, navegacion y adapters Android.
+app:desktop = UI Desktop opcional.
+iOS futuro = adapter propio y UI SwiftUI o Compose Multiplatform segun evaluacion posterior.
 ```
 
 ## 5. Compose Android y Compose Multiplatform
@@ -143,6 +147,10 @@ Decision Carbura:
 ```text
 UI simple y funcional primero.
 Estados vacios, loading y error antes que pulido visual.
+Design system compartido en core:designsystem.
+Android usa Compose como UI principal.
+Desktop puede reutilizar Compose Multiplatform si entra.
+iOS futuro queda preparado, pero no se implementa en Entrega 2.
 ```
 
 ## 6. Supabase
@@ -181,6 +189,7 @@ Decision Carbura:
 Supabase gestiona Auth y PostgreSQL.
 Android usa Credential Manager + Google ID como login principal.
 Google Sign-In/OAuth queda como fallback, no como primera opcion.
+Auth se expone mediante contrato comun KMP y adapters por plataforma.
 No habra backend propio en Entrega 2.
 Nunca commitear service role key ni secretos reales.
 ```
@@ -282,7 +291,8 @@ Estamos listos para implementar cuando puedas responder:
 - Que rama uso para Entrega 2: `feature-entrega2-AAC`.
 - Que plataforma priorizo: Android.
 - Que cambio OpenSpec va primero: `bootstrap-kmp-project`.
-- Donde vive el dominio: `shared/commonMain`.
-- Donde van los tests TDD: `shared/commonTest`.
+- Donde vive el dominio: `core:domain`.
+- Donde van los tests TDD: modulos `core:*` y `feature:*`, priorizando dominio/use cases.
+- Como aislamos dependencias nativas: contratos comunes + adapters por plataforma.
 - Donde van secretos reales: `local.properties`, nunca Git.
 - Que queda opcional: Desktop.

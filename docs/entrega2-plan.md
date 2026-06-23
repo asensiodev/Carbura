@@ -56,9 +56,12 @@ Desktop queda como objetivo opcional. La arquitectura seguira siendo Kotlin Mult
 | Area | Decision | Motivo |
 |---|---|---|
 | Lenguaje | Kotlin | Encaja con Android y KMP. |
-| Arquitectura | Kotlin Multiplatform | Compartir dominio y datos entre Android/Desktop. |
+| Arquitectura | Kotlin Multiplatform modular | Compartir dominio, contratos, datos, UiState y tests entre Android/Desktop/iOS futuro. |
+| Build | Convention plugins en `build-logic` | Evitar duplicacion Gradle y mostrar arquitectura escalable. |
 | UI principal | Compose for Android | Target prioritario de Entrega 2. |
-| UI opcional | Compose for Desktop | Solo si Android queda estable. |
+| UI opcional | Compose for Desktop | Solo si Android queda estable; reutiliza design system y componentes compartidos. |
+| UI futura | SwiftUI o Compose Multiplatform iOS | iOS queda preparado por contratos y modulos, no implementado en el MVP. |
+| Design system | `core:designsystem` | Tema, tokens y componentes Compose base reutilizables. |
 | Backend | Supabase | Auth, PostgreSQL y RLS sin servidor propio. |
 | Persistencia local | SQLDelight si no bloquea | Base local multiplataforma y testeable. |
 | Red | Ktor Client o Supabase Kotlin | Acceso a Supabase desde shared. |
@@ -66,6 +69,8 @@ Desktop queda como objetivo opcional. La arquitectura seguira siendo Kotlin Mult
 | CI | GitHub Actions minimo | Ejecutar checks/tests cuando existan. |
 
 Decision importante: si SQLDelight o Supabase bloquean demasiado el avance, se puede usar un repositorio local fake/in-memory temporal para cerrar primero el flujo vertical. La condicion es mantener interfaces limpias para sustituirlo por implementacion real sin romper la arquitectura.
+
+Patron general para dependencias de plataforma: todo lo que dependa del sistema operativo se define como contrato comun y se implementa con adapters por target. Esto aplica a auth, permisos, notificaciones, storage seguro, deep links, archivos y APIs especificas de Android/Desktop/iOS futuro.
 
 ## 4. IDE y herramientas
 
@@ -150,7 +155,7 @@ Orden recomendado:
 
 | Orden | Change ID sugerido | Tickets | Objetivo |
 |---|---|---|---|
-| 1 | `bootstrap-kmp-project` | T-11 parcial | Crear esqueleto KMP, Gradle y estructura base. |
+| 1 | `bootstrap-kmp-project` | T-11 parcial | Crear esqueleto KMP modular, convention plugins, design system base y estructura app/core/feature. |
 | 2 | `add-initial-data-model` | T-01 | Definir modelo local/remoto y contratos de datos. |
 | 3 | `add-auth-family-garage` | T-02 | Login/onboarding minimo y garaje familiar. |
 | 4 | `add-vehicle-management` | T-03, T-07 | Crear vehiculo y verlo en garaje. |
@@ -179,11 +184,13 @@ Antes de empezar con codigo, revisar la guia de lecturas previas en [`docs/entre
 
 ### Paso 2 - Bootstrap KMP
 
-- Crear proyecto KMP minimo.
+- Crear proyecto KMP modular.
+- Crear `build-logic` con convention plugins basicos.
 - Mantener modulos esperados:
-  - `shared` para dominio/datos/presentacion compartida.
-  - `androidApp` para Android.
-  - `desktopApp` opcional si el template lo facilita.
+  - `app:android` para Android.
+  - `app:desktop` opcional si el template lo facilita.
+  - `core:model`, `core:domain`, `core:data`, `core:auth`, `core:designsystem`.
+  - `feature:onboarding`, `feature:garage`, `feature:maintenance`, `feature:reminders` cuando el scaffold lo permita sin bloquear.
 - Verificar que Android compila antes de seguir.
 
 Comandos objetivo:
@@ -241,6 +248,7 @@ Primero puede validarse manualmente desde Supabase SQL Editor. Despues se conect
   - `GetVehicleHistoryUseCase`
   - `CreateAutomaticReminderUseCase`
 - Crear contratos de repositorio.
+- Crear contratos comunes para integraciones nativas, empezando por auth.
 
 TDD prioritario aqui: los tests de dominio son mas baratos, estables y dan seguridad.
 
@@ -327,8 +335,8 @@ Resultado esperado: plan operativo claro y cambio OpenSpec listo para iniciar el
 ### 23 junio - Bootstrap KMP
 
 - Crear el proyecto Kotlin Multiplatform con Android como target principal.
-- Crear estructura base `shared` y `androidApp`.
-- Dejar `desktopApp` solo si el template lo facilita sin bloquear.
+- Crear estructura modular base `app`, `core`, `feature` y `build-logic`.
+- Dejar `app:desktop` solo si el template lo facilita sin bloquear.
 - Confirmar que Gradle lista tareas correctamente.
 - Crear `local.properties.example` si todavia no existe.
 
@@ -491,7 +499,9 @@ bootstrap-kmp-project
 Objetivo:
 
 - crear el esqueleto KMP;
-- definir estructura de modulos;
+- definir estructura modular `app`, `core`, `feature` y `build-logic`;
+- crear convention plugins minimos;
+- preparar `core:designsystem`;
 - dejar Android compilando;
 - preparar base para tests y configuracion segura.
 

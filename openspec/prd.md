@@ -116,11 +116,14 @@ Las apps existentes en el mercado son demasiado complejas (enfocadas en flotas, 
 | Capa | Tecnologia |
 |---|---|
 | UI Android | Compose for Android |
-| UI Desktop | Compose for Desktop (macOS + Windows) |
-| Logica compartida | Kotlin Multiplatform (commonMain) |
+| UI Desktop | Compose for Desktop opcional, reutilizando design system/componentes compartidos cuando aporte valor |
+| UI iOS futura | SwiftUI o Compose Multiplatform a evaluar; arquitectura preparada, fuera del MVP |
+| Logica compartida | Kotlin Multiplatform (commonMain) para dominio, casos de uso, contratos, modelos, validaciones y UiState |
+| Modularizacion | Modulos Gradle con convention plugins en `build-logic` |
+| Design system | `core:designsystem` con tema, tokens y componentes Compose reutilizables |
 | Base de datos local | SQLDelight |
 | HTTP Client | Ktor Client (KMP) |
-| Autenticacion cliente | Android Credential Manager + Google ID, fallback Google Sign-In/OAuth; Desktop OAuth opcional |
+| Autenticacion cliente | Contrato KMP comun; Android adapter con Credential Manager + Google ID y fallback Google Sign-In/OAuth; Desktop OAuth opcional; iOS futuro con adapter propio |
 | Inyeccion de dependencias | Koin (KMP) |
 | Serializacion | kotlinx.serialization |
 | Backend / Auth | Supabase (PostgreSQL + Auth + Storage) |
@@ -131,7 +134,7 @@ Las apps existentes en el mercado son demasiado complejas (enfocadas en flotas, 
 
 ## 9. Arquitectura
 
-Clean Architecture en capas, 100% compartida en `commonMain` salvo la UI:
+Clean Architecture modular. Se comparte en `commonMain` todo lo que sea dominio, contratos, modelos, estado y logica testeable. Las integraciones nativas viven detras de contratos comunes y se implementan por plataforma:
 
 ```text
 Presentation (Compose Android / Compose Desktop)
@@ -140,12 +143,14 @@ ViewModel + UiState (commonMain)
       ↓
 Use Cases / Domain (commonMain)
       ↓
-Repository (commonMain)
+Repository contracts (commonMain)
       ↓
-LocalDataSource (SQLDelight) + RemoteDataSource (Ktor + Supabase)
+Platform adapters + LocalDataSource (SQLDelight) + RemoteDataSource (Ktor + Supabase)
       ↓
 SyncManager (commonMain) - gestiona conflictos last-write-wins
 ```
+
+Patron general para dependencias de plataforma: auth, permisos, notificaciones, secure storage, deep links y APIs del sistema se definen como contratos en KMP y se resuelven con adapters `androidMain`, `desktopMain` o `iosMain` futuro.
 
 ---
 

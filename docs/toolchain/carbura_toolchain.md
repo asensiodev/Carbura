@@ -341,15 +341,24 @@ carbura/
 │   │   └── backend.md
 │   ├── changes/                ← propuestas en curso
 │   └── archive/                ← historial de cambios completados
-├── shared/                     ← KMP commonMain (lógica compartida)
-│   ├── domain/
-│   ├── data/
-│   ├── presentation/
-│   └── test/                   ← tests unitarios commonTest (TDD)
-├── androidApp/                 ← UI Android (Compose)
-│   └── test/                   ← tests instrumentados Android
-├── desktopApp/                 ← UI Desktop (Compose Desktop)
-│   └── test/                   ← tests Desktop
+├── build-logic/                ← convention plugins Gradle
+├── app/
+│   ├── android/                ← UI Android, navegación y adapters Android
+│   └── desktop/                ← UI Desktop opcional
+├── core/
+│   ├── model/                  ← modelos compartidos
+│   ├── domain/                 ← entidades, use cases y contratos
+│   ├── data/                   ← repositorios
+│   ├── database/               ← SQLDelight
+│   ├── network/                ← Ktor/Supabase
+│   ├── auth/                   ← contrato común + adapters de auth
+│   ├── designsystem/           ← tema, tokens y componentes base
+│   └── testing/                ← fakes y utilidades de test
+├── feature/
+│   ├── onboarding/
+│   ├── garage/
+│   ├── maintenance/
+│   └── reminders/
 ├── local.properties.example
 ├── README.md
 └── .gitignore
