@@ -154,6 +154,8 @@ Documentacion oficial:
 - API keys: <https://supabase.com/docs/guides/getting-started/api-keys>
 - Auth overview: <https://supabase.com/docs/guides/auth>
 - Google Auth: <https://supabase.com/docs/guides/auth/social-login/auth-google>
+- Android Credential Manager: <https://developer.android.com/identity/sign-in/credential-manager>
+- Sign in with Google for Android: <https://developer.android.com/identity/sign-in/credential-manager-siwg>
 - Row Level Security: <https://supabase.com/docs/guides/database/postgres/row-level-security>
 
 Lectura minima:
@@ -163,6 +165,8 @@ Lectura minima:
 - Diferencia entre anon key y service role key.
 - Como activar RLS.
 - Como configurar Google OAuth a alto nivel.
+- Como funciona Credential Manager como flujo principal de Android.
+- Que fallback conviene dejar previsto si Credential Manager no esta disponible o no devuelve credenciales.
 
 No hace falta leer ahora:
 
@@ -175,6 +179,8 @@ Decision Carbura:
 
 ```text
 Supabase gestiona Auth y PostgreSQL.
+Android usa Credential Manager + Google ID como login principal.
+Google Sign-In/OAuth queda como fallback, no como primera opcion.
 No habra backend propio en Entrega 2.
 Nunca commitear service role key ni secretos reales.
 ```

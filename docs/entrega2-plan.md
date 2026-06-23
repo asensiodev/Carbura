@@ -221,6 +221,8 @@ GOOGLE_CLIENT_ID=xxxx
 - Activar RLS.
 - Crear policies por `family_id`.
 - Configurar Google OAuth.
+- Planificar Android Auth con Credential Manager + Google ID como flujo principal.
+- Mantener fallback controlado a Google Sign-In/OAuth si Credential Manager no esta disponible o no devuelve credenciales validas.
 
 Primero puede validarse manualmente desde Supabase SQL Editor. Despues se conecta desde la app.
 

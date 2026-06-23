@@ -107,7 +107,7 @@ Las apps existentes en el mercado son demasiado complejas (enfocadas en flotas, 
 - **Rendimiento**: la app debe arrancar en menos de 2 segundos en condiciones normales.
 - **Multiplataforma**: Android (API 26+) y Desktop (macOS + Windows) desde la misma base de codigo KMP.
 - **Escalabilidad del backend**: arquitectura Supabase con Row Level Security por `family_id`, preparada para multiples familias independientes desde el dia 1.
-- **Seguridad**: autenticacion OAuth 2.0 via Google. Tokens JWT gestionados por Supabase Auth. Secrets nunca en el repositorio.
+- **Seguridad**: autenticacion OAuth 2.0 via Google. En Android se prioriza Credential Manager con Google ID y fallback controlado a Google Sign-In/OAuth cuando el dispositivo no lo soporte. Tokens JWT gestionados por Supabase Auth. Secrets nunca en el repositorio.
 
 ---
 
@@ -120,7 +120,7 @@ Las apps existentes en el mercado son demasiado complejas (enfocadas en flotas, 
 | Logica compartida | Kotlin Multiplatform (commonMain) |
 | Base de datos local | SQLDelight |
 | HTTP Client | Ktor Client (KMP) |
-| Autenticacion cliente | KMPAuth (Google Sign-In) |
+| Autenticacion cliente | Android Credential Manager + Google ID, fallback Google Sign-In/OAuth; Desktop OAuth opcional |
 | Inyeccion de dependencias | Koin (KMP) |
 | Serializacion | kotlinx.serialization |
 | Backend / Auth | Supabase (PostgreSQL + Auth + Storage) |

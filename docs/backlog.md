@@ -68,7 +68,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Tipo:** feature / auth.
 
-**Descripcion:** implementar el flujo inicial de autenticacion con Google mediante Supabase Auth y creacion/carga del garaje familiar.
+**Descripcion:** implementar el flujo inicial de autenticacion con Google mediante Supabase Auth y creacion/carga del garaje familiar. En Android, Credential Manager con Google ID sera la opcion principal, con fallback controlado a Google Sign-In/OAuth si no esta disponible.
 
 **Proposito:** permitir que el usuario entre en la app y tenga un espacio de datos aislado antes de registrar vehiculos.
 
@@ -85,6 +85,8 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 **Alcance:**
 
 - Configurar login Google en Supabase Auth.
+- Implementar login Android con Credential Manager y Google ID.
+- Definir fallback a Google Sign-In/OAuth para dispositivos o entornos no compatibles.
 - Crear o cargar `UserProfile` tras login.
 - Crear `Family` si el usuario no tiene garaje.
 - Exponer estado de sesion a la UI.
@@ -94,12 +96,16 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 **Criterios de aceptacion:**
 
 - Dado un usuario sin sesion, cuando inicia sesion con Google, entonces accede autenticado.
+- Dado un dispositivo compatible, cuando el usuario inicia sesion, entonces la app usa Credential Manager como flujo principal.
+- Dado que Credential Manager no devuelve credencial valida o no esta disponible, cuando el usuario intenta iniciar sesion, entonces la app ofrece un fallback controlado sin bloquear el onboarding.
 - Dado un usuario autenticado sin garaje, cuando completa onboarding, entonces se crea su garaje familiar.
 - Dado un usuario autenticado con garaje, cuando abre la app, entonces se carga su garaje activo.
 
 **Tests TDD previstos:**
 
 - Test de creacion de perfil si no existe.
+- Test de seleccion de flujo Credential Manager disponible.
+- Test de fallback cuando no hay credencial disponible.
 - Test de carga de garaje existente.
 - Test de error de autenticacion propagado como estado de UI.
 

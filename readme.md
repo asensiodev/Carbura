@@ -58,6 +58,7 @@ El valor principal está en reducir olvidos y pérdida de información, creando 
 - Actualización rápida de odómetro.
 - Sincronización offline-first entre dispositivos.
 - Autenticación con Google mediante Supabase Auth.
+- En Android, Credential Manager con Google ID será la vía principal de login; se mantendrá fallback controlado a Google Sign-In/OAuth si el dispositivo o los servicios disponibles no lo soportan.
 - Invitación de familiares mediante código.
 - Exportación de historial a PDF o CSV como objetivo de MVP extendido.
 

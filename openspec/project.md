@@ -18,7 +18,8 @@ El PRD completo vive en `openspec/prd.md` y debe usarse como contexto de product
 - Logica compartida: Kotlin Multiplatform en `commonMain`.
 - Base de datos local: SQLDelight.
 - HTTP client: Ktor Client.
-- Auth cliente: KMPAuth con Google Sign-In.
+- Auth cliente Android: Credential Manager con Google ID como opcion principal y fallback controlado a Google Sign-In/OAuth si el dispositivo no lo soporta.
+- Auth cliente Desktop: OAuth mediante navegador o flujo equivalente, solo si Desktop entra en el alcance de la entrega.
 - DI: Koin.
 - Serializacion: kotlinx.serialization.
 - Backend: Supabase Auth, PostgreSQL y Storage.
