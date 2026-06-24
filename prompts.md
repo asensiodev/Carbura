@@ -339,3 +339,36 @@ Revisa los cambios antes de abrir PR con mentalidad de code reviewer senior. Pri
 ```text
 Tras cerrar este PR, actualiza la documentacion de Carbura. Refleja la user story implementada, tests relevantes, decisiones de arquitectura, cambios en specs OpenSpec y cualquier instruccion nueva de setup o uso.
 ```
+
+---
+
+## 8. Entrega 2 - Bootstrap KMP
+
+### Prompt 1 - OpenSpec bootstrap KMP
+
+**Estado:** usado.
+
+```text
+Crea una propuesta OpenSpec para inicializar Carbura como proyecto Kotlin Multiplatform modular.
+
+Objetivo:
+Crear el esqueleto tecnico de Carbura con Android como plataforma principal de Entrega 2, Desktop opcional e iOS preparado arquitectonicamente para futuro.
+
+Alcance:
+- Estructura modular app, core, feature y build-logic.
+- Convention plugins Gradle desde el inicio.
+- Modulos minimos app:android, core:model, core:domain, core:data, core:auth, core:designsystem y core:testing.
+- Features iniciales onboarding, garage, maintenance y reminders.
+- Contratos comunes KMP y adapters por plataforma para integraciones nativas.
+- Android auth con Credential Manager + Google ID y fallback Google Sign-In/OAuth.
+- local.properties.example sin secretos.
+- Comandos de verificacion: ./gradlew tasks, ./gradlew test y ./gradlew assembleDebug.
+```
+
+### Prompt 2 - Implementacion guiada por OpenSpec
+
+**Estado:** usado.
+
+```text
+Aplica el cambio OpenSpec bootstrap-kmp-project. Implementa el scaffold KMP modular siguiendo proposal.md, design.md, spec.md y tasks.md. Manten Android como target principal, evita implementar features reales y verifica con Gradle antes de cerrar.
+```

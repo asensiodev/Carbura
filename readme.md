@@ -85,17 +85,17 @@ La interfaz se diseñará con Compose Multiplatform, manteniendo una experiencia
 
 ### **1.4. Instrucciones de instalación:**
 
-El proyecto está en fase documental. Las instrucciones definitivas se completarán cuando se inicialice la base de código KMP.
+El proyecto ya cuenta con un scaffold Kotlin Multiplatform modular inicial. Android es la plataforma principal para Entrega 2; Desktop queda preparado como objetivo opcional posterior.
 
-Requisitos previstos:
+Requisitos:
 
 - Android Studio con soporte Kotlin Multiplatform.
 - JDK compatible con la versión de Gradle del proyecto.
 - Cuenta y proyecto Supabase.
 - Google OAuth configurado en Supabase Auth.
-- Variables locales en `local.properties`, nunca versionadas.
+- Variables locales en `local.properties`, nunca versionadas. La plantilla segura vive en [`local.properties.example`](local.properties.example).
 
-Configuración local prevista:
+Configuración local prevista para cambios posteriores:
 
 ```properties
 SUPABASE_URL=https://xxxx.supabase.co
@@ -103,13 +103,15 @@ SUPABASE_ANON_KEY=xxxx
 GOOGLE_CLIENT_ID=xxxx
 ```
 
-Comandos previstos:
+Comandos de verificación del scaffold:
 
 ```bash
+./gradlew tasks
 ./gradlew test
 ./gradlew assembleDebug
-./gradlew desktopRun
 ```
+
+La APK debug se genera desde el módulo `app:android`. La configuración real de Supabase se realizará en cambios posteriores mediante OpenSpec.
 
 ---
 
