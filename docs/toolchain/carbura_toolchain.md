@@ -15,6 +15,12 @@
 | **OpenCode** | Agente de IA | Generación y modificación de código asistida por IA |
 | **OpenSpec** | Framework de specs | Gestión de especificaciones versionadas, metodología SDD |
 
+### Herramientas IA usadas
+
+- **OpenCode**: agente principal para explorar el repositorio, proponer cambios, editar documentación, generar código y ayudar en la verificación.
+- **OpenSpec**: flujo asistido por IA para convertir requisitos en proposals, tareas, specs versionadas y archives trazables.
+- **ChatGPT/OpenAI vía OpenCode**: soporte conversacional para decisiones de arquitectura, revisión de documentación, planificación y ejecución guiada.
+
 ---
 
 ## Metodología: SDD sobre TDD + DDD ligero
@@ -300,6 +306,14 @@ Ramas y PRs oficiales:
    - Mostrar trazabilidad: spec → criterios de aceptación → tests (Red) → código (Green) → refactor.
    - Incluir métricas de cobertura de tests como indicador de calidad.
 3. Preparar el guion de la **demo final**.
+
+### Evidencias
+
+- `openspec/specs/`: fuente de verdad viva de las capacidades aceptadas.
+- `openspec/changes/`: proposals y tareas durante la implementación.
+- `openspec/changes/archive/`: historial de cambios aplicados y cerrados.
+- Commits y PRs: trazabilidad entre documentación, specs, código y entregas.
+- Comandos de verificación: `./gradlew test`, `./gradlew assembleDebug` y revisiones manuales en Android Studio/emulador.
 
 ---
 

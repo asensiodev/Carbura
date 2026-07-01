@@ -183,7 +183,7 @@ Patron general para dependencias de plataforma: auth, permisos, notificaciones, 
 
 | Fecha | Hito |
 |---|---|
-| **12 junio 2026** | Entrega de documentacion (PRD, user stories, tickets, readme.md, prompts.md) |
+| **12 junio 2026** | Entrega de documentacion (PRD, user stories, tickets, readme.md y toolchain de IA/proceso) |
 | **10 julio 2026** | Codigo funcional: MVP completo con todas las features del scope |
 | **29 julio 2026** | Entrega final refinada: UX pulida, tests, documentacion completa |
 

@@ -221,7 +221,7 @@ Carbura/
 │   ├── garage/
 │   ├── maintenance/
 │   └── reminders/
-├── docs/                       # Documentación funcional y técnica
+├── docs/                       # Documentación funcional, técnica, herramientas IA y evidencias
 │   ├── user-stories.md
 │   └── toolchain/
 ├── openspec/                   # SDD: PRD, contexto, specs y cambios
@@ -230,7 +230,6 @@ Carbura/
 │   ├── specs/
 │   ├── changes/
 │   └── archive/
-├── prompts.md                  # Registro de prompts utilizados o preparados
 ├── readme.md                   # Documentación principal de entrega
 ├── local.properties.example    # Ejemplo de configuración local sin secretos
 └── .gitignore

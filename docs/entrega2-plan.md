@@ -289,7 +289,7 @@ Abrir vehiculo
 - Tests de validacion basicos.
 - Checks de build.
 - README actualizado con instrucciones reales de ejecucion.
-- `prompts.md` actualizado con prompts usados en implementacion.
+- `docs/toolchain/carbura_toolchain.md` actualizado con herramientas IA, proceso y evidencias.
 
 ## 9. Criterios de listo para Entrega 2
 
@@ -305,7 +305,7 @@ La entrega se considera lista si cumple esto:
 - Hay base de datos/backend conectado o, como minimo, persistencia local real y Supabase parcialmente integrado.
 - Hay tests unitarios clave en dominio/use cases.
 - README incluye instrucciones actualizadas para ejecutar.
-- `prompts.md` incluye prompts reales de Entrega 2.
+- `docs/toolchain/carbura_toolchain.md` incluye herramientas IA, proceso y evidencias de Entrega 2.
 - Existe PR `feature-entrega2-AAC` -> `main`.
 
 ## 10. Riesgos y mitigaciones
@@ -449,7 +449,7 @@ Resultado esperado: MVP Android estable para demo interna.
 
 - Ejecutar flujo completo en emulador o dispositivo.
 - Actualizar `readme.md` con instrucciones reales de ejecucion.
-- Actualizar `prompts.md` con prompts usados en Entrega 2.
+- Actualizar `docs/toolchain/carbura_toolchain.md` con herramientas IA, proceso y evidencias de Entrega 2.
 - Preparar capturas o video corto del flujo.
 - Revisar diff y abrir PR draft si ya tiene sentido.
 
