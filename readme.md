@@ -93,7 +93,7 @@ Requisitos:
 - JDK compatible con la versión de Gradle del proyecto.
 - Cuenta y proyecto Supabase.
 - Google OAuth configurado en Supabase Auth.
-- Variables locales en `local.properties`, nunca versionadas. La plantilla segura vive en [`local.properties.example`](local.properties.example).
+- Variables locales en `local.properties`, nunca versionadas. La plantilla segura vive en [`local.properties.example`](local.properties.example) y la guia de setup en [`docs/supabase-setup.md`](docs/supabase-setup.md).
 
 Configuración local prevista para cambios posteriores:
 
