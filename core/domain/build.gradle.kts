@@ -6,4 +6,8 @@ kotlin {
     sourceSets.commonMain.dependencies {
         implementation(projects.core.model)
     }
+
+    sourceSets.commonTest.dependencies {
+        implementation(libs.kotlinx.coroutines.test)
+    }
 }
