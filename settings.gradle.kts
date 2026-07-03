@@ -20,6 +20,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 rootProject.name = "Carbura"
 
 include(":app:android")
+include(":app:shared")
 
 include(":core:model")
 include(":core:domain")

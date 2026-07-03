@@ -1,0 +1,111 @@
+package com.asensiodev.carbura.feature.garage.presentation
+
+import app.cash.turbine.test
+import com.asensiodev.carbura.core.model.FamilyId
+import com.asensiodev.carbura.core.model.VehicleId
+import com.asensiodev.carbura.core.testing.TestDispatcherProvider
+import com.asensiodev.carbura.feature.garage.data.InMemoryVehicleRepository
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class GarageViewModelTest {
+    private val familyId = FamilyId("family-test")
+
+    @Test
+    fun loadReturnsEmptyStateWhenGarageHasNoVehicles() = runTest {
+        val viewModel = garageViewModel()
+
+        viewModel.onEvent(GarageEvent.Started)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isEmpty)
+        assertEquals(emptyList(), state.vehicles)
+    }
+
+    @Test
+    fun validVehicleCreationAddsVehicleToGarage() = runTest {
+        val viewModel = garageViewModel(nextVehicleId = { VehicleId("vehicle-1") })
+
+        viewModel.effects.test {
+            viewModel.onEvent(GarageEvent.NameChanged("Coche familiar"))
+            viewModel.onEvent(GarageEvent.OdometerChanged("12000"))
+            viewModel.onEvent(GarageEvent.SubmitVehicle)
+            advanceUntilIdle()
+
+            assertIs<GarageEffect.VehicleCreated>(awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        val state = viewModel.uiState.value
+        assertEquals(1, state.vehicles.size)
+        assertEquals("Coche familiar", state.vehicles.single().name)
+        assertEquals(12000, state.vehicles.single().currentOdometerKm)
+        assertEquals("", state.name)
+        assertEquals("0", state.odometerKm)
+    }
+
+    @Test
+    fun blankVehicleNameReturnsValidationError() = runTest {
+        val viewModel = garageViewModel()
+
+        viewModel.effects.test {
+            viewModel.onEvent(GarageEvent.NameChanged(" "))
+            viewModel.onEvent(GarageEvent.OdometerChanged("12000"))
+            viewModel.onEvent(GarageEvent.SubmitVehicle)
+            advanceUntilIdle()
+
+            assertIs<GarageEffect.ValidationFailed>(awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        val state = viewModel.uiState.value
+        assertTrue(state.vehicles.isEmpty())
+        assertNotNull(state.errorMessage)
+    }
+
+    @Test
+    fun negativeOdometerReturnsValidationError() = runTest {
+        val viewModel = garageViewModel()
+
+        viewModel.effects.test {
+            viewModel.onEvent(GarageEvent.NameChanged("Coche familiar"))
+            viewModel.onEvent(GarageEvent.OdometerChanged("-1"))
+            viewModel.onEvent(GarageEvent.SubmitVehicle)
+            advanceUntilIdle()
+
+            assertIs<GarageEffect.ValidationFailed>(awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        val state = viewModel.uiState.value
+        assertTrue(state.vehicles.isEmpty())
+        assertNotNull(state.errorMessage)
+    }
+
+    private fun TestScope.garageViewModel(
+        nextVehicleId: () -> VehicleId = { VehicleId("vehicle-test") },
+    ): GarageViewModel {
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        return GarageViewModel(
+            familyId = familyId,
+            vehicleRepository = InMemoryVehicleRepository(),
+            dispatchers = TestDispatcherProvider(
+                io = dispatcher,
+                default = dispatcher,
+                main = dispatcher,
+            ),
+            nextVehicleId = nextVehicleId,
+            coroutineScope = this,
+        )
+    }
+}
