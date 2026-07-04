@@ -15,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,18 +27,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
+import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.core.model.Vehicle
+import com.asensiodev.carbura.core.stringresources.CarburaString
+import com.asensiodev.carbura.featuregarage.R
 import org.koin.core.context.GlobalContext
 
 @Composable
 fun GarageRoute(
     modifier: Modifier = Modifier,
+    onVehicleSelected: (String) -> Unit = {},
     viewModel: GarageViewModel = rememberGarageViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var effectMessage by remember { mutableStateOf<String?>(null) }
+    var effectMessage by remember { mutableStateOf<CarburaString?>(null) }
+    var effectMessageArg by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(viewModel) {
         viewModel.onEvent(GarageEvent.Started)
@@ -45,19 +51,40 @@ fun GarageRoute(
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
-            effectMessage = when (effect) {
-                is GarageEffect.VehicleCreated -> "${effect.vehicleName} guardado en el garaje."
-                is GarageEffect.ValidationFailed -> effect.message
+            when (effect) {
+                is GarageEffect.VehicleCreated -> {
+                    effectMessage = CarburaString.VehicleCreatedMessage
+                    effectMessageArg = effect.vehicleName
+                }
+
+                is GarageEffect.ValidationFailed -> {
+                    effectMessage = effect.message
+                    effectMessageArg = null
+                }
+
+                is GarageEffect.NavigateToVehicleHistory -> {
+                    onVehicleSelected(effect.vehicleId.value)
+                }
             }
+        }
+    }
+
+    val resolvedEffectMessage = effectMessage?.let { message ->
+        val arg = effectMessageArg
+        if (arg == null) {
+            stringResource(message.garageStringRes())
+        } else {
+            stringResource(message.garageStringRes(), arg)
         }
     }
 
     GarageScreen(
         state = uiState,
-        effectMessage = effectMessage,
+        effectMessage = resolvedEffectMessage,
         onNameChange = { value -> viewModel.onEvent(GarageEvent.NameChanged(value)) },
         onOdometerChange = { value -> viewModel.onEvent(GarageEvent.OdometerChanged(value)) },
         onCreateVehicle = { viewModel.onEvent(GarageEvent.SubmitVehicle) },
+        onSelectVehicle = { vehicle -> viewModel.onEvent(GarageEvent.VehicleSelected(vehicle.id)) },
         modifier = modifier,
     )
 }
@@ -74,6 +101,7 @@ private fun GarageScreen(
     onNameChange: (String) -> Unit,
     onOdometerChange: (String) -> Unit,
     onCreateVehicle: () -> Unit,
+    onSelectVehicle: (Vehicle) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -82,8 +110,8 @@ private fun GarageScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(Spacings.spacing24),
+            verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
         ) {
             item {
                 GarageHeader()
@@ -105,7 +133,10 @@ private fun GarageScreen(
                 item { EmptyGarageCard() }
             } else {
                 items(state.vehicles) { vehicle ->
-                    VehicleCard(vehicle = vehicle)
+                    VehicleCard(
+                        vehicle = vehicle,
+                        onSelectVehicle = onSelectVehicle,
+                    )
                 }
             }
         }
@@ -114,13 +145,13 @@ private fun GarageScreen(
 
 @Composable
 private fun GarageHeader() {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
         Text(
-            text = "Carbura",
+            text = stringResource(R.string.garage_title),
             style = MaterialTheme.typography.headlineLarge,
         )
         Text(
-            text = "Tu garaje, siempre a punto.",
+            text = stringResource(R.string.garage_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -131,7 +162,7 @@ private fun GarageHeader() {
 private fun VehicleForm(
     name: String,
     odometer: String,
-    errorMessage: String?,
+    errorMessage: CarburaString?,
     effectMessage: String?,
     onNameChange: (String) -> Unit,
     onOdometerChange: (String) -> Unit,
@@ -139,31 +170,31 @@ private fun VehicleForm(
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(Spacings.spacing16),
+            verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
         ) {
             Text(
-                text = "Anade tu primer vehiculo",
+                text = stringResource(R.string.vehicle_form_title),
                 style = MaterialTheme.typography.titleMedium,
             )
             OutlinedTextField(
                 value = name,
                 onValueChange = onNameChange,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Nombre") },
+                label = { Text(stringResource(R.string.vehicle_name_label)) },
                 singleLine = true,
             )
             OutlinedTextField(
                 value = odometer,
                 onValueChange = onOdometerChange,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Kilometros actuales") },
+                label = { Text(stringResource(R.string.current_odometer_label)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
             )
             if (errorMessage != null) {
                 Text(
-                    text = errorMessage,
+                    text = stringResource(errorMessage.garageStringRes()),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -179,7 +210,7 @@ private fun VehicleForm(
                 onClick = onCreateVehicle,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Guardar vehiculo")
+                Text(stringResource(R.string.save_vehicle_button))
             }
         }
     }
@@ -188,14 +219,14 @@ private fun VehicleForm(
 @Composable
 private fun EmptyGarageCard() {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacings.spacing16)) {
             Text(
-                text = "Garaje vacio",
+                text = stringResource(R.string.empty_garage_title),
                 style = MaterialTheme.typography.titleMedium,
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacings.spacing8))
             Text(
-                text = "Crea un vehiculo para empezar a registrar mantenimientos y recordatorios.",
+                text = stringResource(R.string.empty_garage_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -204,29 +235,40 @@ private fun EmptyGarageCard() {
 }
 
 @Composable
-private fun VehicleCard(vehicle: Vehicle) {
+private fun VehicleCard(
+    vehicle: Vehicle,
+    onSelectVehicle: (Vehicle) -> Unit,
+) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(Spacings.spacing16),
+            verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
         ) {
-            Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column {
+                    Text(
+                        text = vehicle.name,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = vehicle.type.name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 Text(
-                    text = vehicle.name,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = vehicle.type.name,
+                    text = "${vehicle.currentOdometerKm} km",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text(
-                text = "${vehicle.currentOdometerKm} km",
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            OutlinedButton(onClick = { onSelectVehicle(vehicle) }) {
+                Text(stringResource(R.string.view_history_button))
+            }
         }
     }
 }

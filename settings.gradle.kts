@@ -27,6 +27,7 @@ include(":core:domain")
 include(":core:data")
 include(":core:auth")
 include(":core:designsystem")
+include(":core:string-resources")
 include(":core:testing")
 
 include(":feature:onboarding")

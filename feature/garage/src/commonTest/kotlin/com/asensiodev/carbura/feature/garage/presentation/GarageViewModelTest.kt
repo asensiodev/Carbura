@@ -92,6 +92,26 @@ class GarageViewModelTest {
         assertNotNull(state.errorMessage)
     }
 
+    @Test
+    fun selectingVehicleEmitsNavigationEffect() = runTest {
+        val viewModel = garageViewModel(nextVehicleId = { VehicleId("vehicle-1") })
+
+        viewModel.effects.test {
+            viewModel.onEvent(GarageEvent.NameChanged("Coche familiar"))
+            viewModel.onEvent(GarageEvent.OdometerChanged("12000"))
+            viewModel.onEvent(GarageEvent.SubmitVehicle)
+            advanceUntilIdle()
+            assertIs<GarageEffect.VehicleCreated>(awaitItem())
+
+            viewModel.onEvent(GarageEvent.VehicleSelected(VehicleId("vehicle-1")))
+            advanceUntilIdle()
+
+            val effect = assertIs<GarageEffect.NavigateToVehicleHistory>(awaitItem())
+            assertEquals(VehicleId("vehicle-1"), effect.vehicleId)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
     private fun TestScope.garageViewModel(
         nextVehicleId: () -> VehicleId = { VehicleId("vehicle-test") },
     ): GarageViewModel {

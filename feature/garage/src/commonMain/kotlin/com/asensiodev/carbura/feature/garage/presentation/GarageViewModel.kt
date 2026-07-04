@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.asensiodev.carbura.core.domain.CreateVehicleUseCase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
-import com.asensiodev.carbura.core.domain.ValidationFailure
 import com.asensiodev.carbura.core.domain.VehicleRepository
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Vehicle
@@ -21,6 +20,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.random.Random
 
 class GarageViewModel(
     private val familyId: FamilyId,
@@ -51,6 +51,9 @@ class GarageViewModel(
 
             GarageEvent.Started -> scope.launch { loadVehicles() }
             GarageEvent.SubmitVehicle -> scope.launch { createVehicle() }
+            is GarageEvent.VehicleSelected -> scope.launch {
+                _effects.send(GarageEffect.NavigateToVehicleHistory(event.vehicleId))
+            }
         }
     }
 
@@ -107,18 +110,4 @@ class GarageViewModel(
     }
 }
 
-private fun ValidationFailure.toGarageMessage(): String = when (this) {
-    ValidationFailure.BlankVehicleName -> "Introduce un nombre para el vehiculo."
-    ValidationFailure.NegativeVehicleOdometer -> "Los kilometros no pueden ser negativos."
-    ValidationFailure.NegativeMaintenanceOdometer,
-    ValidationFailure.NegativeMaintenanceCost,
-    -> "Revisa los datos introducidos."
-}
-
-private fun randomVehicleId(): VehicleId = VehicleId("vehicle-${RandomId.next()}")
-
-private object RandomId {
-    private var next = 1
-
-    fun next(): Int = next++
-}
+private fun randomVehicleId(): VehicleId = VehicleId("vehicle-${Random.nextInt(1, Int.MAX_VALUE)}")

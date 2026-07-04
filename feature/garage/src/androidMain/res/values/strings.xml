@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="garage_title">Carbura</string>
+    <string name="garage_subtitle">Tu garaje, siempre a punto.</string>
+    <string name="vehicle_form_title">Anade tu primer vehiculo</string>
+    <string name="vehicle_name_label">Nombre</string>
+    <string name="current_odometer_label">Kilometros actuales</string>
+    <string name="save_vehicle_button">Guardar vehiculo</string>
+    <string name="empty_garage_title">Garaje vacio</string>
+    <string name="empty_garage_description">Crea un vehiculo para empezar a registrar mantenimientos y recordatorios.</string>
+    <string name="view_history_button">Ver historial</string>
+    <string name="vehicle_created_message">%1$s guardado en el garaje.</string>
+    <string name="validation_blank_vehicle_name">Introduce un nombre para el vehiculo.</string>
+    <string name="validation_negative_vehicle_odometer">Los kilometros no pueden ser negativos.</string>
+    <string name="validation_generic">Revisa los datos introducidos.</string>
+</resources>
