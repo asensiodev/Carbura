@@ -32,3 +32,10 @@ The system SHALL keep garage vehicles in memory for the initial Android MVP slic
 #### Scenario: Vehicles remain available during the current process
 - **WHEN** a vehicle is created successfully during the current app process
 - **THEN** subsequent reads from the garage repository return that vehicle
+
+### Requirement: Garage Vehicle Selection
+The system SHALL allow the Android user to select a vehicle from the garage list to open its maintenance history.
+
+#### Scenario: Select vehicle from garage
+- **WHEN** the user selects an existing vehicle in the garage list
+- **THEN** the app navigates to that vehicle's maintenance history screen
