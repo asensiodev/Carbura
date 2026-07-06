@@ -4,11 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
 import com.asensiodev.carbura.app.shared.CarburaRoute
 import com.asensiodev.carbura.core.designsystem.CarburaTheme
 import com.asensiodev.carbura.feature.garage.presentation.GarageRoute
@@ -27,24 +26,42 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun CarburaApp() {
-    var route: CarburaRoute by remember { mutableStateOf(CarburaRoute.Garage) }
+    val backStack = rememberNavBackStack(CarburaRoute.Garage)
 
-    when (val currentRoute = route) {
-        CarburaRoute.Garage -> GarageRoute(
-            onVehicleSelected = { vehicleId ->
-                route = CarburaRoute.VehicleDetail(vehicleId)
-            },
-        )
+    NavDisplay(
+        backStack = backStack,
+        onBack = {
+            if (backStack.size > 1) {
+                backStack.removeLastOrNull()
+            }
+        },
+        entryProvider = { route ->
+            when (val carburaRoute = route as CarburaRoute) {
+                CarburaRoute.Garage -> NavEntry(route) {
+                    GarageRoute(
+                        onVehicleSelected = { vehicleId ->
+                            backStack.add(CarburaRoute.VehicleDetail(vehicleId))
+                        },
+                    )
+                }
 
-        is CarburaRoute.VehicleDetail -> MaintenanceHistoryRoute(
-            vehicleId = currentRoute.vehicleId,
-            onBack = { route = CarburaRoute.Garage },
-        )
+                is CarburaRoute.VehicleDetail -> NavEntry(route) {
+                    MaintenanceHistoryRoute(
+                        vehicleId = carburaRoute.vehicleId,
+                        onBack = {
+                            if (backStack.size > 1) {
+                                backStack.removeLastOrNull()
+                            }
+                        },
+                    )
+                }
 
-        is CarburaRoute.CreateMaintenance,
-        CarburaRoute.Reminders,
-        -> GarageRoute()
-    }
+                is CarburaRoute.CreateMaintenance,
+                CarburaRoute.Reminders,
+                -> NavEntry(route) { GarageRoute() }
+            }
+        },
+    )
 }
 
 @Preview

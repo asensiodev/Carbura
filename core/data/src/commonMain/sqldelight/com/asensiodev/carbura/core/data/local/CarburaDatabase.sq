@@ -1,0 +1,65 @@
+CREATE TABLE vehicles (
+    id TEXT NOT NULL PRIMARY KEY,
+    familyId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    brand TEXT,
+    model TEXT,
+    licensePlate TEXT,
+    currentOdometerKm INTEGER NOT NULL
+);
+
+selectVehiclesByFamily:
+SELECT *
+FROM vehicles
+WHERE familyId = ?
+ORDER BY name ASC;
+
+upsertVehicle:
+INSERT OR REPLACE INTO vehicles(
+    id,
+    familyId,
+    name,
+    type,
+    brand,
+    model,
+    licensePlate,
+    currentOdometerKm
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+CREATE TABLE maintenanceRecords (
+    id TEXT NOT NULL PRIMARY KEY,
+    familyId TEXT NOT NULL,
+    vehicleId TEXT NOT NULL,
+    maintenanceTypeId TEXT NOT NULL,
+    maintenanceTypeCode TEXT,
+    performedOn TEXT NOT NULL,
+    odometerKm INTEGER,
+    costCents INTEGER,
+    currency TEXT NOT NULL,
+    workshop TEXT,
+    notes TEXT,
+    nextDueDate TEXT
+);
+
+selectMaintenanceRecordsByVehicle:
+SELECT *
+FROM maintenanceRecords
+WHERE vehicleId = ?
+ORDER BY performedOn DESC;
+
+upsertMaintenanceRecord:
+INSERT OR REPLACE INTO maintenanceRecords(
+    id,
+    familyId,
+    vehicleId,
+    maintenanceTypeId,
+    maintenanceTypeCode,
+    performedOn,
+    odometerKm,
+    costCents,
+    currency,
+    workshop,
+    notes,
+    nextDueDate
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);

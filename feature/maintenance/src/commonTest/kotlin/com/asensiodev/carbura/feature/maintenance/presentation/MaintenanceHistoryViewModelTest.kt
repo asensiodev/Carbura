@@ -3,6 +3,7 @@ package com.asensiodev.carbura.feature.maintenance.presentation
 import app.cash.turbine.test
 import com.asensiodev.carbura.core.domain.CreateMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.GetVehicleHistoryUseCase
+import com.asensiodev.carbura.core.domain.MaintenanceRecordRepository
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
@@ -11,7 +12,6 @@ import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.MaintenanceTypeId
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.testing.TestDispatcherProvider
-import com.asensiodev.carbura.feature.maintenance.data.InMemoryMaintenanceRecordRepository
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -121,7 +121,7 @@ class MaintenanceHistoryViewModelTest {
 
     @Test
     fun historyIsOrderedByDateDescending() = runTest {
-        val repository = InMemoryMaintenanceRecordRepository()
+        val repository = FakeMaintenanceRecordRepository()
         repository.saveMaintenanceRecord(record("record-old", "2026-01-01"))
         repository.saveMaintenanceRecord(record("record-new", "2026-07-04"))
         val viewModel = maintenanceHistoryViewModel(repository = repository)
@@ -134,7 +134,7 @@ class MaintenanceHistoryViewModelTest {
     }
 
     private fun TestScope.maintenanceHistoryViewModel(
-        repository: InMemoryMaintenanceRecordRepository = InMemoryMaintenanceRecordRepository(),
+        repository: FakeMaintenanceRecordRepository = FakeMaintenanceRecordRepository(),
         nextRecordId: () -> MaintenanceRecordId = { MaintenanceRecordId("record-test") },
     ): MaintenanceHistoryViewModel {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
@@ -162,4 +162,15 @@ class MaintenanceHistoryViewModelTest {
         performedOn = CalendarDate(date),
         odometerKm = 1,
     )
+}
+
+private class FakeMaintenanceRecordRepository : MaintenanceRecordRepository {
+    private val records = mutableListOf<MaintenanceRecord>()
+
+    override suspend fun saveMaintenanceRecord(record: MaintenanceRecord) {
+        records += record
+    }
+
+    override suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord> =
+        records.filter { it.vehicleId == vehicleId }
 }

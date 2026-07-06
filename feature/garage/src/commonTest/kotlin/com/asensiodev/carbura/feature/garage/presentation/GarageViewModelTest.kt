@@ -1,10 +1,11 @@
 package com.asensiodev.carbura.feature.garage.presentation
 
 import app.cash.turbine.test
+import com.asensiodev.carbura.core.domain.VehicleRepository
 import com.asensiodev.carbura.core.model.FamilyId
+import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.testing.TestDispatcherProvider
-import com.asensiodev.carbura.feature.garage.data.InMemoryVehicleRepository
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -118,7 +119,7 @@ class GarageViewModelTest {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         return GarageViewModel(
             familyId = familyId,
-            vehicleRepository = InMemoryVehicleRepository(),
+            vehicleRepository = FakeVehicleRepository(),
             dispatchers = TestDispatcherProvider(
                 io = dispatcher,
                 default = dispatcher,
@@ -127,5 +128,16 @@ class GarageViewModelTest {
             nextVehicleId = nextVehicleId,
             coroutineScope = this,
         )
+    }
+}
+
+private class FakeVehicleRepository : VehicleRepository {
+    private val vehicles = mutableListOf<Vehicle>()
+
+    override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> =
+        vehicles.filter { it.familyId == familyId }
+
+    override suspend fun saveVehicle(vehicle: Vehicle) {
+        vehicles += vehicle
     }
 }

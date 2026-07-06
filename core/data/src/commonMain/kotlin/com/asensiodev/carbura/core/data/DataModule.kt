@@ -1,8 +1,5 @@
 package com.asensiodev.carbura.core.data
 
-import com.asensiodev.carbura.core.domain.DispatcherProvider
-import org.koin.dsl.module
+import org.koin.core.module.Module
 
-val dataModule = module {
-    single<DispatcherProvider> { DefaultDispatcherProvider() }
-}
+expect val dataModule: Module
