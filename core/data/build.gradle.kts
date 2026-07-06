@@ -1,15 +1,18 @@
 plugins {
     alias(libs.plugins.convention.kmp.library)
+    alias(libs.plugins.convention.kotlin.serialization)
     alias(libs.plugins.sqldelight)
 }
 
 kotlin {
     sourceSets.commonMain.dependencies {
         implementation(projects.core.domain)
+        implementation(projects.core.auth)
         implementation(projects.core.model)
         implementation(libs.kotlinx.coroutines.core)
         implementation(libs.koin.core)
         implementation(libs.sqldelight.runtime)
+        implementation(libs.supabase.postgrest)
     }
 
     sourceSets.androidMain.dependencies {

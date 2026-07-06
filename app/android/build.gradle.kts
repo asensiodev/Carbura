@@ -1,5 +1,28 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.convention.android.application.compose)
+}
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use(::load)
+    }
+}
+
+fun localProperty(name: String): String = localProperties.getProperty(name).orEmpty()
+
+android {
+    buildFeatures {
+        buildConfig = true
+    }
+
+    defaultConfig {
+        buildConfigField("String", "SUPABASE_URL", "\"${localProperty("SUPABASE_URL")}\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperty("SUPABASE_ANON_KEY")}\"")
+        buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${localProperty("GOOGLE_CLIENT_ID")}\"")
+    }
 }
 
 dependencies {

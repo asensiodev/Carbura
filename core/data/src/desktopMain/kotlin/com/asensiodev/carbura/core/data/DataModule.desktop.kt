@@ -19,4 +19,5 @@ actual val dataModule: Module = module {
     single { CarburaDatabase(get()) }
     single<VehicleRepository> { LocalVehicleRepository(get()) }
     single<MaintenanceRecordRepository> { LocalMaintenanceRecordRepository(get()) }
+    single<RemoteUserProfileGateway> { SupabaseUserProfileGateway(get()) }
 }

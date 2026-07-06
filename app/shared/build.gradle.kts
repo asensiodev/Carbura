@@ -7,6 +7,7 @@ kotlin {
     sourceSets.commonMain.dependencies {
         implementation(projects.feature.garage)
         implementation(projects.feature.maintenance)
+        implementation(projects.core.auth)
         implementation(projects.core.data)
         implementation(projects.core.domain)
         implementation(projects.core.model)
