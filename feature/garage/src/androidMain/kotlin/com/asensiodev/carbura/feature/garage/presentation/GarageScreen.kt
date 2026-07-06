@@ -39,6 +39,7 @@ import org.koin.core.context.GlobalContext
 fun GarageRoute(
     modifier: Modifier = Modifier,
     onVehicleSelected: (String) -> Unit = {},
+    onSignOut: () -> Unit = {},
     viewModel: GarageViewModel = rememberGarageViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -85,6 +86,7 @@ fun GarageRoute(
         onOdometerChange = { value -> viewModel.onEvent(GarageEvent.OdometerChanged(value)) },
         onCreateVehicle = { viewModel.onEvent(GarageEvent.SubmitVehicle) },
         onSelectVehicle = { vehicle -> viewModel.onEvent(GarageEvent.VehicleSelected(vehicle.id)) },
+        onSignOut = onSignOut,
         modifier = modifier,
     )
 }
@@ -102,6 +104,7 @@ private fun GarageScreen(
     onOdometerChange: (String) -> Unit,
     onCreateVehicle: () -> Unit,
     onSelectVehicle: (Vehicle) -> Unit,
+    onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -114,7 +117,7 @@ private fun GarageScreen(
             verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
         ) {
             item {
-                GarageHeader()
+                GarageHeader(onSignOut = onSignOut)
             }
 
             item {
@@ -144,12 +147,20 @@ private fun GarageScreen(
 }
 
 @Composable
-private fun GarageHeader() {
+private fun GarageHeader(onSignOut: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
-        Text(
-            text = stringResource(R.string.garage_title),
-            style = MaterialTheme.typography.headlineLarge,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = stringResource(R.string.garage_title),
+                style = MaterialTheme.typography.headlineLarge,
+            )
+            OutlinedButton(onClick = onSignOut) {
+                Text(stringResource(R.string.garage_sign_out_button))
+            }
+        }
         Text(
             text = stringResource(R.string.garage_subtitle),
             style = MaterialTheme.typography.bodyLarge,

@@ -2,6 +2,7 @@
 <resources>
     <string name="garage_title">Carbura</string>
     <string name="garage_subtitle">Tu garaje, siempre a punto.</string>
+    <string name="garage_sign_out_button">Cerrar sesion</string>
     <string name="vehicle_form_title">Anade tu primer vehiculo</string>
     <string name="vehicle_name_label">Nombre</string>
     <string name="current_odometer_label">Kilometros actuales</string>
