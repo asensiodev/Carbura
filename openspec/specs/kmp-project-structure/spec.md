@@ -25,6 +25,17 @@ The system SHALL prepare core modules for model, domain, data, auth, design syst
 - **WHEN** a developer inspects the core module structure
 - **THEN** model, domain, data, auth, design system, and testing responsibilities are represented by separate modules or clearly separated module directories
 
+### Requirement: Data Implementations Stay In Core Data
+The system SHALL keep production repository implementations and local storage wiring in `core:data` rather than feature modules.
+
+#### Scenario: Feature module boundaries stay presentation-focused
+- **WHEN** a developer inspects feature modules
+- **THEN** they do not contain production local database implementations or production repository bindings
+
+#### Scenario: Core data owns repository bindings
+- **WHEN** shared dependency injection is initialized for production
+- **THEN** `core:data` provides concrete repository bindings for persisted MVP data
+
 ### Requirement: Feature modules are prepared
 The system SHALL prepare feature areas for onboarding, garage, maintenance, and reminders without implementing full product behavior in this change.
 
