@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reminders_title">Recordatorios</string>
+    <string name="reminders_subtitle">Planifica próximas revisiones por fecha o kilometraje.</string>
+    <string name="reminders_form_title">Nuevo recordatorio</string>
+    <string name="reminder_title_label">Titulo</string>
+    <string name="reminder_due_date_label">Fecha YYYY-MM-DD (opcional)</string>
+    <string name="reminder_due_odometer_label">Kilómetros (opcional)</string>
+    <string name="add_reminder_button">Añadir</string>
+    <string name="add_first_reminder_button">Añadir recordatorio</string>
+    <string name="save_reminder_button">Guardar recordatorio</string>
+    <string name="pending_reminders_title">Pendientes</string>
+    <string name="empty_reminders_title">Sin recordatorios</string>
+    <string name="empty_reminders_description">Crea un recordatorio para no olvidar ITV, seguro o revisiones.</string>
+    <string name="select_vehicle_title">Vehículo</string>
+    <string name="complete_reminder_button">Completar</string>
+    <string name="reminder_created_message">%1$s guardado como recordatorio.</string>
+    <string name="reminder_completed_message">%1$s completado.</string>
+    <string name="validation_blank_reminder_title">Introduce un título para el recordatorio.</string>
+    <string name="validation_missing_reminder_vehicle">Selecciona un vehículo.</string>
+    <string name="validation_missing_reminder_due_target">Introduce una fecha o kilometraje objetivo.</string>
+    <string name="validation_negative_reminder_due_odometer">Los kilómetros no pueden ser negativos.</string>
+    <string name="validation_invalid_reminder_date">Usa una fecha con formato YYYY-MM-DD.</string>
+    <string name="validation_generic">Revisa los datos introducidos.</string>
+</resources>

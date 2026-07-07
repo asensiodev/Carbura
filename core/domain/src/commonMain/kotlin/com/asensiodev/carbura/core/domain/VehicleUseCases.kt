@@ -21,6 +21,14 @@ class CreateVehicleUseCase(
     }
 }
 
+class DeleteVehicleUseCase(
+    private val repository: VehicleRepository,
+) : SuspendUseCase<VehicleId, Unit> {
+    override suspend fun invoke(params: VehicleId) {
+        repository.deleteVehicle(params)
+    }
+}
+
 class GetVehicleHistoryUseCase(
     private val repository: MaintenanceRecordRepository,
 ) : SuspendUseCase<VehicleId, List<MaintenanceRecord>> {

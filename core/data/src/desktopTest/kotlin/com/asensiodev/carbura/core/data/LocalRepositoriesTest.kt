@@ -8,6 +8,8 @@ import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.MaintenanceTypeId
+import com.asensiodev.carbura.core.model.Reminder
+import com.asensiodev.carbura.core.model.ReminderId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
@@ -52,6 +54,56 @@ class LocalRepositoriesTest {
         assertEquals(listOf("new", "old"), history.map { it.id.value })
     }
 
+    @Test
+    fun reminderRepositoryReadsPendingRemindersFromRecreatedDatabase() = runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
+        val repository = LocalReminderRepository(firstDatabase)
+        repository.saveReminder(reminder("late", dueDate = "2026-08-01"))
+        repository.saveReminder(reminder("early", dueDate = "2026-07-01"))
+
+        val recreatedRepository = LocalReminderRepository(recreatedDatabase)
+
+        val reminders = recreatedRepository.getPendingReminders(familyId)
+        assertEquals(listOf("early", "late"), reminders.map { it.id.value })
+    }
+
+    @Test
+    fun reminderRepositoryHidesCompletedRemindersFromRecreatedDatabase() = runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
+        val repository = LocalReminderRepository(firstDatabase)
+        repository.saveReminder(reminder("completed", dueOdometerKm = 20000))
+        repository.markReminderCompleted(ReminderId("completed"))
+
+        val recreatedRepository = LocalReminderRepository(recreatedDatabase)
+
+        assertEquals(emptyList(), recreatedRepository.getPendingReminders(familyId))
+    }
+
+    @Test
+    fun deletingVehicleRemovesVehicleMaintenanceAndReminders() = runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
+        val vehicleRepository = LocalVehicleRepository(firstDatabase)
+        val maintenanceRepository = LocalMaintenanceRecordRepository(firstDatabase)
+        val reminderRepository = LocalReminderRepository(firstDatabase)
+        vehicleRepository.saveVehicle(
+            Vehicle(
+                id = vehicleId,
+                familyId = familyId,
+                name = "Moto",
+                type = VehicleType.Motorcycle,
+                currentOdometerKm = 3000,
+            ),
+        )
+        maintenanceRepository.saveMaintenanceRecord(record("oil", "2026-07-01"))
+        reminderRepository.saveReminder(reminder("itv", dueDate = "2026-08-01"))
+
+        vehicleRepository.deleteVehicle(vehicleId)
+
+        val recreatedVehicleRepository = LocalVehicleRepository(recreatedDatabase)
+        val recreatedMaintenanceRepository = LocalMaintenanceRecordRepository(recreatedDatabase)
+        val recreatedReminderRepository = LocalReminderRepository(recreatedDatabase)
+        assertEquals(emptyList(), recreatedVehicleRepository.observeVehicles(familyId))
+        assertEquals(emptyList(), recreatedMaintenanceRepository.getVehicleHistory(vehicleId))
+        assertEquals(emptyList(), recreatedReminderRepository.getPendingReminders(familyId))
+    }
+
     private fun runTestWithRecreatedDatabase(
         block: suspend (CarburaDatabase, CarburaDatabase) -> Unit,
     ) = kotlinx.coroutines.test.runTest {
@@ -71,5 +123,19 @@ class LocalRepositoriesTest {
         maintenanceTypeCode = MaintenanceTypeCode.Custom,
         performedOn = CalendarDate(performedOn),
         odometerKm = 1,
+    )
+
+    private fun reminder(
+        id: String,
+        dueDate: String? = null,
+        dueOdometerKm: Int? = null,
+    ): Reminder = Reminder(
+        id = ReminderId(id),
+        familyId = familyId,
+        vehicleId = vehicleId,
+        maintenanceTypeId = null,
+        title = "Recordatorio $id",
+        dueDate = dueDate?.let(::CalendarDate),
+        dueOdometerKm = dueOdometerKm,
     )
 }

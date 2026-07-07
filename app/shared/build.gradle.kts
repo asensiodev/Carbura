@@ -8,6 +8,7 @@ kotlin {
         implementation(projects.feature.garage)
         implementation(projects.feature.maintenance)
         implementation(projects.feature.onboarding)
+        implementation(projects.feature.reminders)
         implementation(projects.core.auth)
         implementation(projects.core.data)
         implementation(projects.core.domain)

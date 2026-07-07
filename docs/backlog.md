@@ -4,6 +4,12 @@ Este documento detalla los tickets de trabajo derivados de las historias de usua
 
 Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada bloque de trabajo se creara un cambio en `openspec/changes/` con `proposal.md`, `tasks.md` y spec delta cuando aplique. La implementacion seguira TDD: Red -> Green -> Refactor.
 
+## Scope MVP dia 10
+
+- Incluido: login Google real, garaje local persistente, historial de mantenimiento local persistente, recordatorios MVP locales, y UI Android con edge-to-edge.
+- Recordatorios MVP: crear, listar pendientes y marcar completados por familia/vehiculo, con fecha y/o kilometraje objetivo.
+- Diferido: notificaciones locales, recordatorios recurrentes, sync remoto de recordatorios, invitaciones familiares, y Desktop.
+
 ## Orden de implementacion recomendado
 
 | Orden | Ticket | Area | Historias | Prioridad | Estimacion |

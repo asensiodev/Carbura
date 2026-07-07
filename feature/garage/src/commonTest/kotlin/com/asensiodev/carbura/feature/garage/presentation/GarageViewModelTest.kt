@@ -5,6 +5,7 @@ import com.asensiodev.carbura.core.domain.VehicleRepository
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
+import com.asensiodev.carbura.core.model.VehicleType
 import com.asensiodev.carbura.core.testing.TestDispatcherProvider
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -50,9 +51,28 @@ class GarageViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(1, state.vehicles.size)
         assertEquals("Coche familiar", state.vehicles.single().name)
+        assertEquals(VehicleType.Car, state.vehicles.single().type)
         assertEquals(12000, state.vehicles.single().currentOdometerKm)
         assertEquals("", state.name)
         assertEquals("0", state.odometerKm)
+    }
+
+    @Test
+    fun selectedVehicleTypeIsUsedWhenCreatingVehicle() = runTest {
+        val viewModel = garageViewModel(nextVehicleId = { VehicleId("vehicle-1") })
+
+        viewModel.effects.test {
+            viewModel.onEvent(GarageEvent.NameChanged("Moto"))
+            viewModel.onEvent(GarageEvent.OdometerChanged("3000"))
+            viewModel.onEvent(GarageEvent.TypeSelected(VehicleType.Motorcycle))
+            viewModel.onEvent(GarageEvent.SubmitVehicle)
+            advanceUntilIdle()
+
+            assertIs<GarageEffect.VehicleCreated>(awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertEquals(VehicleType.Motorcycle, viewModel.uiState.value.vehicles.single().type)
     }
 
     @Test
@@ -113,6 +133,28 @@ class GarageViewModelTest {
         }
     }
 
+    @Test
+    fun deletingVehicleRemovesItFromGarageAndEmitsEffect() = runTest {
+        val viewModel = garageViewModel(nextVehicleId = { VehicleId("vehicle-1") })
+
+        viewModel.effects.test {
+            viewModel.onEvent(GarageEvent.NameChanged("Coche familiar"))
+            viewModel.onEvent(GarageEvent.OdometerChanged("12000"))
+            viewModel.onEvent(GarageEvent.SubmitVehicle)
+            advanceUntilIdle()
+            assertIs<GarageEffect.VehicleCreated>(awaitItem())
+
+            viewModel.onEvent(GarageEvent.DeleteVehicleConfirmed(VehicleId("vehicle-1")))
+            advanceUntilIdle()
+
+            val effect = assertIs<GarageEffect.VehicleDeleted>(awaitItem())
+            assertEquals("Coche familiar", effect.vehicleName)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertTrue(viewModel.uiState.value.vehicles.isEmpty())
+    }
+
     private fun TestScope.garageViewModel(
         nextVehicleId: () -> VehicleId = { VehicleId("vehicle-test") },
     ): GarageViewModel {
@@ -139,5 +181,9 @@ private class FakeVehicleRepository : VehicleRepository {
 
     override suspend fun saveVehicle(vehicle: Vehicle) {
         vehicles += vehicle
+    }
+
+    override suspend fun deleteVehicle(vehicleId: VehicleId) {
+        vehicles.removeAll { it.id == vehicleId }
     }
 }

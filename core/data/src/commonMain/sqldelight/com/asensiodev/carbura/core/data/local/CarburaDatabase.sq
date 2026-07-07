@@ -27,6 +27,10 @@ INSERT OR REPLACE INTO vehicles(
     currentOdometerKm
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
+deleteVehicle:
+DELETE FROM vehicles
+WHERE id = ?;
+
 CREATE TABLE maintenanceRecords (
     id TEXT NOT NULL PRIMARY KEY,
     familyId TEXT NOT NULL,
@@ -63,3 +67,50 @@ INSERT OR REPLACE INTO maintenanceRecords(
     notes,
     nextDueDate
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteMaintenanceRecordsByVehicle:
+DELETE FROM maintenanceRecords
+WHERE vehicleId = ?;
+
+CREATE TABLE reminders (
+    id TEXT NOT NULL PRIMARY KEY,
+    familyId TEXT NOT NULL,
+    vehicleId TEXT NOT NULL,
+    maintenanceTypeId TEXT,
+    title TEXT NOT NULL,
+    dueDate TEXT,
+    dueOdometerKm INTEGER,
+    notifyDaysBefore INTEGER NOT NULL,
+    isCompleted INTEGER NOT NULL DEFAULT 0
+);
+
+selectPendingRemindersByFamily:
+SELECT *
+FROM reminders
+WHERE familyId = ?
+AND isCompleted = 0
+ORDER BY COALESCE(dueDate, '9999-12-31') ASC,
+         COALESCE(dueOdometerKm, 9223372036854775807) ASC,
+         title ASC;
+
+upsertReminder:
+INSERT OR REPLACE INTO reminders(
+    id,
+    familyId,
+    vehicleId,
+    maintenanceTypeId,
+    title,
+    dueDate,
+    dueOdometerKm,
+    notifyDaysBefore,
+    isCompleted
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+markReminderCompleted:
+UPDATE reminders
+SET isCompleted = 1
+WHERE id = ?;
+
+deleteRemindersByVehicle:
+DELETE FROM reminders
+WHERE vehicleId = ?;

@@ -3,6 +3,7 @@ package com.asensiodev.carbura.feature.garage.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.asensiodev.carbura.core.domain.CreateVehicleUseCase
+import com.asensiodev.carbura.core.domain.DeleteVehicleUseCase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
 import com.asensiodev.carbura.core.domain.VehicleRepository
@@ -27,6 +28,7 @@ class GarageViewModel(
     private val vehicleRepository: VehicleRepository,
     private val dispatchers: DispatcherProvider,
     private val createVehicleUseCase: CreateVehicleUseCase = CreateVehicleUseCase(vehicleRepository),
+    private val deleteVehicleUseCase: DeleteVehicleUseCase = DeleteVehicleUseCase(vehicleRepository),
     private val nextVehicleId: () -> VehicleId = ::randomVehicleId,
     private val coroutineScope: CoroutineScope? = null,
 ) : ViewModel() {
@@ -49,8 +51,13 @@ class GarageViewModel(
                 it.copy(odometerKm = event.value, errorMessage = null)
             }
 
+            is GarageEvent.TypeSelected -> _uiState.update {
+                it.copy(selectedType = event.value, errorMessage = null)
+            }
+
             GarageEvent.Started -> scope.launch { loadVehicles() }
             GarageEvent.SubmitVehicle -> scope.launch { createVehicle() }
+            is GarageEvent.DeleteVehicleConfirmed -> scope.launch { deleteVehicle(event.vehicleId) }
             is GarageEvent.VehicleSelected -> scope.launch {
                 _effects.send(GarageEffect.NavigateToVehicleHistory(event.vehicleId))
             }
@@ -79,7 +86,7 @@ class GarageViewModel(
             id = nextVehicleId(),
             familyId = familyId,
             name = state.name.trim(),
-            type = VehicleType.Car,
+            type = state.selectedType,
             currentOdometerKm = odometerKm,
         )
 
@@ -107,6 +114,16 @@ class GarageViewModel(
                 _effects.send(GarageEffect.ValidationFailed(message))
             }
         }
+    }
+
+    private suspend fun deleteVehicle(vehicleId: VehicleId) {
+        val vehicleName = _uiState.value.vehicles.firstOrNull { it.id == vehicleId }?.name.orEmpty()
+        withContext(dispatchers.io) { deleteVehicleUseCase(vehicleId) }
+        val vehicles = withContext(dispatchers.io) {
+            vehicleRepository.observeVehicles(familyId)
+        }
+        _uiState.update { it.copy(vehicles = vehicles) }
+        _effects.send(GarageEffect.VehicleDeleted(vehicleName))
     }
 }
 

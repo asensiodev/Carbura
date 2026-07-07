@@ -8,5 +8,9 @@ internal fun ValidationFailure.toMaintenanceMessage(): CarburaString = when (thi
     ValidationFailure.NegativeMaintenanceCost -> CarburaString.ValidationNegativeMaintenanceCost
     ValidationFailure.BlankVehicleName,
     ValidationFailure.NegativeVehicleOdometer,
+    ValidationFailure.BlankReminderTitle,
+    ValidationFailure.MissingReminderVehicle,
+    ValidationFailure.MissingReminderDueTarget,
+    ValidationFailure.NegativeReminderDueOdometer,
     -> CarburaString.ValidationGeneric
 }

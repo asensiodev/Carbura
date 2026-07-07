@@ -10,4 +10,8 @@ enum class ValidationFailure {
     NegativeVehicleOdometer,
     NegativeMaintenanceOdometer,
     NegativeMaintenanceCost,
+    BlankReminderTitle,
+    MissingReminderVehicle,
+    MissingReminderDueTarget,
+    NegativeReminderDueOdometer,
 }

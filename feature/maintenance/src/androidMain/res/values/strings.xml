@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="maintenance_back_button">Volver al garaje</string>
+    <string name="maintenance_back_button">Volver</string>
     <string name="maintenance_title">Mantenimiento</string>
-    <string name="maintenance_subtitle">Registra trabajos y consulta el historial del vehiculo.</string>
+    <string name="maintenance_subtitle">Registra trabajos y consulta el historial del vehículo.</string>
     <string name="maintenance_form_title">Nuevo mantenimiento</string>
     <string name="maintenance_type_label">Tipo</string>
     <string name="maintenance_date_label">Fecha YYYY-MM-DD</string>
-    <string name="maintenance_odometer_label">Kilometros</string>
-    <string name="maintenance_cost_label">Coste opcional</string>
-    <string name="maintenance_workshop_label">Taller opcional</string>
-    <string name="maintenance_notes_label">Notas opcionales</string>
+    <string name="maintenance_odometer_label">Kilómetros</string>
+    <string name="maintenance_cost_label">Coste (opcional)</string>
+    <string name="maintenance_workshop_label">Taller (opcional)</string>
+    <string name="maintenance_notes_label">Notas (opcional)</string>
     <string name="save_maintenance_button">Guardar mantenimiento</string>
     <string name="maintenance_history_title">Historial</string>
     <string name="empty_maintenance_history_title">Sin historial</string>
@@ -17,7 +17,7 @@
     <string name="maintenance_created_message">%1$s guardado en el historial.</string>
     <string name="validation_blank_maintenance_type">Introduce un tipo de mantenimiento.</string>
     <string name="validation_invalid_maintenance_date">Usa una fecha con formato YYYY-MM-DD.</string>
-    <string name="validation_negative_maintenance_odometer">Los kilometros no pueden ser negativos.</string>
+    <string name="validation_negative_maintenance_odometer">Los kilómetros no pueden ser negativos.</string>
     <string name="validation_negative_maintenance_cost">El coste no puede ser negativo.</string>
     <string name="validation_generic">Revisa los datos introducidos.</string>
 </resources>

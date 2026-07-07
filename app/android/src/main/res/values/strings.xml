@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tab_garage">Garaje</string>
+    <string name="tab_reminders">Recordatorios</string>
+    <string name="tab_user">Usuario</string>
+    <string name="user_title">Usuario</string>
+    <string name="user_subtitle">Cuenta, familia y preferencias de Carbura.</string>
+    <string name="user_family_title">Familia</string>
+    <string name="user_family_description">Aqui encajaran invitaciones, miembros y edicion de la familia.</string>
+    <string name="user_session_title">Sesion</string>
+    <string name="user_sign_out_button">Cerrar sesión</string>
+</resources>

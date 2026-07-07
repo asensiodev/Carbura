@@ -29,6 +29,14 @@ class LocalVehicleRepository(
             currentOdometerKm = vehicle.currentOdometerKm.toLong(),
         )
     }
+
+    override suspend fun deleteVehicle(vehicleId: VehicleId) {
+        database.carburaDatabaseQueries.transaction {
+            database.carburaDatabaseQueries.deleteMaintenanceRecordsByVehicle(vehicleId.value)
+            database.carburaDatabaseQueries.deleteRemindersByVehicle(vehicleId.value)
+            database.carburaDatabaseQueries.deleteVehicle(vehicleId.value)
+        }
+    }
 }
 
 private fun Vehicles.toVehicle(): Vehicle = Vehicle(

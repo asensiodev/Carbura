@@ -6,6 +6,7 @@ import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.MaintenanceRecordRepository
+import com.asensiodev.carbura.core.domain.ReminderRepository
 import com.asensiodev.carbura.core.domain.VehicleRepository
 import org.koin.core.module.Module
 import org.koin.dsl.module
@@ -22,5 +23,6 @@ actual val dataModule: Module = module {
     single { CarburaDatabase(get()) }
     single<VehicleRepository> { LocalVehicleRepository(get()) }
     single<MaintenanceRecordRepository> { LocalMaintenanceRecordRepository(get()) }
+    single<ReminderRepository> { LocalReminderRepository(get()) }
     single<RemoteUserProfileGateway> { SupabaseUserProfileGateway(get()) }
 }

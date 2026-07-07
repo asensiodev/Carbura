@@ -24,4 +24,7 @@ sealed interface CarburaRoute : NavKey {
 
     @Serializable
     data object Reminders : CarburaRoute
+
+    @Serializable
+    data object User : CarburaRoute
 }
