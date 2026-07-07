@@ -13,7 +13,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -92,10 +91,38 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun googleLoginWithoutRemoteProfileShowsRecoverableError() = runTest {
+    fun googleLoginAutoCreatesProfileAndNavigates() = runTest {
+        val signInGate = CompletableDeferred<Unit>()
+        val viewModel = onboardingViewModel(
+            authGateway = FakeAuthGateway(signInSession = authSession(), signInGate = signInGate),
+            remoteUserProfileGateway = FakeRemoteUserProfileGateway(profile = null),
+        )
+
+        viewModel.effects.test {
+            viewModel.onEvent(OnboardingEvent.GoogleSignInClicked)
+            runCurrent()
+            assertTrue(viewModel.uiState.value.isLoading)
+            signInGate.complete(Unit)
+            advanceUntilIdle()
+
+            assertIs<OnboardingEffect.NavigateToGarage>(awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertTrue(state.isAuthenticated)
+        assertEquals("Angela", state.displayName)
+    }
+
+    @Test
+    fun googleLoginWithAutoCreationFailureShowsError() = runTest {
         val viewModel = onboardingViewModel(
             authGateway = FakeAuthGateway(signInSession = authSession()),
-            remoteUserProfileGateway = FakeRemoteUserProfileGateway(profile = null),
+            remoteUserProfileGateway = FakeRemoteUserProfileGateway(
+                profile = null,
+                ensureProfileError = IllegalStateException("Database error"),
+            ),
         )
 
         viewModel.onEvent(OnboardingEvent.GoogleSignInClicked)
@@ -104,7 +131,72 @@ class OnboardingViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertFalse(state.isAuthenticated)
-        assertNotNull(state.errorMessage)
+        assertEquals("Database error", state.errorMessage)
+    }
+
+    @Test
+    fun googleIdTokenLoginEmitsLoadingThenNavigateWhenProfileExists() = runTest {
+        val signInGate = CompletableDeferred<Unit>()
+        val viewModel = onboardingViewModel(
+            authGateway = FakeAuthGateway(signInSession = authSession(), signInGate = signInGate),
+            remoteUserProfileGateway = FakeRemoteUserProfileGateway(remoteProfile()),
+        )
+
+        viewModel.effects.test {
+            viewModel.onEvent(OnboardingEvent.GoogleIdTokenReceived("test-id-token"))
+            runCurrent()
+            assertTrue(viewModel.uiState.value.isLoading)
+            signInGate.complete(Unit)
+            advanceUntilIdle()
+
+            assertIs<OnboardingEffect.NavigateToGarage>(awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertTrue(state.isAuthenticated)
+        assertEquals("Angela Remote", state.displayName)
+    }
+
+    @Test
+    fun googleIdTokenLoginFailureShowsError() = runTest {
+        val viewModel = onboardingViewModel(
+            authGateway = FakeAuthGateway(signInError = IllegalStateException("Invalid token")),
+        )
+
+        viewModel.onEvent(OnboardingEvent.GoogleIdTokenReceived("bad-token"))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertFalse(state.isAuthenticated)
+        assertEquals("Invalid token", state.errorMessage)
+    }
+
+    @Test
+    fun googleIdTokenLoginAutoCreatesProfileAndNavigates() = runTest {
+        val signInGate = CompletableDeferred<Unit>()
+        val viewModel = onboardingViewModel(
+            authGateway = FakeAuthGateway(signInSession = authSession(), signInGate = signInGate),
+            remoteUserProfileGateway = FakeRemoteUserProfileGateway(profile = null),
+        )
+
+        viewModel.effects.test {
+            viewModel.onEvent(OnboardingEvent.GoogleIdTokenReceived("test-id-token"))
+            runCurrent()
+            assertTrue(viewModel.uiState.value.isLoading)
+            signInGate.complete(Unit)
+            advanceUntilIdle()
+
+            assertIs<OnboardingEffect.NavigateToGarage>(awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertTrue(state.isAuthenticated)
+        assertEquals("Angela", state.displayName)
     }
 
     @Test
@@ -180,11 +272,35 @@ private class FakeAuthGateway(
         return signInSession
     }
 
+    override suspend fun signInWithGoogle(idToken: String): AuthSession {
+        signInGate?.await()
+        signInError?.let { throw it }
+        return signInSession
+    }
+
     override suspend fun signOut() = Unit
 }
 
 private class FakeRemoteUserProfileGateway(
     private val profile: RemoteUserProfile?,
+    private val ensureProfileError: Throwable? = null,
 ) : RemoteUserProfileGateway {
-    override suspend fun getProfileForUser(userId: UserId): RemoteUserProfile? = profile
+    private val createdProfiles = mutableMapOf<UserId, RemoteUserProfile>()
+
+    override suspend fun getProfileForUser(userId: UserId): RemoteUserProfile? =
+        createdProfiles[userId] ?: profile
+
+    override suspend fun ensureProfile(
+        displayName: String,
+        email: String?,
+    ): RemoteUserProfile {
+        ensureProfileError?.let { throw it }
+        val createdUserId = UserId("user-1")
+        return RemoteUserProfile(
+            userId = createdUserId,
+            familyId = FamilyId("family-auto-1"),
+            displayName = displayName,
+            email = email,
+        ).also { createdProfiles[createdUserId] = it }
+    }
 }

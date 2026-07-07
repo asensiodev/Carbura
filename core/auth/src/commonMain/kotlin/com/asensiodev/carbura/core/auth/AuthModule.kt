@@ -3,6 +3,7 @@ package com.asensiodev.carbura.core.auth
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.postgrest.Postgrest
 import org.koin.dsl.module
 
 val authModule = module {
@@ -14,7 +15,8 @@ val authModule = module {
             supabaseKey = settings.anonKey,
         ) {
             install(Auth)
+            install(Postgrest)
         }
     }
-    single<AuthGateway> { SupabaseAuthGateway(get()) }
+    single<AuthGateway> { SupabaseAuthGateway(get(), get<SupabaseSettings>().googleClientId) }
 }

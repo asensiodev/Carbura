@@ -4,6 +4,8 @@ import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -21,7 +23,26 @@ class SupabaseUserProfileGateway(
             .decodeList<UserProfileDto>()
             .firstOrNull()
             ?.toRemoteUserProfile()
+
+    override suspend fun ensureProfile(
+        displayName: String,
+        email: String?,
+    ): RemoteUserProfile =
+        client.postgrest.rpc(
+            function = "ensure_user_profile",
+            parameters = EnsureUserProfileDto(
+                profileDisplayName = displayName,
+                profileEmail = email,
+            )
+        ).decodeSingle<UserProfileDto>()
+            .toRemoteUserProfile()
 }
+
+@Serializable
+internal data class EnsureUserProfileDto(
+    @SerialName("profile_display_name") val profileDisplayName: String,
+    @SerialName("profile_email") val profileEmail: String? = null,
+)
 
 @Serializable
 internal data class UserProfileDto(

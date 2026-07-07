@@ -25,4 +25,15 @@ class SupabaseSettingsTest {
             ).validate()
         }
     }
+
+    @Test
+    fun validateFailsWhenGoogleClientIdIsBlank() {
+        assertFailsWith<IllegalArgumentException> {
+            SupabaseSettings(
+                url = "https://example.supabase.co",
+                anonKey = "anon-key",
+                googleClientId = "",
+            ).validate()
+        }
+    }
 }

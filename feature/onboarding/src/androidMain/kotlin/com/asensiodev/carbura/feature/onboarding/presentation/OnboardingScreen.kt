@@ -17,11 +17,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.NoCredentialException
+import com.asensiodev.carbura.core.auth.SupabaseSettings
 import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.featureonboarding.R
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
+import org.koin.core.context.GlobalContext
 
 @Composable
 fun OnboardingRoute(
@@ -29,12 +40,65 @@ fun OnboardingRoute(
     viewModel: OnboardingViewModel,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val credentialManager = remember { CredentialManager.create(context) }
+    val googleClientId = remember {
+        GlobalContext.get().get<SupabaseSettings>().googleClientId
+    }
 
     OnboardingScreen(
         state = state,
-        onGoogleSignIn = { viewModel.onEvent(OnboardingEvent.GoogleSignInClicked) },
+        onGoogleSignIn = {
+            scope.launch {
+                try {
+                    if (googleClientId.isBlank()) {
+                        viewModel.onEvent(
+                            OnboardingEvent.GoogleSignInError(
+                                "GOOGLE_CLIENT_ID is not configured in local.properties",
+                            ),
+                        )
+                        return@launch
+                    }
+                    val googleIdOption = GetSignInWithGoogleOption.Builder(googleClientId)
+                        .build()
+                    val request = GetCredentialRequest.Builder()
+                        .addCredentialOption(googleIdOption)
+                        .build()
+                    val result = credentialManager.getCredential(context, request)
+                    val credential = result.credential
+                    if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                        val googleIdTokenCredential = GoogleIdTokenCredential
+                            .createFrom(credential.data)
+                        viewModel.onEvent(
+                            OnboardingEvent.GoogleIdTokenReceived(googleIdTokenCredential.idToken),
+                        )
+                    }
+                } catch (e: NoCredentialException) {
+                    viewModel.onEvent(
+                        OnboardingEvent.GoogleSignInError(
+                            "No hay credenciales de Google disponibles en este dispositivo.",
+                        ),
+                    )
+                } catch (e: Exception) {
+                    viewModel.onEvent(OnboardingEvent.GoogleSignInError(googleSignInErrorMessage(e)))
+                }
+            }
+        },
         modifier = modifier,
     )
+}
+
+private fun googleSignInErrorMessage(error: Exception): String {
+    val rawMessage = error.message.orEmpty()
+    return if (rawMessage.contains("account reauth failed", ignoreCase = true) ||
+        rawMessage.contains("16", ignoreCase = true)
+    ) {
+        "Google no pudo reautenticar la cuenta. Revisa que el OAuth Android tenga el package " +
+            "y SHA-1/SHA-256 de esta app, y que GOOGLE_CLIENT_ID sea el Web OAuth Client ID."
+    } else {
+        rawMessage.ifBlank { "Unable to sign in with Google." }
+    }
 }
 
 @Composable
@@ -103,11 +167,6 @@ private fun LoginError(errorMessage: String) {
             text = errorMessage,
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodyMedium,
-        )
-        Text(
-            text = stringResource(R.string.onboarding_missing_profile_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

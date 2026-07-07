@@ -8,5 +8,6 @@ data class SupabaseSettings(
     fun validate() {
         require(url.isNotBlank()) { "SUPABASE_URL is missing in local.properties" }
         require(anonKey.isNotBlank()) { "SUPABASE_ANON_KEY is missing in local.properties" }
+        require(googleClientId.isNotBlank()) { "GOOGLE_CLIENT_ID is missing in local.properties" }
     }
 }

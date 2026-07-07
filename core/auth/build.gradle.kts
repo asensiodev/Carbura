@@ -7,6 +7,7 @@ kotlin {
     sourceSets.commonMain.dependencies {
         implementation(libs.koin.core)
         implementation(libs.supabase.auth)
+        implementation(libs.supabase.postgrest)
     }
 
     sourceSets.androidMain.dependencies {

@@ -3,9 +3,11 @@ package com.asensiodev.carbura.core.auth
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
+import io.github.jan.supabase.auth.providers.builtin.IDToken
 
 class SupabaseAuthGateway(
     private val client: SupabaseClient,
+    private val googleClientId: String,
 ) : AuthGateway {
     override suspend fun currentSession(): AuthSession? =
         client.auth.currentSessionOrNull()?.let { session ->
@@ -22,6 +24,14 @@ class SupabaseAuthGateway(
     override suspend fun signInWithGoogle(): AuthSession {
         client.auth.signInWith(Google)
         return currentSession() ?: error("Google sign-in completed without an active Supabase session.")
+    }
+
+    override suspend fun signInWithGoogle(idToken: String): AuthSession {
+        client.auth.signInWith(IDToken) {
+            this.idToken = idToken
+            provider = Google
+        }
+        return currentSession() ?: error("Google ID token sign-in completed without an active Supabase session.")
     }
 
     override suspend fun signOut() {

@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.asensiodev.carbura.core.auth.AuthGateway
 import com.asensiodev.carbura.core.auth.AuthSession
+import com.asensiodev.carbura.core.data.RemoteUserProfile
 import com.asensiodev.carbura.core.data.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.domain.DispatcherProvider
+import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
@@ -37,6 +39,10 @@ class OnboardingViewModel(
         when (event) {
             OnboardingEvent.Started -> scope.launch { loadCurrentSession() }
             OnboardingEvent.GoogleSignInClicked -> scope.launch { signInWithGoogle() }
+            is OnboardingEvent.GoogleIdTokenReceived -> scope.launch { signInWithGoogle(event.idToken) }
+            is OnboardingEvent.GoogleSignInError -> _uiState.update {
+                it.copy(isLoading = false, errorMessage = event.message)
+            }
             OnboardingEvent.SignOutClicked -> scope.launch { signOut() }
             OnboardingEvent.ErrorDismissed -> _uiState.update { it.copy(errorMessage = null) }
         }
@@ -92,14 +98,7 @@ class OnboardingViewModel(
 
         result.onSuccess { (session, profile) ->
             if (profile == null) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isAuthenticated = false,
-                        displayName = session.displayName,
-                        errorMessage = "No family profile was found for this user.",
-                    )
-                }
+                ensureProfileAndNavigate(session)
             } else {
                 _uiState.update {
                     it.copy(
@@ -117,6 +116,72 @@ class OnboardingViewModel(
                     isLoading = false,
                     isAuthenticated = false,
                     errorMessage = error.message ?: "Unable to sign in.",
+                )
+            }
+        }
+    }
+
+    private suspend fun signInWithGoogle(idToken: String) {
+        if (_uiState.value.isLoading) return
+
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        val result = runCatching {
+            val session = withContext(dispatchers.io) { authGateway.signInWithGoogle(idToken) }
+            val profile = withContext(dispatchers.io) {
+                remoteUserProfileGateway.getProfileForUser(UserId(session.user.id))
+            }
+            session to profile
+        }
+
+        result.onSuccess { (session, profile) ->
+            if (profile == null) {
+                ensureProfileAndNavigate(session)
+            } else {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isAuthenticated = true,
+                        displayName = profile.displayName,
+                        errorMessage = null,
+                    )
+                }
+                _effects.send(OnboardingEffect.NavigateToGarage)
+            }
+        }.onFailure { error ->
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    isAuthenticated = false,
+                    errorMessage = error.message ?: "Unable to sign in.",
+                )
+            }
+        }
+    }
+
+    private suspend fun ensureProfileAndNavigate(session: AuthSession) {
+        withContext(dispatchers.io) {
+            runCatching {
+                remoteUserProfileGateway.ensureProfile(
+                    displayName = session.displayName ?: "Usuario",
+                    email = session.user.email,
+                )
+            }
+        }.onSuccess { profile ->
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    isAuthenticated = true,
+                    displayName = profile.displayName,
+                    errorMessage = null,
+                )
+            }
+            _effects.send(OnboardingEffect.NavigateToGarage)
+        }.onFailure { error ->
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    isAuthenticated = false,
+                    errorMessage = error.message ?: "Unable to create profile.",
                 )
             }
         }
