@@ -34,11 +34,14 @@ class OnboardingViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isInitializing)
         assertFalse(state.isAuthenticated)
+        assertEquals(null, state.displayName)
+        assertEquals(null, state.email)
+        assertEquals(null, state.familyName)
         assertTrue(state.canSubmitLogin)
     }
 
     @Test
-    fun startupWithSessionShowsAuthenticatedState() = runTest {
+    fun startupWithSessionShowsAuthenticatedProfileState() = runTest {
         val viewModel = onboardingViewModel(authGateway = FakeAuthGateway(currentSession = authSession()))
 
         viewModel.onEvent(OnboardingEvent.Started)
@@ -47,7 +50,9 @@ class OnboardingViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isInitializing)
         assertTrue(state.isAuthenticated)
-        assertEquals("Angela", state.displayName)
+        assertEquals("Angela Remote", state.displayName)
+        assertEquals("angela@example.com", state.email)
+        assertEquals("Familia de Angela", state.familyName)
     }
 
     @Test
@@ -73,6 +78,8 @@ class OnboardingViewModelTest {
         assertFalse(state.isLoading)
         assertTrue(state.isAuthenticated)
         assertEquals("Angela Remote", state.displayName)
+        assertEquals("angela@example.com", state.email)
+        assertEquals("Familia de Angela", state.familyName)
     }
 
     @Test
@@ -113,6 +120,8 @@ class OnboardingViewModelTest {
         assertFalse(state.isLoading)
         assertTrue(state.isAuthenticated)
         assertEquals("Angela", state.displayName)
+        assertEquals("angela@example.com", state.email)
+        assertEquals("Familia de Angela", state.familyName)
     }
 
     @Test
@@ -157,6 +166,8 @@ class OnboardingViewModelTest {
         assertFalse(state.isLoading)
         assertTrue(state.isAuthenticated)
         assertEquals("Angela Remote", state.displayName)
+        assertEquals("angela@example.com", state.email)
+        assertEquals("Familia de Angela", state.familyName)
     }
 
     @Test
@@ -197,6 +208,8 @@ class OnboardingViewModelTest {
         assertFalse(state.isLoading)
         assertTrue(state.isAuthenticated)
         assertEquals("Angela", state.displayName)
+        assertEquals("angela@example.com", state.email)
+        assertEquals("Familia de Angela", state.familyName)
     }
 
     @Test
@@ -219,6 +232,9 @@ class OnboardingViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertFalse(state.isAuthenticated)
+        assertEquals(null, state.displayName)
+        assertEquals(null, state.email)
+        assertEquals(null, state.familyName)
     }
 
     private fun TestScope.onboardingViewModel(
@@ -250,6 +266,7 @@ class OnboardingViewModelTest {
     private fun remoteProfile(): RemoteUserProfile = RemoteUserProfile(
         userId = UserId("user-1"),
         familyId = FamilyId("family-1"),
+        familyName = "Familia de Angela",
         displayName = "Angela Remote",
         email = "angela@example.com",
     )
@@ -299,6 +316,7 @@ private class FakeRemoteUserProfileGateway(
         return RemoteUserProfile(
             userId = createdUserId,
             familyId = FamilyId("family-auto-1"),
+            familyName = "Familia de $displayName",
             displayName = displayName,
             email = email,
         ).also { createdProfiles[createdUserId] = it }

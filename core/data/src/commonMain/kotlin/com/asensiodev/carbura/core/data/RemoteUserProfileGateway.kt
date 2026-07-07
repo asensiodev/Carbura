@@ -14,6 +14,7 @@ interface RemoteUserProfileGateway {
 data class RemoteUserProfile(
     val userId: UserId,
     val familyId: FamilyId,
+    val familyName: String?,
     val displayName: String,
     val email: String?,
 )

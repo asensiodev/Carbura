@@ -173,6 +173,8 @@ private fun CarburaApp() {
                     CarburaRoute.User -> NavEntry(route) {
                         UserRoute(
                             displayName = onboardingState.displayName,
+                            email = onboardingState.email,
+                            familyName = onboardingState.familyName,
                             onSignOut = {
                                 onboardingViewModel.onEvent(OnboardingEvent.SignOutClicked)
                             },
@@ -250,8 +252,13 @@ private fun CarburaMainScaffold(
 @Composable
 private fun UserRoute(
     displayName: String?,
+    email: String?,
+    familyName: String?,
     onSignOut: () -> Unit,
 ) {
+    val resolvedDisplayName = displayName ?: stringResource(R.string.user_profile_fallback_name)
+    val resolvedFamilyName = familyName ?: stringResource(R.string.user_family_fallback_name)
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
@@ -268,22 +275,53 @@ private fun UserRoute(
                 style = MaterialTheme.typography.headlineLarge,
             )
             Text(
-                text = displayName ?: stringResource(R.string.user_subtitle),
+                text = stringResource(R.string.user_subtitle),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(Spacings.spacing16),
-                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
+                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
+                ) {
+                    Text(
+                        text = stringResource(R.string.user_profile_title),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = resolvedDisplayName,
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    if (email != null) {
+                        Text(
+                            text = email,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(Spacings.spacing16),
+                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
                 ) {
                     Text(
                         text = stringResource(R.string.user_family_title),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Text(
+                        text = resolvedFamilyName,
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    Text(
                         text = stringResource(R.string.user_family_description),
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = stringResource(R.string.user_family_deferred_note),
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

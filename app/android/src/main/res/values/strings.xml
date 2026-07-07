@@ -4,9 +4,13 @@
     <string name="tab_reminders">Recordatorios</string>
     <string name="tab_user">Usuario</string>
     <string name="user_title">Usuario</string>
-    <string name="user_subtitle">Cuenta, familia y preferencias de Carbura.</string>
+    <string name="user_subtitle">Tu cuenta y tu espacio familiar en Carbura.</string>
+    <string name="user_profile_title">Perfil</string>
+    <string name="user_profile_fallback_name">Usuario</string>
     <string name="user_family_title">Familia</string>
-    <string name="user_family_description">Aqui encajaran invitaciones, miembros y edicion de la familia.</string>
-    <string name="user_session_title">Sesion</string>
+    <string name="user_family_fallback_name">Familia personal</string>
+    <string name="user_family_description">Este es el espacio donde se agrupan tus vehículos, mantenimientos y recordatorios.</string>
+    <string name="user_family_deferred_note">Las invitaciones y miembros llegarán en una próxima versión.</string>
+    <string name="user_session_title">Sesión</string>
     <string name="user_sign_out_button">Cerrar sesión</string>
 </resources>

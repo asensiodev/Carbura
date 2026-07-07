@@ -15,6 +15,7 @@ class SupabaseUserProfileGatewayTest {
 
         assertEquals("user-1", profile.userId.value)
         assertEquals("family-1", profile.familyId.value)
+        assertEquals(null, profile.familyName)
         assertEquals("Angela", profile.displayName)
         assertEquals("angela@example.com", profile.email)
     }

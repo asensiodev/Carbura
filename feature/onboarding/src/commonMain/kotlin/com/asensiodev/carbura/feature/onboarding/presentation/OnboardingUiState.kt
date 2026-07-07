@@ -5,6 +5,8 @@ data class OnboardingUiState(
     val isLoading: Boolean = false,
     val isAuthenticated: Boolean = false,
     val displayName: String? = null,
+    val email: String? = null,
+    val familyName: String? = null,
     val errorMessage: String? = null,
 ) {
     val canSubmitLogin: Boolean = !isInitializing && !isLoading

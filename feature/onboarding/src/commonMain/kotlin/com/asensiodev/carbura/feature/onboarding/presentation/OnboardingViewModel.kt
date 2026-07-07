@@ -69,17 +69,29 @@ class OnboardingViewModel(
                     isInitializing = false,
                     isAuthenticated = false,
                     displayName = null,
+                    email = null,
+                    familyName = null,
                     errorMessage = null,
                 )
             }
         } else {
-            _uiState.update {
-                it.copy(
-                    isInitializing = false,
-                    isAuthenticated = true,
-                    displayName = session.displayName,
-                    errorMessage = null,
-                )
+            val profileResult = runCatching {
+                withContext(dispatchers.io) {
+                    remoteUserProfileGateway.getProfileForUser(UserId(session.user.id))
+                }
+            }
+            profileResult.onSuccess { profile ->
+                if (profile == null) {
+                    ensureProfileAndNavigate(session, isInitializing = true)
+                } else {
+                    applyAuthenticatedProfile(
+                        profile = profile,
+                        isInitializing = false,
+                        isLoading = false,
+                    )
+                }
+            }.onFailure {
+                applyAuthenticatedSessionFallback(session)
             }
         }
     }
@@ -100,14 +112,7 @@ class OnboardingViewModel(
             if (profile == null) {
                 ensureProfileAndNavigate(session)
             } else {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isAuthenticated = true,
-                        displayName = profile.displayName,
-                        errorMessage = null,
-                    )
-                }
+                applyAuthenticatedProfile(profile = profile)
                 _effects.send(OnboardingEffect.NavigateToGarage)
             }
         }.onFailure { error ->
@@ -137,14 +142,7 @@ class OnboardingViewModel(
             if (profile == null) {
                 ensureProfileAndNavigate(session)
             } else {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isAuthenticated = true,
-                        displayName = profile.displayName,
-                        errorMessage = null,
-                    )
-                }
+                applyAuthenticatedProfile(profile = profile)
                 _effects.send(OnboardingEffect.NavigateToGarage)
             }
         }.onFailure { error ->
@@ -158,7 +156,10 @@ class OnboardingViewModel(
         }
     }
 
-    private suspend fun ensureProfileAndNavigate(session: AuthSession) {
+    private suspend fun ensureProfileAndNavigate(
+        session: AuthSession,
+        isInitializing: Boolean = false,
+    ) {
         withContext(dispatchers.io) {
             runCatching {
                 remoteUserProfileGateway.ensureProfile(
@@ -167,23 +168,55 @@ class OnboardingViewModel(
                 )
             }
         }.onSuccess { profile ->
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    isAuthenticated = true,
-                    displayName = profile.displayName,
-                    errorMessage = null,
-                )
+            applyAuthenticatedProfile(
+                profile = profile,
+                isInitializing = false,
+                isLoading = false,
+            )
+            if (!isInitializing) {
+                _effects.send(OnboardingEffect.NavigateToGarage)
             }
-            _effects.send(OnboardingEffect.NavigateToGarage)
         }.onFailure { error ->
             _uiState.update {
                 it.copy(
+                    isInitializing = false,
                     isLoading = false,
                     isAuthenticated = false,
                     errorMessage = error.message ?: "Unable to create profile.",
                 )
             }
+        }
+    }
+
+    private fun applyAuthenticatedProfile(
+        profile: RemoteUserProfile,
+        isInitializing: Boolean = false,
+        isLoading: Boolean = false,
+    ) {
+        _uiState.update {
+            it.copy(
+                isInitializing = isInitializing,
+                isLoading = isLoading,
+                isAuthenticated = true,
+                displayName = profile.displayName,
+                email = profile.email,
+                familyName = profile.familyName,
+                errorMessage = null,
+            )
+        }
+    }
+
+    private fun applyAuthenticatedSessionFallback(session: AuthSession) {
+        _uiState.update {
+            it.copy(
+                isInitializing = false,
+                isLoading = false,
+                isAuthenticated = true,
+                displayName = session.displayName,
+                email = session.user.email,
+                familyName = null,
+                errorMessage = null,
+            )
         }
     }
 
