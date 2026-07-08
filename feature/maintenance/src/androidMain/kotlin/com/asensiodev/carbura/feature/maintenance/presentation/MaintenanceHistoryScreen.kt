@@ -1,17 +1,19 @@
 package com.asensiodev.carbura.feature.maintenance.presentation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -20,10 +22,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -31,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -52,6 +59,7 @@ fun MaintenanceHistoryRoute(
     val uiState by viewModel.uiState.collectAsState()
     var effectMessage by remember { mutableStateOf<CarburaString?>(null) }
     var effectMessageArg by remember { mutableStateOf<String?>(null) }
+    var maintenanceCreatedSignal by remember { mutableStateOf(0) }
 
     LaunchedEffect(viewModel) {
         viewModel.onEvent(MaintenanceHistoryEvent.Started)
@@ -63,6 +71,7 @@ fun MaintenanceHistoryRoute(
                 is MaintenanceHistoryEffect.MaintenanceCreated -> {
                     effectMessage = CarburaString.MaintenanceCreatedMessage
                     effectMessageArg = effect.type
+                    maintenanceCreatedSignal += 1
                 }
 
                 is MaintenanceHistoryEffect.ValidationFailed -> {
@@ -85,6 +94,7 @@ fun MaintenanceHistoryRoute(
     MaintenanceHistoryScreen(
         state = uiState,
         effectMessage = resolvedEffectMessage,
+        maintenanceCreatedSignal = maintenanceCreatedSignal,
         onBack = onBack,
         onTypeChange = { viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged(it)) },
         onPerformedOnChange = { viewModel.onEvent(MaintenanceHistoryEvent.PerformedOnChanged(it)) },
@@ -107,6 +117,7 @@ private fun rememberMaintenanceHistoryViewModel(vehicleId: String): MaintenanceH
 private fun MaintenanceHistoryScreen(
     state: MaintenanceHistoryUiState,
     effectMessage: String?,
+    maintenanceCreatedSignal: Int,
     onBack: () -> Unit,
     onTypeChange: (String) -> Unit,
     onPerformedOnChange: (String) -> Unit,
@@ -117,81 +128,122 @@ private fun MaintenanceHistoryScreen(
     onSubmitMaintenance: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.maintenance_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.maintenance_back_button),
-                        )
+    var showMaintenanceSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(maintenanceCreatedSignal) {
+        if (maintenanceCreatedSignal > 0) {
+            showMaintenanceSheet = false
+            if (effectMessage != null) {
+                snackbarHostState.showSnackbar(effectMessage)
+            }
+        }
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.maintenance_title)) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.maintenance_back_button),
+                            )
+                        }
+                    },
+                )
+            },
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(Spacings.spacing24),
+                verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
+            ) {
+                item {
+                    MaintenanceHeader(onAddMaintenance = { showMaintenanceSheet = true })
+                }
+
+                item {
+                    Text(
+                        text = stringResource(R.string.maintenance_history_title),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                }
+
+                if (state.isEmpty) {
+                    item {
+                        EmptyHistoryCard(onAddMaintenance = { showMaintenanceSheet = true })
                     }
-                },
-            )
-        },
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(Spacings.spacing24),
-            verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
-        ) {
-            item {
-                MaintenanceHeader()
-            }
-
-            item {
-                MaintenanceForm(
-                    state = state,
-                    effectMessage = effectMessage,
-                    onTypeChange = onTypeChange,
-                    onPerformedOnChange = onPerformedOnChange,
-                    onOdometerChange = onOdometerChange,
-                    onCostChange = onCostChange,
-                    onWorkshopChange = onWorkshopChange,
-                    onNotesChange = onNotesChange,
-                    onSubmitMaintenance = onSubmitMaintenance,
-                )
-            }
-
-            item {
-                Text(
-                    text = stringResource(R.string.maintenance_history_title),
-                    style = MaterialTheme.typography.titleLarge,
-                )
-            }
-
-            if (state.isEmpty) {
-                item { EmptyHistoryCard() }
-            } else {
-                items(state.records) { record ->
-                    MaintenanceRecordCard(record = record)
+                } else {
+                    items(state.records) { record ->
+                        MaintenanceRecordCard(record = record)
+                    }
                 }
             }
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .safeDrawingPadding()
+                .padding(horizontal = Spacings.spacing16),
+        )
+    }
+
+    if (showMaintenanceSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showMaintenanceSheet = false },
+            sheetState = sheetState,
+        ) {
+            MaintenanceForm(
+                state = state,
+                onTypeChange = onTypeChange,
+                onPerformedOnChange = onPerformedOnChange,
+                onOdometerChange = onOdometerChange,
+                onCostChange = onCostChange,
+                onWorkshopChange = onWorkshopChange,
+                onNotesChange = onNotesChange,
+                onSubmitMaintenance = onSubmitMaintenance,
+                modifier = Modifier.padding(
+                    start = Spacings.spacing24,
+                    end = Spacings.spacing24,
+                    bottom = Spacings.spacing24,
+                ),
+            )
         }
     }
 }
 
 @Composable
-private fun MaintenanceHeader() {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+private fun MaintenanceHeader(onAddMaintenance: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Spacings.spacing16),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(
             text = stringResource(R.string.maintenance_subtitle),
+            modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Button(onClick = onAddMaintenance) {
+            Text(stringResource(R.string.add_maintenance_button))
+        }
     }
 }
 
 @Composable
 private fun MaintenanceForm(
     state: MaintenanceHistoryUiState,
-    effectMessage: String?,
     onTypeChange: (String) -> Unit,
     onPerformedOnChange: (String) -> Unit,
     onOdometerChange: (String) -> Unit,
@@ -199,98 +251,97 @@ private fun MaintenanceForm(
     onWorkshopChange: (String) -> Unit,
     onNotesChange: (String) -> Unit,
     onSubmitMaintenance: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
+    ) {
+        Text(
+            text = stringResource(R.string.maintenance_form_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        OutlinedTextField(
+            value = state.type,
+            onValueChange = onTypeChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.maintenance_type_label)) },
+            singleLine = true,
+        )
+        OutlinedTextField(
+            value = state.performedOn,
+            onValueChange = onPerformedOnChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.maintenance_date_label)) },
+            singleLine = true,
+        )
+        OutlinedTextField(
+            value = state.odometerKm,
+            onValueChange = onOdometerChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.maintenance_odometer_label)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+        )
+        OutlinedTextField(
+            value = state.cost,
+            onValueChange = onCostChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.maintenance_cost_label)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            singleLine = true,
+        )
+        OutlinedTextField(
+            value = state.workshop,
+            onValueChange = onWorkshopChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.maintenance_workshop_label)) },
+            singleLine = true,
+        )
+        OutlinedTextField(
+            value = state.notes,
+            onValueChange = onNotesChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.maintenance_notes_label)) },
+            minLines = 2,
+        )
+        if (state.errorMessage != null) {
+            Text(
+                text = stringResource(state.errorMessage.maintenanceStringRes()),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        Button(
+            onClick = onSubmitMaintenance,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.save_maintenance_button))
+        }
+    }
+}
+
+@Composable
+private fun EmptyHistoryCard(onAddMaintenance: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(Spacings.spacing16),
             verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
         ) {
             Text(
-                text = stringResource(R.string.maintenance_form_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            OutlinedTextField(
-                value = state.type,
-                onValueChange = onTypeChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.maintenance_type_label)) },
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = state.performedOn,
-                onValueChange = onPerformedOnChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.maintenance_date_label)) },
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = state.odometerKm,
-                onValueChange = onOdometerChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.maintenance_odometer_label)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = state.cost,
-                onValueChange = onCostChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.maintenance_cost_label)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = state.workshop,
-                onValueChange = onWorkshopChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.maintenance_workshop_label)) },
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = state.notes,
-                onValueChange = onNotesChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.maintenance_notes_label)) },
-                minLines = 2,
-            )
-            if (state.errorMessage != null) {
-                Text(
-                    text = stringResource(state.errorMessage.maintenanceStringRes()),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            if (effectMessage != null && state.errorMessage == null) {
-                Text(
-                    text = effectMessage,
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            Button(
-                onClick = onSubmitMaintenance,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.save_maintenance_button))
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyHistoryCard() {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(Spacings.spacing16)) {
-            Text(
                 text = stringResource(R.string.empty_maintenance_history_title),
                 style = MaterialTheme.typography.titleMedium,
             )
-            Spacer(modifier = Modifier.height(Spacings.spacing8))
             Text(
                 text = stringResource(R.string.empty_maintenance_history_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Button(onClick = onAddMaintenance) {
+                Text(stringResource(R.string.add_maintenance_button))
+            }
         }
     }
 }

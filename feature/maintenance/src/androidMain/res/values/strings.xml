@@ -4,6 +4,7 @@
     <string name="maintenance_title">Mantenimiento</string>
     <string name="maintenance_subtitle">Registra trabajos y consulta el historial del vehículo.</string>
     <string name="maintenance_form_title">Nuevo mantenimiento</string>
+    <string name="add_maintenance_button">Añadir</string>
     <string name="maintenance_type_label">Tipo</string>
     <string name="maintenance_date_label">Fecha YYYY-MM-DD</string>
     <string name="maintenance_odometer_label">Kilómetros</string>
