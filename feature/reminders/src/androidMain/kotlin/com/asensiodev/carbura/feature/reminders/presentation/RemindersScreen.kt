@@ -224,13 +224,14 @@ private fun RemindersHeader(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = stringResource(R.string.reminders_title),
                 style = MaterialTheme.typography.headlineLarge,
             )
             if (showAddReminderAction) {
-                TextButton(onClick = onAddReminder) {
+                Button(onClick = onAddReminder) {
                     Text(stringResource(R.string.add_reminder_button))
                 }
             }

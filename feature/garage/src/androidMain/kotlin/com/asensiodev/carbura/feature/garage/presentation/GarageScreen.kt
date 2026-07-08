@@ -266,13 +266,14 @@ private fun GarageHeader(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = stringResource(R.string.garage_title),
                 style = MaterialTheme.typography.headlineLarge,
             )
             if (showAddVehicleAction) {
-                TextButton(onClick = onAddVehicle) {
+                Button(onClick = onAddVehicle) {
                     Text(stringResource(R.string.add_vehicle_button))
                 }
             }

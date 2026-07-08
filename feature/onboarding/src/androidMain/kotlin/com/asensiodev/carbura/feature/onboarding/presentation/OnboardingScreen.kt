@@ -150,7 +150,10 @@ private fun OnboardingScreen(
                     }
 
                     if (state.isLoading) {
-                        LoadingMessage(text = stringResource(R.string.onboarding_loading))
+                        LoadingMessage(
+                            text = stringResource(R.string.onboarding_loading),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
             }
@@ -175,8 +178,14 @@ private fun LoginError(errorMessage: String) {
 }
 
 @Composable
-private fun LoadingMessage(text: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun LoadingMessage(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         CircularProgressIndicator()
         Spacer(modifier = Modifier.height(Spacings.spacing12))
         Text(
