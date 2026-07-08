@@ -12,6 +12,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 - Garaje MVP: crear coche/moto, listar y borrar vehiculos con limpieza local de mantenimientos y recordatorios asociados.
 - Diferido: notificaciones locales, recordatorios recurrentes, invitaciones familiares completas, Desktop y sync remoto completo.
 - Siguiente bloque recomendado: sync v0 funcional KMP con Supabase para vehiculos, mantenimientos y recordatorios, usando estrategia simple `last-write-wins` y sin realtime/background sync avanzado.
+- Roadmap de sincronizacion: `docs/sync-roadmap.md`.
 
 ## Estado actual Entrega 2
 
@@ -22,6 +23,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 ## Sync v0 previsto
 
+- Fuente de alcance: `docs/sync-roadmap.md`.
 - Debe ser funcional end-to-end, no solo preparatorio: subir cambios locales pendientes a Supabase y bajar datos remotos de la familia.
 - Alcance v0: vehiculos, mantenimientos y recordatorios; ejecucion manual o al iniciar sesion/app; resolucion simple por `updated_at` con `last-write-wins`.
 - Fuera de v0: realtime, background sync periodico, merge manual de conflictos, colas complejas, adjuntos y notificaciones remotas.
