@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import com.asensiodev.carbura.core.designsystem.Spacings
+import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.stringresources.CarburaString
@@ -64,9 +65,10 @@ import org.koin.core.parameter.parametersOf
 @Composable
 fun MaintenanceHistoryRoute(
     vehicleId: String,
+    familyId: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: MaintenanceHistoryViewModel = rememberMaintenanceHistoryViewModel(vehicleId),
+    viewModel: MaintenanceHistoryViewModel = rememberMaintenanceHistoryViewModel(vehicleId, familyId),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var effectMessage by remember { mutableStateOf<CarburaString?>(null) }
@@ -130,8 +132,11 @@ fun MaintenanceHistoryRoute(
 }
 
 @Composable
-private fun rememberMaintenanceHistoryViewModel(vehicleId: String): MaintenanceHistoryViewModel = remember(vehicleId) {
-    GlobalContext.get().get { parametersOf(VehicleId(vehicleId)) }
+private fun rememberMaintenanceHistoryViewModel(
+    vehicleId: String,
+    familyId: String,
+): MaintenanceHistoryViewModel = remember(vehicleId, familyId) {
+    GlobalContext.get().get { parametersOf(VehicleId(vehicleId), FamilyId(familyId)) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

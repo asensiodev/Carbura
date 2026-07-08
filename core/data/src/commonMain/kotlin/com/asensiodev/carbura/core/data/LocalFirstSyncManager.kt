@@ -47,6 +47,7 @@ internal class LocalFirstSyncManager(
 
     private suspend fun syncActiveFamily(): Long {
         val familyId = resolveFamilyId()
+        local.adoptLegacyLocalFamily(familyId)
         pushPendingChanges(familyId)
         pullAndMerge(familyId)
         return currentTimeMillis()

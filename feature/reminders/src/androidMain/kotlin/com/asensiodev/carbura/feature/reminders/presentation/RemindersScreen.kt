@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import com.asensiodev.carbura.core.designsystem.Spacings
+import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.stringresources.CarburaString
@@ -56,11 +57,13 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import org.koin.core.context.GlobalContext
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun RemindersRoute(
+    familyId: String,
     modifier: Modifier = Modifier,
-    viewModel: RemindersViewModel = rememberRemindersViewModel(),
+    viewModel: RemindersViewModel = rememberRemindersViewModel(familyId),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var effectMessage by remember { mutableStateOf<CarburaString?>(null) }
@@ -128,8 +131,8 @@ fun RemindersRoute(
 }
 
 @Composable
-private fun rememberRemindersViewModel(): RemindersViewModel = remember {
-    GlobalContext.get().get()
+private fun rememberRemindersViewModel(familyId: String): RemindersViewModel = remember(familyId) {
+    GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

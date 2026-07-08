@@ -45,17 +45,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import com.asensiodev.carbura.core.designsystem.Spacings
+import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleType
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.featuregarage.R
 import org.koin.core.context.GlobalContext
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun GarageRoute(
+    familyId: String,
     modifier: Modifier = Modifier,
     onVehicleSelected: (String) -> Unit = {},
-    viewModel: GarageViewModel = rememberGarageViewModel(),
+    viewModel: GarageViewModel = rememberGarageViewModel(familyId),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var effectMessage by remember { mutableStateOf<CarburaString?>(null) }
@@ -120,8 +123,8 @@ fun GarageRoute(
 }
 
 @Composable
-private fun rememberGarageViewModel(): GarageViewModel = remember {
-    GlobalContext.get().get()
+private fun rememberGarageViewModel(familyId: String): GarageViewModel = remember(familyId) {
+    GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

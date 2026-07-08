@@ -6,6 +6,7 @@ data class OnboardingUiState(
     val isAuthenticated: Boolean = false,
     val displayName: String? = null,
     val email: String? = null,
+    val familyId: String? = null,
     val familyName: String? = null,
     val errorMessage: String? = null,
 ) {

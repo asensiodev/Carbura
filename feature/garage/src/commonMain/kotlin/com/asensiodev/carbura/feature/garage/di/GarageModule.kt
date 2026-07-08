@@ -1,19 +1,21 @@
 package com.asensiodev.carbura.feature.garage.di
 
 import com.asensiodev.carbura.core.domain.CreateVehicleUseCase
+import com.asensiodev.carbura.core.domain.DeleteVehicleUseCase
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.feature.garage.presentation.GarageViewModel
 import org.koin.dsl.module
 
 val garageModule = module {
-    single { FamilyId("local-family") }
     factory { CreateVehicleUseCase(get()) }
-    factory {
+    factory { DeleteVehicleUseCase(get()) }
+    factory { parameters ->
         GarageViewModel(
-            familyId = get(),
+            familyId = parameters.get<FamilyId>(),
             vehicleRepository = get(),
             dispatchers = get(),
             createVehicleUseCase = get(),
+            deleteVehicleUseCase = get(),
             syncManager = get(),
         )
     }

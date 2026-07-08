@@ -152,6 +152,16 @@ private class FakeLocalSyncDataSource(
 
     override suspend fun markMaintenanceRecordSynced(id: String) = Unit
     override suspend fun markReminderSynced(id: String) = Unit
+
+    override suspend fun adoptLegacyLocalFamily(familyId: FamilyId) {
+        vehicles.replaceAll { vehicle ->
+            if (vehicle.familyId == "local-family") {
+                vehicle.copy(familyId = familyId.value, pendingSync = true)
+            } else {
+                vehicle
+            }
+        }
+    }
 }
 
 private class FakeRemoteSyncDataSource(

@@ -70,6 +70,7 @@ class OnboardingViewModel(
                     isAuthenticated = false,
                     displayName = null,
                     email = null,
+                    familyId = null,
                     familyName = null,
                     errorMessage = null,
                 )
@@ -200,6 +201,7 @@ class OnboardingViewModel(
                 isAuthenticated = true,
                 displayName = profile.displayName,
                 email = profile.email,
+                familyId = profile.familyId.value,
                 familyName = profile.familyName,
                 errorMessage = null,
             )
@@ -214,6 +216,7 @@ class OnboardingViewModel(
                 isAuthenticated = true,
                 displayName = session.displayName,
                 email = session.user.email,
+                familyId = null,
                 familyName = null,
                 errorMessage = null,
             )

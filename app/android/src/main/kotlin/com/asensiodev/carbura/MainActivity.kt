@@ -196,6 +196,7 @@ private fun CarburaApp() {
                 when (val carburaRoute = route as CarburaRoute) {
                     CarburaRoute.Garage -> NavEntry(route) {
                         GarageRoute(
+                            familyId = onboardingState.familyId.orEmpty(),
                             onVehicleSelected = { vehicleId ->
                                 backStack.add(CarburaRoute.VehicleDetail(vehicleId))
                             },
@@ -205,6 +206,7 @@ private fun CarburaApp() {
                     is CarburaRoute.VehicleDetail -> NavEntry(route) {
                         MaintenanceHistoryRoute(
                             vehicleId = carburaRoute.vehicleId,
+                            familyId = onboardingState.familyId.orEmpty(),
                             onBack = {
                                 if (backStack.size > 1) {
                                     backStack.removeLastOrNull()
@@ -214,7 +216,7 @@ private fun CarburaApp() {
                     }
 
                     CarburaRoute.Reminders -> NavEntry(route) {
-                        RemindersRoute()
+                        RemindersRoute(familyId = onboardingState.familyId.orEmpty())
                     }
 
                     CarburaRoute.User -> NavEntry(route) {
@@ -230,7 +232,9 @@ private fun CarburaApp() {
                         )
                     }
 
-                    is CarburaRoute.CreateMaintenance -> NavEntry(route) { GarageRoute() }
+                    is CarburaRoute.CreateMaintenance -> NavEntry(route) {
+                        GarageRoute(familyId = onboardingState.familyId.orEmpty())
+                    }
                 }
             },
         )

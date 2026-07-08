@@ -20,6 +20,7 @@ internal interface LocalSyncDataSource {
     suspend fun markVehicleSynced(id: String)
     suspend fun markMaintenanceRecordSynced(id: String)
     suspend fun markReminderSynced(id: String)
+    suspend fun adoptLegacyLocalFamily(familyId: FamilyId)
 }
 
 internal class SqlDelightLocalSyncDataSource(
@@ -106,6 +107,15 @@ internal class SqlDelightLocalSyncDataSource(
 
     override suspend fun markReminderSynced(id: String) {
         database.carburaDatabaseQueries.markReminderSynced(id)
+    }
+
+    override suspend fun adoptLegacyLocalFamily(familyId: FamilyId) {
+        val now = currentTimeMillis()
+        database.carburaDatabaseQueries.transaction {
+            database.carburaDatabaseQueries.adoptLocalVehiclesFamily(familyId.value, now)
+            database.carburaDatabaseQueries.adoptLocalMaintenanceRecordsFamily(familyId.value, now)
+            database.carburaDatabaseQueries.adoptLocalRemindersFamily(familyId.value, now)
+        }
     }
 }
 

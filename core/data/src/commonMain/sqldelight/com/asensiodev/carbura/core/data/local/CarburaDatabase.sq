@@ -49,6 +49,13 @@ UPDATE vehicles
 SET pendingSync = 0
 WHERE id = ?;
 
+adoptLocalVehiclesFamily:
+UPDATE vehicles
+SET familyId = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE familyId = 'local-family';
+
 deleteVehicle:
 UPDATE vehicles
 SET deletedAt = ?,
@@ -130,6 +137,13 @@ UPDATE maintenanceRecords
 SET pendingSync = 0
 WHERE id = ?;
 
+adoptLocalMaintenanceRecordsFamily:
+UPDATE maintenanceRecords
+SET familyId = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE familyId = 'local-family';
+
 CREATE TABLE reminders (
     id TEXT NOT NULL PRIMARY KEY,
     familyId TEXT NOT NULL,
@@ -207,3 +221,10 @@ markReminderSynced:
 UPDATE reminders
 SET pendingSync = 0
 WHERE id = ?;
+
+adoptLocalRemindersFamily:
+UPDATE reminders
+SET familyId = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE familyId = 'local-family';
