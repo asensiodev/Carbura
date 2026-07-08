@@ -4,6 +4,8 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.IDToken
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 class SupabaseAuthGateway(
     private val client: SupabaseClient,
@@ -16,7 +18,7 @@ class SupabaseAuthGateway(
                 user = AuthUser(
                     id = session.user?.id.orEmpty(),
                     email = session.user?.email,
-                    displayName = session.user?.userMetadata?.get("full_name")?.toString(),
+                    displayName = session.user?.userMetadata?.get("full_name")?.jsonPrimitive?.contentOrNull,
                 ),
             )
         }

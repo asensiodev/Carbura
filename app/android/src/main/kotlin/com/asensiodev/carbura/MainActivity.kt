@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
@@ -256,8 +258,8 @@ private fun UserRoute(
     familyName: String?,
     onSignOut: () -> Unit,
 ) {
-    val resolvedDisplayName = displayName ?: stringResource(R.string.user_profile_fallback_name)
-    val resolvedFamilyName = familyName ?: stringResource(R.string.user_family_fallback_name)
+    val resolvedDisplayName = displayName.cleanUserText() ?: stringResource(R.string.user_profile_fallback_name)
+    val resolvedFamilyName = familyName.cleanUserText() ?: stringResource(R.string.user_family_fallback_name)
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -267,6 +269,7 @@ private fun UserRoute(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
                 .padding(Spacings.spacing24),
             verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
         ) {
@@ -346,6 +349,12 @@ private fun UserRoute(
         }
     }
 }
+
+private fun String?.cleanUserText(): String? = this
+    ?.trim()
+    ?.trim('"')
+    ?.replace("\"", "")
+    ?.takeIf { it.isNotBlank() }
 
 @Composable
 private fun rememberOnboardingViewModel(): OnboardingViewModel = remember {

@@ -110,13 +110,13 @@ private fun OnboardingScreen(
 ) {
     Surface(
         modifier = modifier
-            .fillMaxSize()
-            .safeDrawingPadding(),
+            .fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .safeDrawingPadding()
                 .padding(Spacings.spacing24),
             contentAlignment = Alignment.Center,
         ) {
