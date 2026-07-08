@@ -479,6 +479,7 @@ private fun ReminderCard(
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = stringResource(R.string.delete_reminder_content_description),
+                            tint = MaterialTheme.colorScheme.error,
                         )
                     }
                 }

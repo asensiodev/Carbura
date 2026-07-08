@@ -482,6 +482,7 @@ private fun MaintenanceRecordCard(
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = stringResource(R.string.delete_maintenance_content_description),
+                            tint = MaterialTheme.colorScheme.error,
                         )
                     }
                 }

@@ -18,7 +18,7 @@
     <string name="view_history_button">Ver historial</string>
     <string name="delete_vehicle_content_description">Borrar vehículo</string>
     <string name="delete_vehicle_dialog_title">Borrar vehículo</string>
-    <string name="delete_vehicle_dialog_description">Se eliminará %1$s y sus mantenimientos y recordatorios asociados.</string>
+    <string name="delete_vehicle_dialog_description">Se eliminará este vehículo y sus mantenimientos y recordatorios asociados:</string>
     <string name="delete_vehicle_confirm_button">Borrar</string>
     <string name="delete_vehicle_cancel_button">Cancelar</string>
     <string name="vehicle_created_message">%1$s guardado en el garaje.</string>

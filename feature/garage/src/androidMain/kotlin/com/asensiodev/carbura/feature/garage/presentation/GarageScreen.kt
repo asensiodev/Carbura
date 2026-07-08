@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import com.asensiodev.carbura.core.designsystem.Spacings
@@ -238,7 +239,15 @@ private fun GarageScreen(
         AlertDialog(
             onDismissRequest = { vehiclePendingDeletion = null },
             title = { Text(stringResource(R.string.delete_vehicle_dialog_title)) },
-            text = { Text(stringResource(R.string.delete_vehicle_dialog_description, vehicle.name)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+                    Text(stringResource(R.string.delete_vehicle_dialog_description))
+                    Text(
+                        text = vehicle.name,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
