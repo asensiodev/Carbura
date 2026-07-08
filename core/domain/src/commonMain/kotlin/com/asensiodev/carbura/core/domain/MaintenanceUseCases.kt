@@ -1,6 +1,7 @@
 package com.asensiodev.carbura.core.domain
 
 import com.asensiodev.carbura.core.model.MaintenanceRecord
+import com.asensiodev.carbura.core.model.MaintenanceRecordId
 
 class CreateMaintenanceRecordUseCase(
     private val repository: MaintenanceRecordRepository,
@@ -18,5 +19,13 @@ class CreateMaintenanceRecordUseCase(
 
         repository.saveMaintenanceRecord(params)
         return DomainResult.Success(params)
+    }
+}
+
+class DeleteMaintenanceRecordUseCase(
+    private val repository: MaintenanceRecordRepository,
+) : SuspendUseCase<MaintenanceRecordId, Unit> {
+    override suspend fun invoke(params: MaintenanceRecordId) {
+        repository.deleteMaintenanceRecord(params)
     }
 }

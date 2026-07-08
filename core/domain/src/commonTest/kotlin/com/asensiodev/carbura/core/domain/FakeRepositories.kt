@@ -2,6 +2,7 @@ package com.asensiodev.carbura.core.domain
 
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
+import com.asensiodev.carbura.core.model.MaintenanceRecordId
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.ReminderId
 import com.asensiodev.carbura.core.model.Vehicle
@@ -31,6 +32,10 @@ internal class FakeMaintenanceRecordRepository : MaintenanceRecordRepository {
 
     override suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord> =
         savedRecords.filter { it.vehicleId == vehicleId }
+
+    override suspend fun deleteMaintenanceRecord(recordId: MaintenanceRecordId) {
+        savedRecords.removeAll { it.id == recordId }
+    }
 }
 
 internal class FakeReminderRepository : ReminderRepository {
@@ -48,5 +53,9 @@ internal class FakeReminderRepository : ReminderRepository {
         if (index >= 0) {
             savedReminders[index] = savedReminders[index].copy(isCompleted = true)
         }
+    }
+
+    override suspend fun deleteReminder(reminderId: ReminderId) {
+        savedReminders.removeAll { it.id == reminderId }
     }
 }

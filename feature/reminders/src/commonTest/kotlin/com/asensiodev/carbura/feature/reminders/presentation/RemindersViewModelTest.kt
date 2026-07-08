@@ -3,6 +3,7 @@ package com.asensiodev.carbura.feature.reminders.presentation
 import app.cash.turbine.test
 import com.asensiodev.carbura.core.domain.CompleteReminderUseCase
 import com.asensiodev.carbura.core.domain.CreateReminderUseCase
+import com.asensiodev.carbura.core.domain.DeleteReminderUseCase
 import com.asensiodev.carbura.core.domain.GetPendingRemindersUseCase
 import com.asensiodev.carbura.core.domain.ReminderRepository
 import com.asensiodev.carbura.core.domain.VehicleRepository
@@ -119,6 +120,27 @@ class RemindersViewModelTest {
         assertEquals(emptyList(), viewModel.uiState.value.reminders)
     }
 
+    @Test
+    fun deleteReminderRemovesItFromPendingList() = runTest {
+        val repository = FakeReminderRepository(listOf(reminder("itv")))
+        val viewModel = remindersViewModel(
+            vehicleRepository = FakeVehicleRepository(listOf(vehicle)),
+            reminderRepository = repository,
+        )
+        viewModel.onEvent(RemindersEvent.Started)
+        advanceUntilIdle()
+
+        viewModel.effects.test {
+            viewModel.onEvent(RemindersEvent.DeleteReminder(ReminderId("itv")))
+            advanceUntilIdle()
+
+            assertIs<RemindersEffect.ReminderDeleted>(awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertEquals(emptyList(), viewModel.uiState.value.reminders)
+    }
+
     private fun TestScope.remindersViewModel(
         vehicleRepository: VehicleRepository = FakeVehicleRepository(),
         reminderRepository: FakeReminderRepository = FakeReminderRepository(),
@@ -135,6 +157,7 @@ class RemindersViewModelTest {
             createReminderUseCase = CreateReminderUseCase(reminderRepository),
             getPendingRemindersUseCase = GetPendingRemindersUseCase(reminderRepository),
             completeReminderUseCase = CompleteReminderUseCase(reminderRepository),
+            deleteReminderUseCase = DeleteReminderUseCase(reminderRepository),
             nextReminderId = { ReminderId("created-reminder") },
             coroutineScope = this,
         )
@@ -178,5 +201,9 @@ private class FakeReminderRepository(
         if (index >= 0) {
             savedReminders[index] = savedReminders[index].copy(isCompleted = true)
         }
+    }
+
+    override suspend fun deleteReminder(reminderId: ReminderId) {
+        savedReminders.removeAll { it.id == reminderId }
     }
 }

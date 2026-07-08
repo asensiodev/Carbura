@@ -2,6 +2,7 @@ package com.asensiodev.carbura.feature.maintenance.presentation
 
 import app.cash.turbine.test
 import com.asensiodev.carbura.core.domain.CreateMaintenanceRecordUseCase
+import com.asensiodev.carbura.core.domain.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.GetVehicleHistoryUseCase
 import com.asensiodev.carbura.core.domain.MaintenanceRecordRepository
 import com.asensiodev.carbura.core.model.CalendarDate
@@ -133,6 +134,25 @@ class MaintenanceHistoryViewModelTest {
         assertEquals(listOf("record-new", "record-old"), records.map { it.id.value })
     }
 
+    @Test
+    fun deleteMaintenanceRemovesRecordFromHistory() = runTest {
+        val repository = FakeMaintenanceRecordRepository()
+        repository.saveMaintenanceRecord(record("record-1", "2026-07-04"))
+        val viewModel = maintenanceHistoryViewModel(repository = repository)
+        viewModel.onEvent(MaintenanceHistoryEvent.Started)
+        advanceUntilIdle()
+
+        viewModel.effects.test {
+            viewModel.onEvent(MaintenanceHistoryEvent.DeleteMaintenance(MaintenanceRecordId("record-1")))
+            advanceUntilIdle()
+
+            assertIs<MaintenanceHistoryEffect.MaintenanceDeleted>(awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertEquals(emptyList(), viewModel.uiState.value.records)
+    }
+
     private fun TestScope.maintenanceHistoryViewModel(
         repository: FakeMaintenanceRecordRepository = FakeMaintenanceRecordRepository(),
         nextRecordId: () -> MaintenanceRecordId = { MaintenanceRecordId("record-test") },
@@ -148,6 +168,7 @@ class MaintenanceHistoryViewModelTest {
             ),
             createMaintenanceRecordUseCase = CreateMaintenanceRecordUseCase(repository),
             getVehicleHistoryUseCase = GetVehicleHistoryUseCase(repository),
+            deleteMaintenanceRecordUseCase = DeleteMaintenanceRecordUseCase(repository),
             nextRecordId = nextRecordId,
             coroutineScope = this,
         )
@@ -173,4 +194,8 @@ private class FakeMaintenanceRecordRepository : MaintenanceRecordRepository {
 
     override suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord> =
         records.filter { it.vehicleId == vehicleId }
+
+    override suspend fun deleteMaintenanceRecord(recordId: MaintenanceRecordId) {
+        records.removeAll { it.id == recordId }
+    }
 }

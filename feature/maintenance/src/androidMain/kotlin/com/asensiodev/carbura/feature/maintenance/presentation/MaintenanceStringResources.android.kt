@@ -5,6 +5,7 @@ import com.asensiodev.carbura.featuremaintenance.R
 
 internal fun CarburaString.maintenanceStringRes(): Int = when (this) {
     CarburaString.MaintenanceCreatedMessage -> R.string.maintenance_created_message
+    CarburaString.MaintenanceDeletedMessage -> R.string.maintenance_deleted_message
     CarburaString.ValidationBlankMaintenanceType -> R.string.validation_blank_maintenance_type
     CarburaString.ValidationInvalidMaintenanceDate -> R.string.validation_invalid_maintenance_date
     CarburaString.ValidationNegativeMaintenanceOdometer -> R.string.validation_negative_maintenance_odometer

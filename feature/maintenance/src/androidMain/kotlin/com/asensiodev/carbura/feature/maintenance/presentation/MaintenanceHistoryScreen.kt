@@ -16,19 +16,26 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +53,9 @@ import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.featuremaintenance.R
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import org.koin.core.context.GlobalContext
 import org.koin.core.parameter.parametersOf
 
@@ -60,6 +70,7 @@ fun MaintenanceHistoryRoute(
     var effectMessage by remember { mutableStateOf<CarburaString?>(null) }
     var effectMessageArg by remember { mutableStateOf<String?>(null) }
     var maintenanceCreatedSignal by remember { mutableStateOf(0) }
+    var maintenanceSuccessSignal by remember { mutableStateOf(0) }
 
     LaunchedEffect(viewModel) {
         viewModel.onEvent(MaintenanceHistoryEvent.Started)
@@ -72,6 +83,13 @@ fun MaintenanceHistoryRoute(
                     effectMessage = CarburaString.MaintenanceCreatedMessage
                     effectMessageArg = effect.type
                     maintenanceCreatedSignal += 1
+                    maintenanceSuccessSignal += 1
+                }
+
+                is MaintenanceHistoryEffect.MaintenanceDeleted -> {
+                    effectMessage = CarburaString.MaintenanceDeletedMessage
+                    effectMessageArg = effect.type
+                    maintenanceSuccessSignal += 1
                 }
 
                 is MaintenanceHistoryEffect.ValidationFailed -> {
@@ -95,6 +113,7 @@ fun MaintenanceHistoryRoute(
         state = uiState,
         effectMessage = resolvedEffectMessage,
         maintenanceCreatedSignal = maintenanceCreatedSignal,
+        maintenanceSuccessSignal = maintenanceSuccessSignal,
         onBack = onBack,
         onTypeChange = { viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged(it)) },
         onPerformedOnChange = { viewModel.onEvent(MaintenanceHistoryEvent.PerformedOnChanged(it)) },
@@ -103,6 +122,7 @@ fun MaintenanceHistoryRoute(
         onWorkshopChange = { viewModel.onEvent(MaintenanceHistoryEvent.WorkshopChanged(it)) },
         onNotesChange = { viewModel.onEvent(MaintenanceHistoryEvent.NotesChanged(it)) },
         onSubmitMaintenance = { viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance) },
+        onDeleteMaintenance = { viewModel.onEvent(MaintenanceHistoryEvent.DeleteMaintenance(it.id)) },
         modifier = modifier,
     )
 }
@@ -118,6 +138,7 @@ private fun MaintenanceHistoryScreen(
     state: MaintenanceHistoryUiState,
     effectMessage: String?,
     maintenanceCreatedSignal: Int,
+    maintenanceSuccessSignal: Int,
     onBack: () -> Unit,
     onTypeChange: (String) -> Unit,
     onPerformedOnChange: (String) -> Unit,
@@ -126,18 +147,23 @@ private fun MaintenanceHistoryScreen(
     onWorkshopChange: (String) -> Unit,
     onNotesChange: (String) -> Unit,
     onSubmitMaintenance: () -> Unit,
+    onDeleteMaintenance: (MaintenanceRecord) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showMaintenanceSheet by remember { mutableStateOf(false) }
+    var recordPendingDeletion by remember { mutableStateOf<MaintenanceRecord?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(maintenanceCreatedSignal) {
         if (maintenanceCreatedSignal > 0) {
             showMaintenanceSheet = false
-            if (effectMessage != null) {
-                snackbarHostState.showSnackbar(effectMessage)
-            }
+        }
+    }
+
+    LaunchedEffect(maintenanceSuccessSignal) {
+        if (maintenanceSuccessSignal > 0 && effectMessage != null) {
+            snackbarHostState.showSnackbar(effectMessage)
         }
     }
 
@@ -183,7 +209,10 @@ private fun MaintenanceHistoryScreen(
                     }
                 } else {
                     items(state.records) { record ->
-                        MaintenanceRecordCard(record = record)
+                        MaintenanceRecordCard(
+                            record = record,
+                            onDeleteMaintenance = { recordPendingDeletion = record },
+                        )
                     }
                 }
             }
@@ -219,6 +248,30 @@ private fun MaintenanceHistoryScreen(
                 ),
             )
         }
+    }
+
+    recordPendingDeletion?.let { record ->
+        val type = record.displayType()
+        AlertDialog(
+            onDismissRequest = { recordPendingDeletion = null },
+            title = { Text(stringResource(R.string.delete_maintenance_dialog_title)) },
+            text = { Text(stringResource(R.string.delete_maintenance_dialog_description, type)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        recordPendingDeletion = null
+                        onDeleteMaintenance(record)
+                    },
+                ) {
+                    Text(stringResource(R.string.delete_maintenance_confirm_button))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { recordPendingDeletion = null }) {
+                    Text(stringResource(R.string.delete_maintenance_cancel_button))
+                }
+            },
+        )
     }
 }
 
@@ -270,12 +323,9 @@ private fun MaintenanceForm(
             label = { Text(stringResource(R.string.maintenance_type_label)) },
             singleLine = true,
         )
-        OutlinedTextField(
+        MaintenanceDatePickerField(
             value = state.performedOn,
             onValueChange = onPerformedOnChange,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(R.string.maintenance_date_label)) },
-            singleLine = true,
         )
         OutlinedTextField(
             value = state.odometerKm,
@@ -323,6 +373,52 @@ private fun MaintenanceForm(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MaintenanceDatePickerField(
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = value.toUtcMillisOrNull())
+
+    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+        Text(
+            text = stringResource(R.string.maintenance_date_label),
+            style = MaterialTheme.typography.labelLarge,
+        )
+        OutlinedButton(
+            onClick = { showDatePicker = true },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(value)
+        }
+    }
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { onValueChange(it.toIsoDate()) }
+                        showDatePicker = false
+                    },
+                ) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+}
+
 @Composable
 private fun EmptyHistoryCard(onAddMaintenance: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -347,7 +443,10 @@ private fun EmptyHistoryCard(onAddMaintenance: () -> Unit) {
 }
 
 @Composable
-private fun MaintenanceRecordCard(record: MaintenanceRecord) {
+private fun MaintenanceRecordCard(
+    record: MaintenanceRecord,
+    onDeleteMaintenance: (MaintenanceRecord) -> Unit,
+) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(Spacings.spacing16),
@@ -358,13 +457,21 @@ private fun MaintenanceRecordCard(record: MaintenanceRecord) {
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = record.maintenanceTypeId.value.removePrefix("type-").replace('-', ' '),
+                    text = record.displayType(),
                     style = MaterialTheme.typography.titleMedium,
                 )
-                Text(
-                    text = record.performedOn.iso8601,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = record.performedOn.iso8601,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    IconButton(onClick = { onDeleteMaintenance(record) }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.delete_maintenance_content_description),
+                        )
+                    }
+                }
             }
             record.odometerKm?.let { odometer ->
                 Text("$odometer km", style = MaterialTheme.typography.bodyMedium)
@@ -385,3 +492,13 @@ private fun MaintenanceRecordCard(record: MaintenanceRecord) {
         }
     }
 }
+
+private fun String.toUtcMillisOrNull(): Long? = runCatching {
+    LocalDate.parse(this).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+}.getOrNull()
+
+private fun Long.toIsoDate(): String = Instant
+    .ofEpochMilli(this)
+    .atZone(ZoneOffset.UTC)
+    .toLocalDate()
+    .toString()

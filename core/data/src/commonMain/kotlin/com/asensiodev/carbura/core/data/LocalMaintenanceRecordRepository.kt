@@ -36,6 +36,10 @@ class LocalMaintenanceRecordRepository(
             .selectMaintenanceRecordsByVehicle(vehicleId.value)
             .executeAsList()
             .map { it.toMaintenanceRecord() }
+
+    override suspend fun deleteMaintenanceRecord(recordId: MaintenanceRecordId) {
+        database.carburaDatabaseQueries.deleteMaintenanceRecord(recordId.value)
+    }
 }
 
 private fun MaintenanceRecords.toMaintenanceRecord(): MaintenanceRecord = MaintenanceRecord(

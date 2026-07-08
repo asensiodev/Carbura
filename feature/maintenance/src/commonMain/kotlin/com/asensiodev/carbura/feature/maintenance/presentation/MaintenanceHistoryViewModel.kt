@@ -3,6 +3,7 @@ package com.asensiodev.carbura.feature.maintenance.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.asensiodev.carbura.core.domain.CreateMaintenanceRecordUseCase
+import com.asensiodev.carbura.core.domain.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
 import com.asensiodev.carbura.core.domain.GetVehicleHistoryUseCase
@@ -32,6 +33,7 @@ class MaintenanceHistoryViewModel(
     private val dispatchers: DispatcherProvider,
     private val createMaintenanceRecordUseCase: CreateMaintenanceRecordUseCase,
     private val getVehicleHistoryUseCase: GetVehicleHistoryUseCase,
+    private val deleteMaintenanceRecordUseCase: DeleteMaintenanceRecordUseCase,
     private val nextRecordId: () -> MaintenanceRecordId = ::randomMaintenanceRecordId,
     private val coroutineScope: CoroutineScope? = null,
 ) : ViewModel() {
@@ -54,6 +56,7 @@ class MaintenanceHistoryViewModel(
             is MaintenanceHistoryEvent.WorkshopChanged -> updateForm { it.copy(workshop = event.value, errorMessage = null) }
             is MaintenanceHistoryEvent.NotesChanged -> updateForm { it.copy(notes = event.value, errorMessage = null) }
             MaintenanceHistoryEvent.SubmitMaintenance -> scope.launch { createMaintenance() }
+            is MaintenanceHistoryEvent.DeleteMaintenance -> scope.launch { deleteMaintenance(event.recordId) }
         }
     }
 
@@ -123,7 +126,17 @@ class MaintenanceHistoryViewModel(
         _uiState.update { it.copy(errorMessage = message) }
         _effects.send(MaintenanceHistoryEffect.ValidationFailed(message))
     }
+
+    private suspend fun deleteMaintenance(recordId: MaintenanceRecordId) {
+        val type = _uiState.value.records.firstOrNull { it.id == recordId }?.displayType().orEmpty()
+        withContext(dispatchers.io) { deleteMaintenanceRecordUseCase(recordId) }
+        val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
+        _uiState.update { it.copy(records = records, errorMessage = null) }
+        _effects.send(MaintenanceHistoryEffect.MaintenanceDeleted(type))
+    }
 }
+
+internal fun MaintenanceRecord.displayType(): String = maintenanceTypeId.value.removePrefix("type-").replace('-', ' ')
 
 private fun String.toCostCentsOrNull(): Int? {
     val trimmed = trim()

@@ -6,7 +6,7 @@
     <string name="maintenance_form_title">Nuevo mantenimiento</string>
     <string name="add_maintenance_button">Añadir</string>
     <string name="maintenance_type_label">Tipo</string>
-    <string name="maintenance_date_label">Fecha YYYY-MM-DD</string>
+    <string name="maintenance_date_label">Fecha</string>
     <string name="maintenance_odometer_label">Kilómetros</string>
     <string name="maintenance_cost_label">Coste (opcional)</string>
     <string name="maintenance_workshop_label">Taller (opcional)</string>
@@ -16,6 +16,12 @@
     <string name="empty_maintenance_history_title">Sin historial</string>
     <string name="empty_maintenance_history_description">Registra el primer mantenimiento para empezar a construir el historial.</string>
     <string name="maintenance_created_message">%1$s guardado en el historial.</string>
+    <string name="maintenance_deleted_message">%1$s eliminado del historial.</string>
+    <string name="delete_maintenance_content_description">Borrar mantenimiento</string>
+    <string name="delete_maintenance_dialog_title">Borrar mantenimiento</string>
+    <string name="delete_maintenance_dialog_description">Se eliminará %1$s del historial.</string>
+    <string name="delete_maintenance_confirm_button">Borrar</string>
+    <string name="delete_maintenance_cancel_button">Cancelar</string>
     <string name="validation_blank_maintenance_type">Introduce un tipo de mantenimiento.</string>
     <string name="validation_invalid_maintenance_date">Usa una fecha con formato YYYY-MM-DD.</string>
     <string name="validation_negative_maintenance_odometer">Los kilómetros no pueden ser negativos.</string>

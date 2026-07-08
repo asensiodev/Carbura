@@ -72,6 +72,10 @@ deleteMaintenanceRecordsByVehicle:
 DELETE FROM maintenanceRecords
 WHERE vehicleId = ?;
 
+deleteMaintenanceRecord:
+DELETE FROM maintenanceRecords
+WHERE id = ?;
+
 CREATE TABLE reminders (
     id TEXT NOT NULL PRIMARY KEY,
     familyId TEXT NOT NULL,
@@ -109,6 +113,10 @@ INSERT OR REPLACE INTO reminders(
 markReminderCompleted:
 UPDATE reminders
 SET isCompleted = 1
+WHERE id = ?;
+
+deleteReminder:
+DELETE FROM reminders
 WHERE id = ?;
 
 deleteRemindersByVehicle:

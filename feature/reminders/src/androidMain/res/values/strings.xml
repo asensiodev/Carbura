@@ -4,7 +4,8 @@
     <string name="reminders_subtitle">Planifica próximas revisiones por fecha o kilometraje.</string>
     <string name="reminders_form_title">Nuevo recordatorio</string>
     <string name="reminder_title_label">Titulo</string>
-    <string name="reminder_due_date_label">Fecha YYYY-MM-DD (opcional)</string>
+    <string name="reminder_due_date_label">Fecha objetivo (opcional)</string>
+    <string name="select_reminder_due_date_button">Seleccionar fecha</string>
     <string name="reminder_due_odometer_label">Kilómetros (opcional)</string>
     <string name="add_reminder_button">Añadir</string>
     <string name="add_first_reminder_button">Añadir recordatorio</string>
@@ -16,6 +17,12 @@
     <string name="complete_reminder_button">Completar</string>
     <string name="reminder_created_message">%1$s guardado como recordatorio.</string>
     <string name="reminder_completed_message">%1$s completado.</string>
+    <string name="reminder_deleted_message">%1$s eliminado.</string>
+    <string name="delete_reminder_content_description">Borrar recordatorio</string>
+    <string name="delete_reminder_dialog_title">Borrar recordatorio</string>
+    <string name="delete_reminder_dialog_description">Se eliminará %1$s.</string>
+    <string name="delete_reminder_confirm_button">Borrar</string>
+    <string name="delete_reminder_cancel_button">Cancelar</string>
     <string name="validation_blank_reminder_title">Introduce un título para el recordatorio.</string>
     <string name="validation_missing_reminder_vehicle">Selecciona un vehículo.</string>
     <string name="validation_missing_reminder_due_target">Introduce una fecha o kilometraje objetivo.</string>

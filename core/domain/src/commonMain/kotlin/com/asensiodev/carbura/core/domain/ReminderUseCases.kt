@@ -76,3 +76,11 @@ class CompleteReminderUseCase(
         repository.markReminderCompleted(params)
     }
 }
+
+class DeleteReminderUseCase(
+    private val repository: ReminderRepository,
+) : SuspendUseCase<ReminderId, Unit> {
+    override suspend fun invoke(params: ReminderId) {
+        repository.deleteReminder(params)
+    }
+}

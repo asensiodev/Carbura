@@ -8,6 +8,7 @@ import com.asensiodev.carbura.featurereminders.R
 internal fun CarburaString.remindersStringRes(): Int = when (this) {
     CarburaString.ReminderCreatedMessage -> R.string.reminder_created_message
     CarburaString.ReminderCompletedMessage -> R.string.reminder_completed_message
+    CarburaString.ReminderDeletedMessage -> R.string.reminder_deleted_message
     CarburaString.ValidationBlankReminderTitle -> R.string.validation_blank_reminder_title
     CarburaString.ValidationMissingReminderVehicle -> R.string.validation_missing_reminder_vehicle
     CarburaString.ValidationMissingReminderDueTarget -> R.string.validation_missing_reminder_due_target

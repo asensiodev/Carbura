@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.asensiodev.carbura.core.domain.CompleteReminderUseCase
 import com.asensiodev.carbura.core.domain.CreateReminderUseCase
+import com.asensiodev.carbura.core.domain.DeleteReminderUseCase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
 import com.asensiodev.carbura.core.domain.GetPendingRemindersUseCase
@@ -32,6 +33,7 @@ class RemindersViewModel(
     private val createReminderUseCase: CreateReminderUseCase,
     private val getPendingRemindersUseCase: GetPendingRemindersUseCase,
     private val completeReminderUseCase: CompleteReminderUseCase,
+    private val deleteReminderUseCase: DeleteReminderUseCase,
     private val nextReminderId: () -> ReminderId = ::randomReminderId,
     private val coroutineScope: CoroutineScope? = null,
 ) : ViewModel() {
@@ -53,6 +55,7 @@ class RemindersViewModel(
             is RemindersEvent.DueOdometerChanged -> updateForm { it.copy(dueOdometerKm = event.value, errorMessage = null) }
             RemindersEvent.SubmitReminder -> scope.launch { createReminder() }
             is RemindersEvent.CompleteReminder -> scope.launch { completeReminder(event.reminderId) }
+            is RemindersEvent.DeleteReminder -> scope.launch { deleteReminder(event.reminderId) }
         }
     }
 
@@ -131,6 +134,14 @@ class RemindersViewModel(
         val reminders = withContext(dispatchers.io) { getPendingRemindersUseCase(familyId) }
         _uiState.update { it.copy(reminders = reminders, errorMessage = null) }
         _effects.send(RemindersEffect.ReminderCompleted(title))
+    }
+
+    private suspend fun deleteReminder(reminderId: ReminderId) {
+        val title = _uiState.value.reminders.firstOrNull { it.id == reminderId }?.title.orEmpty()
+        withContext(dispatchers.io) { deleteReminderUseCase(reminderId) }
+        val reminders = withContext(dispatchers.io) { getPendingRemindersUseCase(familyId) }
+        _uiState.update { it.copy(reminders = reminders, errorMessage = null) }
+        _effects.send(RemindersEffect.ReminderDeleted(title))
     }
 
     private suspend fun emitValidation(message: CarburaString) {

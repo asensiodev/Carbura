@@ -55,6 +55,17 @@ class LocalRepositoriesTest {
     }
 
     @Test
+    fun maintenanceRepositoryDeletesRecordFromRecreatedDatabase() = runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
+        val repository = LocalMaintenanceRecordRepository(firstDatabase)
+        repository.saveMaintenanceRecord(record("oil", "2026-07-04"))
+        repository.deleteMaintenanceRecord(MaintenanceRecordId("oil"))
+
+        val recreatedRepository = LocalMaintenanceRecordRepository(recreatedDatabase)
+
+        assertEquals(emptyList(), recreatedRepository.getVehicleHistory(vehicleId))
+    }
+
+    @Test
     fun reminderRepositoryReadsPendingRemindersFromRecreatedDatabase() = runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
         val repository = LocalReminderRepository(firstDatabase)
         repository.saveReminder(reminder("late", dueDate = "2026-08-01"))
@@ -71,6 +82,17 @@ class LocalRepositoriesTest {
         val repository = LocalReminderRepository(firstDatabase)
         repository.saveReminder(reminder("completed", dueOdometerKm = 20000))
         repository.markReminderCompleted(ReminderId("completed"))
+
+        val recreatedRepository = LocalReminderRepository(recreatedDatabase)
+
+        assertEquals(emptyList(), recreatedRepository.getPendingReminders(familyId))
+    }
+
+    @Test
+    fun reminderRepositoryDeletesReminderFromRecreatedDatabase() = runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
+        val repository = LocalReminderRepository(firstDatabase)
+        repository.saveReminder(reminder("itv", dueDate = "2026-08-01"))
+        repository.deleteReminder(ReminderId("itv"))
 
         val recreatedRepository = LocalReminderRepository(recreatedDatabase)
 

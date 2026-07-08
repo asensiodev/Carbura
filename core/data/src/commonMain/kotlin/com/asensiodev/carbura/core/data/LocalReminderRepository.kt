@@ -36,6 +36,10 @@ class LocalReminderRepository(
     override suspend fun markReminderCompleted(reminderId: ReminderId) {
         database.carburaDatabaseQueries.markReminderCompleted(reminderId.value)
     }
+
+    override suspend fun deleteReminder(reminderId: ReminderId) {
+        database.carburaDatabaseQueries.deleteReminder(reminderId.value)
+    }
 }
 
 private fun Reminders.toReminder(): Reminder = Reminder(

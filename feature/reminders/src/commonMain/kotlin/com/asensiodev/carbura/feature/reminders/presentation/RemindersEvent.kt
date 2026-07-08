@@ -11,4 +11,5 @@ sealed interface RemindersEvent {
     data class DueOdometerChanged(val value: String) : RemindersEvent
     data object SubmitReminder : RemindersEvent
     data class CompleteReminder(val reminderId: ReminderId) : RemindersEvent
+    data class DeleteReminder(val reminderId: ReminderId) : RemindersEvent
 }
