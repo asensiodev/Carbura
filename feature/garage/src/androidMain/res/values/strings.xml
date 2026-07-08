@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="garage_title">Carbura</string>
-    <string name="garage_subtitle">Tu garaje, siempre a punto.</string>
+    <string name="garage_title">Garaje</string>
     <string name="garage_sign_out_button">Cerrar sesión</string>
     <string name="vehicle_form_title_first">Añade tu primer vehículo</string>
     <string name="vehicle_form_title_next">Añade otro vehículo</string>

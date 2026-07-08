@@ -278,11 +278,6 @@ private fun GarageHeader(
                 }
             }
         }
-        Text(
-            text = stringResource(R.string.garage_subtitle),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 
