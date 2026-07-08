@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.core.model.MaintenanceRecord
@@ -330,6 +331,7 @@ private fun MaintenanceForm(
             onValueChange = onTypeChange,
             modifier = Modifier.fillMaxWidth(),
             label = { Text(stringResource(R.string.maintenance_type_label)) },
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
             singleLine = true,
         )
         MaintenanceDatePickerField(
@@ -357,6 +359,7 @@ private fun MaintenanceForm(
             onValueChange = onWorkshopChange,
             modifier = Modifier.fillMaxWidth(),
             label = { Text(stringResource(R.string.maintenance_workshop_label)) },
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
             singleLine = true,
         )
         OutlinedTextField(
@@ -364,6 +367,7 @@ private fun MaintenanceForm(
             onValueChange = onNotesChange,
             modifier = Modifier.fillMaxWidth(),
             label = { Text(stringResource(R.string.maintenance_notes_label)) },
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             minLines = 2,
         )
         if (state.errorMessage != null) {

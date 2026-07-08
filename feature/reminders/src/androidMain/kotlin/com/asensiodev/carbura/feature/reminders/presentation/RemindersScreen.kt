@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.core.model.Reminder
@@ -321,6 +322,7 @@ private fun ReminderForm(
                 onValueChange = onTitleChange,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.reminder_title_label)) },
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 singleLine = true,
             )
             VehicleSelector(

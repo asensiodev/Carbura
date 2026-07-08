@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.core.model.Vehicle
@@ -308,6 +309,7 @@ private fun VehicleForm(
                 onValueChange = onNameChange,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.vehicle_name_label)) },
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                 singleLine = true,
             )
             VehicleTypeSelector(
