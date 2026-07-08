@@ -6,9 +6,26 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 ## Scope MVP dia 10
 
-- Incluido: login Google real, garaje local persistente, historial de mantenimiento local persistente, recordatorios MVP locales, y UI Android con edge-to-edge.
-- Recordatorios MVP: crear, listar pendientes y marcar completados por familia/vehiculo, con fecha y/o kilometraje objetivo.
-- Diferido: notificaciones locales, recordatorios recurrentes, sync remoto de recordatorios, invitaciones familiares, y Desktop.
+- Incluido y validado en Android: login Google real, perfil/familia MVP, garaje local persistente, historial de mantenimiento local persistente, recordatorios MVP locales, UI Android edge-to-edge y smoke visual manual.
+- Recordatorios MVP: crear, listar pendientes, marcar completados y borrar por familia/vehiculo, con fecha mediante date picker y/o kilometraje objetivo.
+- Mantenimiento MVP: crear con date picker, listar historial persistente por vehiculo y borrar registros con confirmacion.
+- Garaje MVP: crear coche/moto, listar y borrar vehiculos con limpieza local de mantenimientos y recordatorios asociados.
+- Diferido: notificaciones locales, recordatorios recurrentes, invitaciones familiares completas, Desktop y sync remoto completo.
+- Siguiente bloque recomendado: sync v0 funcional KMP con Supabase para vehiculos, mantenimientos y recordatorios, usando estrategia simple `last-write-wins` y sin realtime/background sync avanzado.
+
+## Estado actual Entrega 2
+
+- Android MVP local-first: ~85-90% completado para demo.
+- MVP completo Android + Desktop + sync: ~65-70% completado.
+- OpenSpec archivados: `add-user-family-mvp`, `add-date-pickers-delete-mvp`, `add-reminders-mvp-edge-to-edge`.
+- Commits locales pendientes de push desde `0d9dd51`: polish UI, mantenimiento, date pickers, borrados, confirmaciones y capitalizacion de inputs.
+
+## Sync v0 previsto
+
+- Debe ser funcional end-to-end, no solo preparatorio: subir cambios locales pendientes a Supabase y bajar datos remotos de la familia.
+- Alcance v0: vehiculos, mantenimientos y recordatorios; ejecucion manual o al iniciar sesion/app; resolucion simple por `updated_at` con `last-write-wins`.
+- Fuera de v0: realtime, background sync periodico, merge manual de conflictos, colas complejas, adjuntos y notificaciones remotas.
+- La implementacion debe vivir en KMP/shared (`core:domain`/`core:data`) para ser reutilizable por Android y Desktop.
 
 ## Orden de implementacion recomendado
 

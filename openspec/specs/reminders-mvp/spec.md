@@ -18,7 +18,7 @@ The system SHALL show pending reminders for the active family on Android.
 The system SHALL allow the Android user to create a reminder for a vehicle using MVP fields.
 
 #### Scenario: Valid reminder with due date
-- **WHEN** the user submits a reminder with title, vehicle, and valid due date
+- **WHEN** the user submits a reminder with title, vehicle, and picker-selected valid due date
 - **THEN** the reminder is saved and appears in the pending reminders list
 
 #### Scenario: Valid reminder with due odometer
@@ -54,3 +54,10 @@ The system SHALL persist Android MVP reminders in local storage through the doma
 #### Scenario: Completed reminder remains completed after restart
 - **WHEN** a reminder is marked completed and the app process is restarted
 - **THEN** the reminder does not appear in the pending reminders list
+
+### Requirement: Reminder Deletion
+The system SHALL allow the Android user to delete a pending reminder after confirmation.
+
+#### Scenario: Delete pending reminder
+- **WHEN** the user confirms deletion of a pending reminder
+- **THEN** the reminder is removed from local persistence and no longer appears in the pending reminders list

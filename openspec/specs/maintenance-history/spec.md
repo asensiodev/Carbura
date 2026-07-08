@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Define the Android MVP workflow for creating, viewing, persisting, and deleting maintenance records for a selected vehicle.
+
+## Requirements
 
 ### Requirement: Vehicle Maintenance History
 The system SHALL show the maintenance records for a selected vehicle ordered by service date descending.
@@ -15,7 +19,7 @@ The system SHALL show the maintenance records for a selected vehicle ordered by 
 The system SHALL allow the Android user to create a maintenance record for the selected vehicle using the MVP fields supported by the domain.
 
 #### Scenario: Valid maintenance creation
-- **WHEN** the user submits a maintenance record with type, valid date and non-negative odometer value
+- **WHEN** the user submits a maintenance record with type, picker-selected valid date and non-negative odometer value
 - **THEN** the record is saved through the domain maintenance creation use case and appears in the history
 
 #### Scenario: Blank maintenance type error
@@ -30,9 +34,16 @@ The system SHALL allow the Android user to create a maintenance record for the s
 - **WHEN** the user submits a valid maintenance record with cost
 - **THEN** the saved record shows the cost in the history list
 
-### Requirement: Temporary In-Memory Maintenance Storage
-The system SHALL keep maintenance records in memory for the initial Android MVP slice until persistent storage is introduced.
+### Requirement: Local Maintenance Persistence
+The system SHALL persist Android MVP maintenance records in local storage through the domain maintenance repository contract.
 
-#### Scenario: Records remain available during the current process
-- **WHEN** a maintenance record is created successfully during the current app process
-- **THEN** subsequent history reads for the same vehicle return that record
+#### Scenario: Records survive app restart
+- **WHEN** a maintenance record is created and the app process is restarted
+- **THEN** the vehicle history returns the previously created maintenance record from local storage
+
+### Requirement: Maintenance Record Deletion
+The system SHALL allow the Android user to delete a maintenance record from a vehicle history after confirmation.
+
+#### Scenario: Delete maintenance record
+- **WHEN** the user confirms deletion of a maintenance record
+- **THEN** the record is removed from local persistence and no longer appears in the history

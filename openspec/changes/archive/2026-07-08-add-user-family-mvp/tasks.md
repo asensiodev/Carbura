@@ -22,4 +22,4 @@
 
 - [x] 4.1 Run `./gradlew test assembleDebug`.
 - [x] 4.2 Run `openspec validate add-user-family-mvp --strict`.
-- [ ] 4.3 Install/smoke test the Android `Usuario` tab when a device is available.
+- [x] 4.3 Install/smoke test the Android `Usuario` tab when a device is available.
