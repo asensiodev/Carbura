@@ -44,4 +44,4 @@
 - [x] 6.1 Run affected unit tests.
 - [x] 6.2 Run `./gradlew test assembleDebug`.
 - [x] 6.3 Run `openspec validate add-sync-v0 --strict`.
-- [ ] 6.4 Smoke Android sync with Supabase using one account/family.
+- [x] 6.4 Smoke Android sync with Supabase using one account/family.
