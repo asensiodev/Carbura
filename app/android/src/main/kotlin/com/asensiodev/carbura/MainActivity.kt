@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,10 +25,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -54,6 +58,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.asensiodev.carbura.app.shared.CarburaRoute
 import com.asensiodev.carbura.core.designsystem.CarburaTheme
+import com.asensiodev.carbura.core.designsystem.Size
 import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.core.domain.SyncManager
 import com.asensiodev.carbura.core.domain.SyncStatus
@@ -308,6 +313,7 @@ private fun CarburaMainScaffold(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun UserRoute(
     displayName: String?,
@@ -368,10 +374,36 @@ private fun UserRoute(
                     modifier = Modifier.padding(Spacings.spacing16),
                     verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
                 ) {
-                    Text(
-                        text = stringResource(R.string.user_sync_title),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.user_sync_title),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        AssistChip(
+                            onClick = {},
+                            label = {
+                                Text(
+                                    text = when {
+                                        syncStatus.isSyncing -> stringResource(R.string.user_syncing_status)
+                                        syncStatus.lastErrorMessage != null -> stringResource(R.string.user_sync_pending)
+                                        syncStatus.lastSyncedAtMillis != null -> stringResource(R.string.user_sync_ready)
+                                        else -> stringResource(R.string.user_sync_pending)
+                                    },
+                                )
+                            },
+                        )
+                    }
+                    if (syncStatus.isSyncing) {
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        )
+                    }
                     Text(
                         text = stringResource(R.string.user_sync_description),
                         style = MaterialTheme.typography.bodyMedium,
@@ -385,11 +417,28 @@ private fun UserRoute(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     syncStatus.lastErrorMessage?.let { error ->
-                        Text(
-                            text = stringResource(R.string.user_sync_error, error),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = Spacings.spacing4),
+                            verticalArrangement = Arrangement.spacedBy(Spacings.spacing4),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.user_sync_error_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            Text(
+                                text = stringResource(R.string.user_sync_error_description),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = stringResource(R.string.user_sync_error_detail, error),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                     Button(
                         onClick = onSyncNow,
@@ -480,7 +529,7 @@ private fun CarburaLoadingScreen() {
                 .safeDrawingPadding(),
             contentAlignment = Alignment.Center,
         ) {
-            CircularProgressIndicator(strokeWidth = Spacings.spacing4)
+            CircularProgressIndicator(strokeWidth = Size.size4)
         }
     }
 }
