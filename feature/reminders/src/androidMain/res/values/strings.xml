@@ -20,7 +20,7 @@
     <string name="reminder_deleted_message">%1$s eliminado.</string>
     <string name="delete_reminder_content_description">Borrar recordatorio</string>
     <string name="delete_reminder_dialog_title">Borrar recordatorio</string>
-    <string name="delete_reminder_dialog_description">Se eliminará %1$s.</string>
+    <string name="delete_reminder_dialog_description">Se eliminará este recordatorio:</string>
     <string name="delete_reminder_confirm_button">Borrar</string>
     <string name="delete_reminder_cancel_button">Cancelar</string>
     <string name="validation_blank_reminder_title">Introduce un título para el recordatorio.</string>

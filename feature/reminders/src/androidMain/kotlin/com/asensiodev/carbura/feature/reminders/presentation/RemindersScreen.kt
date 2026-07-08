@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.core.model.Reminder
@@ -239,7 +240,15 @@ private fun RemindersScreen(
         AlertDialog(
             onDismissRequest = { reminderPendingDeletion = null },
             title = { Text(stringResource(R.string.delete_reminder_dialog_title)) },
-            text = { Text(stringResource(R.string.delete_reminder_dialog_description, reminder.title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+                    Text(stringResource(R.string.delete_reminder_dialog_description))
+                    Text(
+                        text = reminder.title,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            },
             confirmButton = {
                 TextButton(
                     onClick = {

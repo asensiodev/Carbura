@@ -19,7 +19,7 @@
     <string name="maintenance_deleted_message">%1$s eliminado del historial.</string>
     <string name="delete_maintenance_content_description">Borrar mantenimiento</string>
     <string name="delete_maintenance_dialog_title">Borrar mantenimiento</string>
-    <string name="delete_maintenance_dialog_description">Se eliminará %1$s del historial.</string>
+    <string name="delete_maintenance_dialog_description">Se eliminará este mantenimiento del historial:</string>
     <string name="delete_maintenance_confirm_button">Borrar</string>
     <string name="delete_maintenance_cancel_button">Cancelar</string>
     <string name="validation_blank_maintenance_type">Introduce un tipo de mantenimiento.</string>

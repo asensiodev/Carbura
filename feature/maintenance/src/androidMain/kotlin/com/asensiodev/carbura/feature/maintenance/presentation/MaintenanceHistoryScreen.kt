@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.core.model.MaintenanceRecord
@@ -255,7 +256,15 @@ private fun MaintenanceHistoryScreen(
         AlertDialog(
             onDismissRequest = { recordPendingDeletion = null },
             title = { Text(stringResource(R.string.delete_maintenance_dialog_title)) },
-            text = { Text(stringResource(R.string.delete_maintenance_dialog_description, type)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+                    Text(stringResource(R.string.delete_maintenance_dialog_description))
+                    Text(
+                        text = type,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
