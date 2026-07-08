@@ -11,7 +11,6 @@ kotlin {
         implementation(projects.feature.reminders)
         implementation(projects.core.auth)
         implementation(projects.core.data)
-        implementation(projects.core.domain)
         implementation(projects.core.model)
         implementation(libs.koin.core)
         implementation(libs.androidx.navigation3.runtime)

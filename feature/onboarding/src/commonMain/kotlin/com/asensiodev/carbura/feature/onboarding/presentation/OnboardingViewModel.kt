@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.asensiodev.carbura.core.auth.AuthGateway
 import com.asensiodev.carbura.core.auth.AuthSession
-import com.asensiodev.carbura.core.data.RemoteUserProfile
-import com.asensiodev.carbura.core.data.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.domain.DispatcherProvider
+import com.asensiodev.carbura.core.domain.RemoteUserProfile
+import com.asensiodev.carbura.core.domain.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import kotlinx.coroutines.CoroutineScope

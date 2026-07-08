@@ -1,4 +1,4 @@
-package com.asensiodev.carbura.core.data
+package com.asensiodev.carbura.core.domain
 
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId

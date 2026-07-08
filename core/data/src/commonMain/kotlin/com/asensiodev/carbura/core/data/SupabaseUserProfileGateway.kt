@@ -1,5 +1,7 @@
 package com.asensiodev.carbura.core.data
 
+import com.asensiodev.carbura.core.domain.RemoteUserProfile
+import com.asensiodev.carbura.core.domain.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import io.github.jan.supabase.SupabaseClient

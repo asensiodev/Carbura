@@ -5,7 +5,6 @@ plugins {
 kotlin {
     sourceSets.commonMain.dependencies {
         implementation(projects.core.auth)
-        implementation(projects.core.data)
         implementation(projects.core.domain)
         implementation(projects.core.model)
         implementation(projects.core.stringResources)

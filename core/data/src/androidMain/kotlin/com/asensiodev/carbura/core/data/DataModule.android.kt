@@ -6,6 +6,7 @@ import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.MaintenanceRecordRepository
+import com.asensiodev.carbura.core.domain.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.domain.ReminderRepository
 import com.asensiodev.carbura.core.domain.SyncManager
 import com.asensiodev.carbura.core.domain.VehicleRepository

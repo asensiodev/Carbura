@@ -126,6 +126,12 @@ private fun CarburaApp() {
         return
     }
 
+    val familyId = onboardingState.familyId
+    if (familyId.isNullOrBlank()) {
+        CarburaLoadingScreen()
+        return
+    }
+
     LaunchedEffect(onboardingState.isAuthenticated) {
         if (onboardingState.isAuthenticated) {
             syncManager.syncNow()
@@ -196,7 +202,7 @@ private fun CarburaApp() {
                 when (val carburaRoute = route as CarburaRoute) {
                     CarburaRoute.Garage -> NavEntry(route) {
                         GarageRoute(
-                            familyId = onboardingState.familyId.orEmpty(),
+                            familyId = familyId,
                             onVehicleSelected = { vehicleId ->
                                 backStack.add(CarburaRoute.VehicleDetail(vehicleId))
                             },
@@ -206,7 +212,7 @@ private fun CarburaApp() {
                     is CarburaRoute.VehicleDetail -> NavEntry(route) {
                         MaintenanceHistoryRoute(
                             vehicleId = carburaRoute.vehicleId,
-                            familyId = onboardingState.familyId.orEmpty(),
+                            familyId = familyId,
                             onBack = {
                                 if (backStack.size > 1) {
                                     backStack.removeLastOrNull()
@@ -216,7 +222,7 @@ private fun CarburaApp() {
                     }
 
                     CarburaRoute.Reminders -> NavEntry(route) {
-                        RemindersRoute(familyId = onboardingState.familyId.orEmpty())
+                        RemindersRoute(familyId = familyId)
                     }
 
                     CarburaRoute.User -> NavEntry(route) {
@@ -233,7 +239,7 @@ private fun CarburaApp() {
                     }
 
                     is CarburaRoute.CreateMaintenance -> NavEntry(route) {
-                        GarageRoute(familyId = onboardingState.familyId.orEmpty())
+                        GarageRoute(familyId = familyId)
                     }
                 }
             },
