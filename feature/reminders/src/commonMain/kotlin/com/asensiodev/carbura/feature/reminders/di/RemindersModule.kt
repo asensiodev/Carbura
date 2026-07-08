@@ -12,5 +12,16 @@ val remindersModule = module {
     factory { GetPendingRemindersUseCase(get()) }
     factory { CompleteReminderUseCase(get()) }
     factory { DeleteReminderUseCase(get()) }
-    factory { RemindersViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    factory {
+        RemindersViewModel(
+            familyId = get(),
+            vehicleRepository = get(),
+            dispatchers = get(),
+            createReminderUseCase = get(),
+            getPendingRemindersUseCase = get(),
+            completeReminderUseCase = get(),
+            deleteReminderUseCase = get(),
+            syncManager = get(),
+        )
+    }
 }

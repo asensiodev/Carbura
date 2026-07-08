@@ -6,14 +6,28 @@ CREATE TABLE vehicles (
     brand TEXT,
     model TEXT,
     licensePlate TEXT,
-    currentOdometerKm INTEGER NOT NULL
+    currentOdometerKm INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL DEFAULT 0,
+    pendingSync INTEGER NOT NULL DEFAULT 0,
+    deletedAt INTEGER
 );
 
 selectVehiclesByFamily:
 SELECT *
 FROM vehicles
 WHERE familyId = ?
+AND deletedAt IS NULL
 ORDER BY name ASC;
+
+selectPendingSyncVehicles:
+SELECT *
+FROM vehicles
+WHERE pendingSync = 1;
+
+selectSyncVehiclesByFamily:
+SELECT *
+FROM vehicles
+WHERE familyId = ?;
 
 upsertVehicle:
 INSERT OR REPLACE INTO vehicles(
@@ -24,11 +38,22 @@ INSERT OR REPLACE INTO vehicles(
     brand,
     model,
     licensePlate,
-    currentOdometerKm
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+    currentOdometerKm,
+    updatedAt,
+    pendingSync,
+    deletedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+markVehicleSynced:
+UPDATE vehicles
+SET pendingSync = 0
+WHERE id = ?;
 
 deleteVehicle:
-DELETE FROM vehicles
+UPDATE vehicles
+SET deletedAt = ?,
+    updatedAt = ?,
+    pendingSync = 1
 WHERE id = ?;
 
 CREATE TABLE maintenanceRecords (
@@ -43,14 +68,28 @@ CREATE TABLE maintenanceRecords (
     currency TEXT NOT NULL,
     workshop TEXT,
     notes TEXT,
-    nextDueDate TEXT
+    nextDueDate TEXT,
+    updatedAt INTEGER NOT NULL DEFAULT 0,
+    pendingSync INTEGER NOT NULL DEFAULT 0,
+    deletedAt INTEGER
 );
 
 selectMaintenanceRecordsByVehicle:
 SELECT *
 FROM maintenanceRecords
 WHERE vehicleId = ?
+AND deletedAt IS NULL
 ORDER BY performedOn DESC;
+
+selectPendingSyncMaintenanceRecords:
+SELECT *
+FROM maintenanceRecords
+WHERE pendingSync = 1;
+
+selectSyncMaintenanceRecordsByFamily:
+SELECT *
+FROM maintenanceRecords
+WHERE familyId = ?;
 
 upsertMaintenanceRecord:
 INSERT OR REPLACE INTO maintenanceRecords(
@@ -65,15 +104,30 @@ INSERT OR REPLACE INTO maintenanceRecords(
     currency,
     workshop,
     notes,
-    nextDueDate
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    nextDueDate,
+    updatedAt,
+    pendingSync,
+    deletedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 deleteMaintenanceRecordsByVehicle:
-DELETE FROM maintenanceRecords
-WHERE vehicleId = ?;
+UPDATE maintenanceRecords
+SET deletedAt = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE vehicleId = ?
+AND deletedAt IS NULL;
 
 deleteMaintenanceRecord:
-DELETE FROM maintenanceRecords
+UPDATE maintenanceRecords
+SET deletedAt = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE id = ?;
+
+markMaintenanceRecordSynced:
+UPDATE maintenanceRecords
+SET pendingSync = 0
 WHERE id = ?;
 
 CREATE TABLE reminders (
@@ -85,7 +139,10 @@ CREATE TABLE reminders (
     dueDate TEXT,
     dueOdometerKm INTEGER,
     notifyDaysBefore INTEGER NOT NULL,
-    isCompleted INTEGER NOT NULL DEFAULT 0
+    isCompleted INTEGER NOT NULL DEFAULT 0,
+    updatedAt INTEGER NOT NULL DEFAULT 0,
+    pendingSync INTEGER NOT NULL DEFAULT 0,
+    deletedAt INTEGER
 );
 
 selectPendingRemindersByFamily:
@@ -93,9 +150,20 @@ SELECT *
 FROM reminders
 WHERE familyId = ?
 AND isCompleted = 0
+AND deletedAt IS NULL
 ORDER BY COALESCE(dueDate, '9999-12-31') ASC,
          COALESCE(dueOdometerKm, 9223372036854775807) ASC,
          title ASC;
+
+selectPendingSyncReminders:
+SELECT *
+FROM reminders
+WHERE pendingSync = 1;
+
+selectSyncRemindersByFamily:
+SELECT *
+FROM reminders
+WHERE familyId = ?;
 
 upsertReminder:
 INSERT OR REPLACE INTO reminders(
@@ -107,18 +175,35 @@ INSERT OR REPLACE INTO reminders(
     dueDate,
     dueOdometerKm,
     notifyDaysBefore,
-    isCompleted
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+    isCompleted,
+    updatedAt,
+    pendingSync,
+    deletedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 markReminderCompleted:
 UPDATE reminders
-SET isCompleted = 1
+SET isCompleted = 1,
+    updatedAt = ?,
+    pendingSync = 1
 WHERE id = ?;
 
 deleteReminder:
-DELETE FROM reminders
+UPDATE reminders
+SET deletedAt = ?,
+    updatedAt = ?,
+    pendingSync = 1
 WHERE id = ?;
 
 deleteRemindersByVehicle:
-DELETE FROM reminders
-WHERE vehicleId = ?;
+UPDATE reminders
+SET deletedAt = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE vehicleId = ?
+AND deletedAt IS NULL;
+
+markReminderSynced:
+UPDATE reminders
+SET pendingSync = 0
+WHERE id = ?;

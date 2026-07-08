@@ -11,6 +11,13 @@
     <string name="user_family_fallback_name">Familia personal</string>
     <string name="user_family_description">Este es el espacio donde se agrupan tus vehículos, mantenimientos y recordatorios.</string>
     <string name="user_family_deferred_note">Las invitaciones y miembros llegarán en una próxima versión.</string>
+    <string name="user_sync_title">Sincronización</string>
+    <string name="user_sync_description">Sincroniza garaje, mantenimientos y recordatorios con tu familia.</string>
+    <string name="user_sync_now_button">Sincronizar ahora</string>
+    <string name="user_syncing_button">Sincronizando...</string>
+    <string name="user_sync_never">Aún no se ha sincronizado.</string>
+    <string name="user_sync_last">Última sync: %1$s</string>
+    <string name="user_sync_error">Último error: %1$s</string>
     <string name="user_session_title">Sesión</string>
     <string name="user_sign_out_button">Cerrar sesión</string>
 </resources>

@@ -15,6 +15,7 @@ class LocalMaintenanceRecordRepository(
     private val database: CarburaDatabase,
 ) : MaintenanceRecordRepository {
     override suspend fun saveMaintenanceRecord(record: MaintenanceRecord) {
+        val now = currentTimeMillis()
         database.carburaDatabaseQueries.upsertMaintenanceRecord(
             id = record.id.value,
             familyId = record.familyId.value,
@@ -28,6 +29,9 @@ class LocalMaintenanceRecordRepository(
             workshop = record.workshop,
             notes = record.notes,
             nextDueDate = record.nextDueDate?.iso8601,
+            updatedAt = now,
+            pendingSync = 1,
+            deletedAt = null,
         )
     }
 
@@ -38,7 +42,12 @@ class LocalMaintenanceRecordRepository(
             .map { it.toMaintenanceRecord() }
 
     override suspend fun deleteMaintenanceRecord(recordId: MaintenanceRecordId) {
-        database.carburaDatabaseQueries.deleteMaintenanceRecord(recordId.value)
+        val now = currentTimeMillis()
+        database.carburaDatabaseQueries.deleteMaintenanceRecord(
+            deletedAt = now,
+            updatedAt = now,
+            id = recordId.value,
+        )
     }
 }
 

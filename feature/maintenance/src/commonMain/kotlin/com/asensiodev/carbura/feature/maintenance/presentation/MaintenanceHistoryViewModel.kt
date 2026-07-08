@@ -7,6 +7,7 @@ import com.asensiodev.carbura.core.domain.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
 import com.asensiodev.carbura.core.domain.GetVehicleHistoryUseCase
+import com.asensiodev.carbura.core.domain.SyncManager
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
@@ -34,6 +35,7 @@ class MaintenanceHistoryViewModel(
     private val createMaintenanceRecordUseCase: CreateMaintenanceRecordUseCase,
     private val getVehicleHistoryUseCase: GetVehicleHistoryUseCase,
     private val deleteMaintenanceRecordUseCase: DeleteMaintenanceRecordUseCase,
+    private val syncManager: SyncManager? = null,
     private val nextRecordId: () -> MaintenanceRecordId = ::randomMaintenanceRecordId,
     private val coroutineScope: CoroutineScope? = null,
 ) : ViewModel() {
@@ -114,6 +116,7 @@ class MaintenanceHistoryViewModel(
                     )
                 }
                 _effects.send(MaintenanceHistoryEffect.MaintenanceCreated(type))
+                syncAfterMutation()
             }
 
             is DomainResult.ValidationError -> {
@@ -133,6 +136,11 @@ class MaintenanceHistoryViewModel(
         val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
         _uiState.update { it.copy(records = records, errorMessage = null) }
         _effects.send(MaintenanceHistoryEffect.MaintenanceDeleted(type))
+        syncAfterMutation()
+    }
+
+    private fun syncAfterMutation() {
+        scope.launch { syncManager?.syncNow() }
     }
 }
 

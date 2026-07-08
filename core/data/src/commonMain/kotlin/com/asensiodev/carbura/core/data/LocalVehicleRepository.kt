@@ -18,6 +18,7 @@ class LocalVehicleRepository(
             .map { it.toVehicle() }
 
     override suspend fun saveVehicle(vehicle: Vehicle) {
+        val now = currentTimeMillis()
         database.carburaDatabaseQueries.upsertVehicle(
             id = vehicle.id.value,
             familyId = vehicle.familyId.value,
@@ -27,14 +28,30 @@ class LocalVehicleRepository(
             model = vehicle.model,
             licensePlate = vehicle.licensePlate,
             currentOdometerKm = vehicle.currentOdometerKm.toLong(),
+            updatedAt = now,
+            pendingSync = 1,
+            deletedAt = null,
         )
     }
 
     override suspend fun deleteVehicle(vehicleId: VehicleId) {
+        val now = currentTimeMillis()
         database.carburaDatabaseQueries.transaction {
-            database.carburaDatabaseQueries.deleteMaintenanceRecordsByVehicle(vehicleId.value)
-            database.carburaDatabaseQueries.deleteRemindersByVehicle(vehicleId.value)
-            database.carburaDatabaseQueries.deleteVehicle(vehicleId.value)
+            database.carburaDatabaseQueries.deleteMaintenanceRecordsByVehicle(
+                deletedAt = now,
+                updatedAt = now,
+                vehicleId = vehicleId.value,
+            )
+            database.carburaDatabaseQueries.deleteRemindersByVehicle(
+                deletedAt = now,
+                updatedAt = now,
+                vehicleId = vehicleId.value,
+            )
+            database.carburaDatabaseQueries.deleteVehicle(
+                deletedAt = now,
+                updatedAt = now,
+                id = vehicleId.value,
+            )
         }
     }
 }

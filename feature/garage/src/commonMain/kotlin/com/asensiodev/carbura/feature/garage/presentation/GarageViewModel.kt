@@ -6,6 +6,7 @@ import com.asensiodev.carbura.core.domain.CreateVehicleUseCase
 import com.asensiodev.carbura.core.domain.DeleteVehicleUseCase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
+import com.asensiodev.carbura.core.domain.SyncManager
 import com.asensiodev.carbura.core.domain.VehicleRepository
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Vehicle
@@ -29,6 +30,7 @@ class GarageViewModel(
     private val dispatchers: DispatcherProvider,
     private val createVehicleUseCase: CreateVehicleUseCase = CreateVehicleUseCase(vehicleRepository),
     private val deleteVehicleUseCase: DeleteVehicleUseCase = DeleteVehicleUseCase(vehicleRepository),
+    private val syncManager: SyncManager? = null,
     private val nextVehicleId: () -> VehicleId = ::randomVehicleId,
     private val coroutineScope: CoroutineScope? = null,
 ) : ViewModel() {
@@ -104,6 +106,7 @@ class GarageViewModel(
                     )
                 }
                 _effects.send(GarageEffect.VehicleCreated(result.value.name))
+                syncAfterMutation()
             }
 
             is DomainResult.ValidationError -> {
@@ -124,6 +127,11 @@ class GarageViewModel(
         }
         _uiState.update { it.copy(vehicles = vehicles) }
         _effects.send(GarageEffect.VehicleDeleted(vehicleName))
+        syncAfterMutation()
+    }
+
+    private fun syncAfterMutation() {
+        scope.launch { syncManager?.syncNow() }
     }
 }
 

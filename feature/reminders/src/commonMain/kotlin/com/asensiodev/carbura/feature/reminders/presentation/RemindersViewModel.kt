@@ -8,6 +8,7 @@ import com.asensiodev.carbura.core.domain.DeleteReminderUseCase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
 import com.asensiodev.carbura.core.domain.GetPendingRemindersUseCase
+import com.asensiodev.carbura.core.domain.SyncManager
 import com.asensiodev.carbura.core.domain.VehicleRepository
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
@@ -34,6 +35,7 @@ class RemindersViewModel(
     private val getPendingRemindersUseCase: GetPendingRemindersUseCase,
     private val completeReminderUseCase: CompleteReminderUseCase,
     private val deleteReminderUseCase: DeleteReminderUseCase,
+    private val syncManager: SyncManager? = null,
     private val nextReminderId: () -> ReminderId = ::randomReminderId,
     private val coroutineScope: CoroutineScope? = null,
 ) : ViewModel() {
@@ -126,6 +128,7 @@ class RemindersViewModel(
             )
         }
         _effects.send(RemindersEffect.ReminderCreated(title))
+        syncAfterMutation()
     }
 
     private suspend fun completeReminder(reminderId: ReminderId) {
@@ -134,6 +137,7 @@ class RemindersViewModel(
         val reminders = withContext(dispatchers.io) { getPendingRemindersUseCase(familyId) }
         _uiState.update { it.copy(reminders = reminders, errorMessage = null) }
         _effects.send(RemindersEffect.ReminderCompleted(title))
+        syncAfterMutation()
     }
 
     private suspend fun deleteReminder(reminderId: ReminderId) {
@@ -142,6 +146,11 @@ class RemindersViewModel(
         val reminders = withContext(dispatchers.io) { getPendingRemindersUseCase(familyId) }
         _uiState.update { it.copy(reminders = reminders, errorMessage = null) }
         _effects.send(RemindersEffect.ReminderDeleted(title))
+        syncAfterMutation()
+    }
+
+    private fun syncAfterMutation() {
+        scope.launch { syncManager?.syncNow() }
     }
 
     private suspend fun emitValidation(message: CarburaString) {

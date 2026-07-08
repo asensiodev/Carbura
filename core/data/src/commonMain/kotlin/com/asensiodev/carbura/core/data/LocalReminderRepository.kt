@@ -20,6 +20,7 @@ class LocalReminderRepository(
             .map { it.toReminder() }
 
     override suspend fun saveReminder(reminder: Reminder) {
+        val now = currentTimeMillis()
         database.carburaDatabaseQueries.upsertReminder(
             id = reminder.id.value,
             familyId = reminder.familyId.value,
@@ -30,15 +31,26 @@ class LocalReminderRepository(
             dueOdometerKm = reminder.dueOdometerKm?.toLong(),
             notifyDaysBefore = reminder.notifyDaysBefore.toLong(),
             isCompleted = if (reminder.isCompleted) 1 else 0,
+            updatedAt = now,
+            pendingSync = 1,
+            deletedAt = null,
         )
     }
 
     override suspend fun markReminderCompleted(reminderId: ReminderId) {
-        database.carburaDatabaseQueries.markReminderCompleted(reminderId.value)
+        database.carburaDatabaseQueries.markReminderCompleted(
+            updatedAt = currentTimeMillis(),
+            id = reminderId.value,
+        )
     }
 
     override suspend fun deleteReminder(reminderId: ReminderId) {
-        database.carburaDatabaseQueries.deleteReminder(reminderId.value)
+        val now = currentTimeMillis()
+        database.carburaDatabaseQueries.deleteReminder(
+            deletedAt = now,
+            updatedAt = now,
+            id = reminderId.value,
+        )
     }
 }
 

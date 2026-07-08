@@ -19,6 +19,12 @@ Each syncable local record needs metadata:
 
 The implementation should prefer a deletion strategy that can evolve to remote sync without breaking UI contracts. If hard deletes are kept locally for MVP, v0 must still represent deletes in the outbound sync flow or explicitly document the limitation before implementation proceeds.
 
+## Delete Semantics v0
+
+Sync v0 uses soft deletes for syncable entities. Local delete actions set `deleted_at`, refresh `updated_at` and mark `pending_sync = 1`. Normal UI queries exclude rows with `deleted_at IS NOT NULL`, while pending sync queries keep seeing tombstones until remote propagation succeeds.
+
+Vehicle deletion also tombstones related maintenance records and reminders so the remote family state can converge without orphaned rows. Physical cleanup of synced tombstones is deferred to v1.
+
 ## Sync Flow
 
 1. Load active authenticated family/session.
