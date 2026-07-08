@@ -52,6 +52,7 @@ class OnboardingViewModelTest {
         assertTrue(state.isAuthenticated)
         assertEquals("Angela Remote", state.displayName)
         assertEquals("angela@example.com", state.email)
+        assertEquals("family-1", state.familyId)
         assertEquals("Familia de Angela", state.familyName)
     }
 
@@ -121,6 +122,7 @@ class OnboardingViewModelTest {
         assertTrue(state.isAuthenticated)
         assertEquals("Angela", state.displayName)
         assertEquals("angela@example.com", state.email)
+        assertEquals("family-auto-1", state.familyId)
         assertEquals("Familia de Angela", state.familyName)
     }
 

@@ -15,5 +15,5 @@ data class RemindersUiState(
     val dueOdometerKm: String = "",
     val errorMessage: CarburaString? = null,
 ) {
-    val isEmpty: Boolean = reminders.isEmpty()
+    val isEmpty: Boolean = reminders.isEmpty() && !isLoading
 }

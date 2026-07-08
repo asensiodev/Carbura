@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -178,7 +179,11 @@ private fun GarageScreen(
                     )
                 }
 
-                if (state.isEmpty) {
+                if (state.isLoading) {
+                    item {
+                        LoadingStateCard(message = stringResource(R.string.garage_loading_message))
+                    }
+                } else if (state.isEmpty) {
                     item {
                         EmptyGarageCard(
                             onAddVehicle = { showVehicleSheet = true },
@@ -267,6 +272,24 @@ private fun GarageScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun LoadingStateCard(message: String) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(Spacings.spacing16),
+            horizontalArrangement = Arrangement.spacedBy(Spacings.spacing12),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CircularProgressIndicator()
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

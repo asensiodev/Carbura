@@ -12,5 +12,5 @@ data class GarageUiState(
     val errorMessage: CarburaString? = null,
     val isLoading: Boolean = false,
 ) {
-    val isEmpty: Boolean = vehicles.isEmpty()
+    val isEmpty: Boolean = vehicles.isEmpty() && !isLoading
 }

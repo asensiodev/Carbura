@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -192,7 +193,11 @@ private fun RemindersScreen(
                         style = MaterialTheme.typography.titleLarge,
                     )
                 }
-                if (state.isEmpty) {
+                if (state.isLoading) {
+                    item {
+                        LoadingStateCard(message = stringResource(R.string.reminders_loading_message))
+                    }
+                } else if (state.isEmpty) {
                     item {
                         EmptyRemindersCard(
                             onAddReminder = { showReminderSheet = true },
@@ -269,6 +274,24 @@ private fun RemindersScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun LoadingStateCard(message: String) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(Spacings.spacing16),
+            horizontalArrangement = Arrangement.spacedBy(Spacings.spacing12),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CircularProgressIndicator()
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

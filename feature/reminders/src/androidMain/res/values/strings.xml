@@ -3,7 +3,7 @@
     <string name="reminders_title">Recordatorios</string>
     <string name="reminders_subtitle">Planifica próximas revisiones por fecha o kilometraje.</string>
     <string name="reminders_form_title">Nuevo recordatorio</string>
-    <string name="reminder_title_label">Titulo</string>
+    <string name="reminder_title_label">Título</string>
     <string name="reminder_due_date_label">Fecha objetivo (opcional)</string>
     <string name="select_reminder_due_date_button">Seleccionar fecha</string>
     <string name="reminder_due_odometer_label">Kilómetros (opcional)</string>
@@ -11,6 +11,7 @@
     <string name="add_first_reminder_button">Añadir recordatorio</string>
     <string name="save_reminder_button">Guardar recordatorio</string>
     <string name="pending_reminders_title">Pendientes</string>
+    <string name="reminders_loading_message">Cargando recordatorios...</string>
     <string name="empty_reminders_title">Sin recordatorios</string>
     <string name="empty_reminders_description">Crea un recordatorio para no olvidar ITV, seguro o revisiones.</string>
     <string name="select_vehicle_title">Vehículo</string>

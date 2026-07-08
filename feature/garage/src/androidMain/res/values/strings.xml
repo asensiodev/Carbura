@@ -13,6 +13,7 @@
     <string name="add_first_vehicle_button">Añadir vehículo</string>
     <string name="save_vehicle_button">Guardar vehículo</string>
     <string name="vehicle_list_title">Tus vehículos</string>
+    <string name="garage_loading_message">Cargando tu garaje...</string>
     <string name="empty_garage_title">Garaje vacío</string>
     <string name="empty_garage_description">Crea un vehículo para empezar a registrar mantenimientos y recordatorios.</string>
     <string name="view_history_button">Ver historial</string>
