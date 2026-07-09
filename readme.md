@@ -49,18 +49,27 @@ El valor principal está en reducir olvidos y pérdida de información, creando 
 
 ### **1.2. Características y funcionalidades principales:**
 
-- Gestión de un garaje familiar compartido.
+Funcionalidades del MVP core:
+
+- Gestión de un garaje familiar.
 - Alta y consulta de vehículos.
 - Registro de mantenimientos, averías, ITV, seguro, aceite, neumáticos y revisiones.
 - Historial por vehículo con fecha, kilómetros y coste.
-- Recordatorios por fecha y por kilometraje.
-- Notificaciones locales para vencimientos próximos.
-- Actualización rápida de odómetro.
-- Sincronización offline-first entre dispositivos.
+- Recordatorios automáticos por fecha tras registrar ITV o seguro.
 - Autenticación con Google mediante Supabase Auth.
 - En Android, Credential Manager con Google ID será la vía principal de login; se mantendrá fallback controlado a Google Sign-In/OAuth si el dispositivo o los servicios disponibles no lo soportan.
+- Persistencia local offline-first.
+
+Funcionalidades del MVP extendido (si el tiempo lo permite):
+
+- Pantalla de próximos recordatorios y notificaciones locales para vencimientos.
+- App Desktop desde la misma base KMP.
+- Recordatorios por kilometraje y actualización rápida de odómetro.
+- Sincronización entre dispositivos de la misma familia.
 - Invitación de familiares mediante código.
-- Exportación de historial a PDF o CSV como objetivo de MVP extendido.
+- Exportación de historial a PDF o CSV.
+
+El detalle de priorización vive en `openspec/prd.md` (sección 5) y `docs/user-stories.md`.
 
 ### **1.3. Diseño y experiencia de usuario:**
 
@@ -260,6 +269,15 @@ flowchart LR
 
 El despliegue del backend se apoya en Supabase. No se prevé servidor propio para el MVP. La aplicación se distribuirá como build Android y aplicación Desktop generada con Compose for Desktop.
 
+**CI/CD y evidencia de despliegue (ticket T-11):**
+
+Al ser Carbura una aplicación KMP nativa (Android + Desktop), no existe una URL pública de frontend. La evidencia de despliegue y el pipeline se plantean así:
+
+- **CI con GitHub Actions:** compilación y ejecución de `./gradlew test` en cada push y pull request.
+- **Gestión de secretos:** credenciales de Supabase y Google OAuth fuera del repositorio (`local.properties` en local, GitHub Secrets en CI).
+- **Release:** artefactos instalables (APK Android + paquete Desktop) publicados en GitHub Releases con tag `v1.0-final-AAC`.
+- **Sistema "en vivo":** el backend Supabase (Auth + PostgreSQL con RLS) es el entorno desplegado y accesible; el flujo principal se documentará además con un vídeo demo de 2-3 minutos y capturas.
+
 ### **2.5. Seguridad**
 
 - Autenticación con Google mediante Supabase Auth.
@@ -287,11 +305,13 @@ Tests previstos:
 
 - Tests unitarios de casos de uso: alta de vehículo, registro de mantenimiento, generación de recordatorio.
 - Tests de repositorio con dobles de LocalDataSource y RemoteDataSource.
+- Tests de integración de la capa de datos: SQLDelight local y, cuando aplique, acceso a Supabase con datos de prueba.
 - Tests de sincronización para cambios offline y resolución `last-write-wins`.
 - Tests de validación de formularios y estados vacíos.
+- **Test E2E del flujo principal** (ticket T-12): test instrumentado de Compose UI que recorre el flujo completo `sesión -> alta de vehículo -> registro de ITV -> historial -> recordatorio automático visible`, con login de test y base de datos limpia por ejecución.
 - Tests instrumentados o manuales para notificaciones locales según plataforma.
 
-El TDD se aplicará durante la implementación de cada spec OpenSpec: primero se escribirán tests que fallen, después el código mínimo para pasarlos y finalmente refactor seguro.
+La suite (unitarios, integración y E2E) se ejecutará en el pipeline de CI (ticket T-11). El TDD se aplicará durante la implementación de cada spec OpenSpec: primero se escribirán tests que fallen, después el código mínimo para pasarlos y finalmente refactor seguro. El test E2E se escribe al final, cuando el flujo core está implementado, como verificación de extremo a extremo.
 
 ### **2.7. Diseño de dominio y principios de código**
 
@@ -419,7 +439,10 @@ Campos de sincronización:
 
 ## 4. Especificación de la API
 
-El MVP no plantea un backend propio con endpoints REST custom. La comunicación remota se realizará con Supabase Auth y Supabase PostgreSQL, consumidos desde Ktor Client. Para la documentación académica, se describen los tres contratos remotos principales.
+El MVP no plantea un backend propio con endpoints REST custom. La comunicación remota se realizará con Supabase Auth (GoTrue) y Supabase PostgreSQL (PostgREST), consumidos desde Ktor Client. Aunque el backend es gestionado, Supabase expone endpoints HTTP reales, por lo que la documentación se presenta en dos niveles:
+
+- **Contratos lógicos** (4.1 a 4.3): operaciones de negocio tal y como las consume la capa `RemoteDataSource`.
+- **Especificación OpenAPI** (4.4): los 3 endpoints HTTP principales de Supabase que implementan esos contratos.
 
 ### **4.1. Autenticación y perfil familiar**
 
@@ -486,6 +509,186 @@ errors:
   - network_error
 ```
 
+### **4.4. Especificación OpenAPI de los endpoints Supabase**
+
+Los 3 endpoints HTTP principales que consume la app, en formato OpenAPI 3.0. Todas las peticiones a PostgREST incluyen la cabecera `apikey` y el token JWT del usuario, de forma que Row Level Security filtra automáticamente por `family_id`.
+
+> **Nota de alcance:** se documentan únicamente estos 3 endpoints como simplificación intencional para la entrega (la plantilla pide un máximo de 3). PostgREST expone el mismo patrón `GET`/`POST` para el resto de tablas del modelo (`maintenance_records` en lectura, `reminders`, `maintenance_types`, `families`, `user_profiles`), que siguen exactamente la misma semántica de seguridad, filtro incremental por `updated_at` y upsert. El ciclo completo de sincronización está descrito en el contrato lógico `syncGarageData` (sección 4.2).
+>
+> **Documentación completa:** Supabase genera automáticamente la especificación OpenAPI de todas las tablas expuestas en `GET /rest/v1/` (con la cabecera `apikey` del proyecto). El contrato detallado para implementación —tablas, RLS, cabeceras de upsert y filtros de sync— se documentará en `openspec/specs/backend.md` durante la Entrega 2, siguiendo el flujo SDD con OpenSpec.
+
+```yaml
+openapi: 3.0.3
+info:
+  title: Carbura - API remota (Supabase)
+  description: >
+    Endpoints gestionados por Supabase que consume el cliente KMP.
+    GoTrue para autenticación y PostgREST para datos con RLS por family_id.
+  version: 1.0.0
+servers:
+  - url: https://{project_ref}.supabase.co
+    variables:
+      project_ref:
+        default: xxxx
+paths:
+  /auth/v1/token:
+    post:
+      summary: Iniciar sesión con Google (intercambio de id_token)
+      description: >
+        Intercambia el id_token de Google Sign-In por una sesión Supabase.
+        Implementa el contrato signInWithGoogleAndLoadProfile (4.1).
+      parameters:
+        - name: grant_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [id_token]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, id_token]
+              properties:
+                provider:
+                  type: string
+                  enum: [google]
+                id_token:
+                  type: string
+      responses:
+        "200":
+          description: Sesión creada.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  refresh_token: { type: string }
+                  expires_in: { type: integer }
+                  user:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      email: { type: string }
+        "400":
+          description: id_token de Google inválido o caducado.
+  /rest/v1/vehicles:
+    get:
+      summary: Listar vehículos del garaje familiar
+      description: >
+        Lectura de vehículos para sincronización (contrato syncGarageData, 4.2).
+        RLS limita el resultado a la family_id del usuario autenticado.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: updated_at
+          in: query
+          required: false
+          description: Filtro incremental de sync, p. ej. gte.2026-06-01T00:00:00Z
+          schema:
+            type: string
+        - name: select
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "*"
+      responses:
+        "200":
+          description: Vehículos de la familia del usuario.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Vehicle"
+        "401":
+          description: Token ausente o inválido.
+    post:
+      summary: Crear o actualizar vehículos (upsert de sync)
+      description: >
+        Subida de cambios locales pendientes. Con la cabecera
+        Prefer: resolution=merge-duplicates actúa como upsert por id.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Vehicle"
+      responses:
+        "201":
+          description: Vehículos creados o actualizados.
+        "401":
+          description: Token ausente o inválido.
+        "403":
+          description: RLS rechaza escritura fuera de la family_id del usuario.
+  /rest/v1/maintenance_records:
+    post:
+      summary: Registrar mantenimientos (upsert de sync)
+      description: >
+        Persistencia remota de los registros de mantenimiento creados
+        offline-first en el cliente (contrato syncGarageData, 4.2).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/MaintenanceRecord"
+      responses:
+        "201":
+          description: Registros creados o actualizados.
+        "401":
+          description: Token ausente o inválido.
+        "403":
+          description: RLS rechaza escritura fuera de la family_id del usuario.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Vehicle:
+      type: object
+      required: [id, family_id, name, type, current_odometer_km]
+      properties:
+        id: { type: string, format: uuid }
+        family_id: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string }
+        plate: { type: string, nullable: true }
+        current_odometer_km: { type: integer, minimum: 0 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        deleted_at: { type: string, format: date-time, nullable: true }
+    MaintenanceRecord:
+      type: object
+      required: [id, vehicle_id, maintenance_type_id, performed_at, odometer_km]
+      properties:
+        id: { type: string, format: uuid }
+        vehicle_id: { type: string, format: uuid }
+        maintenance_type_id: { type: string, format: uuid }
+        performed_at: { type: string, format: date }
+        odometer_km: { type: integer, minimum: 0 }
+        cost_amount: { type: number, nullable: true }
+        workshop: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        deleted_at: { type: string, format: date-time, nullable: true }
+```
+
 ---
 
 ## 5. Historias de Usuario
@@ -520,6 +723,8 @@ El backlog completo y detallado está en [`docs/backlog.md`](docs/backlog.md). E
 | T-08 | Frontend / presentación | US-04, US-05 | Must | 8 SP | Formulario de mantenimiento e historial por vehículo. |
 | T-09 | Frontend / recordatorios | US-07 | Should | 5 SP | Pantalla de próximos recordatorios con estados vacío/vencido. |
 | T-10 | Plataforma / notificaciones | US-08 | Should | 5 SP | Notificación local previa a vencimientos configurados. |
+| T-11 | Infraestructura / CI-CD | Transversal | Must (final) | 5 SP | Pipeline CI con tests, gestión de secretos, release con artefactos y evidencia de despliegue. |
+| T-12 | Calidad / tests | US-01 a US-06 | Must (final) | 5 SP | Test E2E automatizado del flujo principal completo. |
 
 ### **6.2. Tickets principales detallados para la entrega**
 

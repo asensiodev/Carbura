@@ -45,30 +45,37 @@ Las apps existentes en el mercado son demasiado complejas (enfocadas en flotas, 
 
 ## 4. Objetivos del MVP
 
-1. Permitir registrar todos los mantenimientos de todos los vehiculos de la familia en un solo lugar.
-2. Generar recordatorios automaticos antes de que caduquen fechas clave (especialmente ITV).
-3. Notificar al usuario con antelacion suficiente (1 mes antes por defecto para ITV).
-4. Mantener un historial completo con fechas, kilometros y costes por vehiculo.
-5. Funcionar offline-first: la app funciona siempre, sincroniza cuando hay conexion.
-6. Permitir acceso compartido familiar: varios miembros ven y editan el mismo garaje.
+1. Permitir registrar todos los mantenimientos de todos los vehiculos de la familia en un solo lugar. *(core)*
+2. Generar recordatorios automaticos antes de que caduquen fechas clave (especialmente ITV). *(core)*
+3. Notificar al usuario con antelacion suficiente (1 mes antes por defecto para ITV). *(extendido)*
+4. Mantener un historial completo con fechas, kilometros y costes por vehiculo. *(core)*
+5. Funcionar offline-first: la app funciona siempre en local; la sincronizacion entre dispositivos es objetivo extendido. *(core local / extendido sync)*
+6. Permitir acceso compartido familiar: varios miembros ven y editan el mismo garaje. *(extendido)*
 
 ---
 
 ## 5. Scope del MVP
 
-### Dentro del MVP
+El scope se divide en dos niveles alineados con la priorizacion de `docs/user-stories.md`: el **MVP core** (Must-Have, imprescindible para el flujo E2E de la entrega) y el **MVP extendido** (Should/Could-Have, se implementa si el tiempo lo permite).
+
+### MVP core (Must-Have)
 
 - Gestion de multiples vehiculos (coche, moto, furgoneta) bajo un garaje familiar.
 - Registro de mantenimientos: ITV, cambio de aceite, cambio de neumaticos, seguro, revision general, averias y tipos personalizados.
-- Recordatorios por fecha y/o por kilometros.
-- **Notificaciones locales** con antelacion configurable (por defecto: 30 dias antes para ITV y seguro).
-- Actualizacion rapida del odometro.
 - Historial completo por vehiculo con costes.
-- Sincronizacion en la nube entre dispositivos de la misma familia.
+- Recordatorios automaticos por fecha tras registrar ITV o seguro.
 - Autenticacion con cuenta de Google.
-- Sistema de invitacion para unirse al garaje familiar (codigo de 6 caracteres).
-- Exportacion del historial de un vehiculo a PDF/CSV.
-- App Android + Desktop (macOS y Windows via Compose Multiplatform).
+- Persistencia local offline-first (la app funciona sin conexion en el dispositivo).
+- App Android como plataforma principal de la demo E2E.
+
+### MVP extendido (Should-Have / Could-Have)
+
+- Pantalla de proximos recordatorios y **notificaciones locales** con antelacion configurable (por defecto: 30 dias antes para ITV y seguro). *(Should)*
+- App Desktop (macOS y Windows via Compose Multiplatform) desde la misma base KMP. *(Should)*
+- Recordatorios por kilometros y actualizacion rapida del odometro. *(Could)*
+- Sincronizacion en la nube entre dispositivos de la misma familia. *(Could)*
+- Sistema de invitacion para unirse al garaje familiar (codigo de 6 caracteres). *(Could)*
+- Exportacion del historial de un vehiculo a PDF/CSV. *(Could)*
 
 ### Fuera del MVP
 
@@ -183,28 +190,41 @@ Patron general para dependencias de plataforma: auth, permisos, notificaciones, 
 
 | Fecha | Hito |
 |---|---|
-| **12 junio 2026** | Entrega de documentacion (PRD, user stories, tickets, readme.md y toolchain de IA/proceso) |
-| **10 julio 2026** | Codigo funcional: MVP completo con todas las features del scope |
-| **29 julio 2026** | Entrega final refinada: UX pulida, tests, documentacion completa |
+| **12 junio 2026** | Entrega de documentacion (PRD, user stories, tickets, readme.md, prompts.md y toolchain de IA/proceso) |
+| **10 julio 2026** | Codigo funcional: MVP Android con auth, vehiculos, mantenimientos, historial, recordatorios, notificaciones locales y sync con backend/base de datos conectados |
+| **29 julio 2026** | Entrega final refinada: UX pulida, tests (unitarios, integracion y E2E), CI/CD, evidencia de despliegue y documentacion completa |
 
 ### Fases de desarrollo
 
 ```text
 Mayo 2026        -> Documentacion: PRD, specs, user stories, tickets, readme.md
 Junio 2026       -> Implementacion core: auth, vehiculos, mantenimientos, historial
-Julio (1-10)     -> Recordatorios, notificaciones, sync, exportacion, Desktop
-Julio (10-29)    -> Refinado UX, tests, cobertura, documentacion final
+Julio (1-10)     -> Recordatorios, pantalla de avisos, CI basico, cierre del flujo E2E
+Julio (10-29)    -> Tests E2E, CI/CD + release, refinado UX, extendido si hay margen
+                    (notificaciones, Desktop, sync, exportacion), documentacion final
 ```
+
+### Nota sobre dedicacion
+
+Las instrucciones del curso estiman una dedicacion orientativa de ~30 horas. Este proyecto asume explicitamente una **dedicacion mayor** por decision del autor, dado el stack elegido (KMP + Compose Multiplatform + Supabase). Aun asi, la priorizacion core/extendido del scope (seccion 5) se mantiene como mecanismo de control: si el tiempo real disponible se reduce, se recorta el MVP extendido sin comprometer el flujo E2E core.
 
 ---
 
 ## 13. Criterios de exito del MVP
 
+### Criterios core (obligatorios para la entrega final)
+
 - Un usuario puede crear su garaje, anadir vehiculos y registrar mantenimientos en menos de 3 minutos desde cero.
-- Los recordatorios de ITV se generan automaticamente al registrar una ITV y notifican 30 dias antes de la proxima.
+- Los recordatorios de ITV/seguro se generan automaticamente al registrar el evento, con 30 dias de antelacion por defecto.
+- El historial muestra todos los eventos con fecha, km y coste, ordenados por fecha descendente.
+- La app funciona completamente offline en el dispositivo local.
+- El flujo E2E core esta cubierto por al menos un test E2E automatizado y la suite pasa en CI.
+
+### Criterios extendidos (si se implementa el MVP extendido)
+
+- Los recordatorios proximos generan una notificacion local con la antelacion configurada.
 - Dos dispositivos de la misma familia muestran los mismos datos tras sincronizacion.
-- El historial exportado contiene todos los eventos con fecha, km y coste.
-- La app funciona completamente offline y sincroniza al recuperar conexion.
+- El historial exportado a PDF/CSV contiene todos los eventos con fecha, km y coste.
 
 ---
 

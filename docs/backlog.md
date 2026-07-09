@@ -43,6 +43,10 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 | 8 | T-08 - Formulario mantenimiento e historial | Frontend | US-04, US-05 | Must | 8 SP |
 | 9 | T-09 - Lista de recordatorios | Frontend | US-07 | Should | 5 SP |
 | 10 | T-10 - Notificaciones locales | Plataforma | US-08 | Should | 5 SP |
+| 11 | T-11 - CI/CD, release y evidencia de despliegue | Infraestructura | Transversal | Must | 5 SP |
+| 12 | T-12 - Test E2E del flujo principal | Calidad / tests | US-01, US-02, US-04, US-05, US-06 | Must | 5 SP |
+
+> T-11 y T-12 cubren artefactos obligatorios de la entrega final (pipeline CI/CD, gestion de secretos, evidencia de despliegue y al menos un test E2E del flujo principal). T-11 conviene arrancarlo pronto (CI minima con tests desde la Entrega 2) y completarlo al final (release y evidencia).
 
 ## T-01 - Esquema local/remoto del MVP
 
@@ -487,3 +491,90 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 **Referencias:** US-08, T-09.
 
 **Historial:** creado para Entrega 1.
+
+## T-11 - CI/CD, release y evidencia de despliegue
+
+**Tipo:** tarea tecnica / infraestructura.
+
+**Descripcion:** configurar un pipeline basico de CI/CD con GitHub Actions y preparar la evidencia de despliegue de la entrega final. Al ser Carbura una app KMP (Android + Desktop) sin URL publica, la evidencia se basa en artefactos instalables, el backend Supabase desplegado y un video demo del flujo principal.
+
+**Proposito:** cumplir el artefacto obligatorio de la entrega final (pipeline CI/CD, gestion de secretos y sistema verificable "en vivo") y detectar regresiones en cada push.
+
+**Historias relacionadas:** transversal (soporta todas las Must-Have).
+
+**Prioridad:** Must-Have (entrega final).
+
+**Estimacion:** 5 story points.
+
+**Responsable:** infraestructura.
+
+**Etiquetas:** `ci`, `cd`, `release`, `github-actions`, `secrets`, `delivery`.
+
+**Alcance:**
+
+- Workflow de GitHub Actions que compila y ejecuta `./gradlew test` en cada push y PR.
+- Gestion de secretos via GitHub Secrets (sin credenciales en el repositorio).
+- Workflow de release que genera artefactos: APK Android y paquete Desktop.
+- Publicacion de artefactos en GitHub Releases con tag `v1.0-final-AAC`.
+- Evidencia de despliegue: backend Supabase activo, instrucciones de instalacion y video demo de 2-3 minutos del flujo E2E.
+
+**Fuera de alcance:** publicacion en Google Play, firma de produccion, despliegue continuo a stores, infraestructura propia de servidor.
+
+**Criterios de aceptacion:**
+
+- Dado un push a una rama con PR, cuando se ejecuta el pipeline, entonces compila el proyecto y ejecuta la suite de tests.
+- Dado un fallo de tests, cuando se ejecuta el pipeline, entonces la PR queda marcada en rojo.
+- Dada la rama final, cuando se genera la release, entonces incluye APK y artefacto Desktop descargables.
+- Dado el repositorio publico, cuando se inspecciona, entonces no contiene secretos ni credenciales.
+
+**Tests TDD previstos:**
+
+- Verificacion del pipeline en verde sobre un cambio trivial.
+- Verificacion de fallo del pipeline ante un test roto (prueba controlada).
+- Checklist manual de release: instalacion del APK y arranque del Desktop desde artefactos.
+
+**Referencias:** instrucciones del proyecto final (artefactos de infra y despliegue), `readme.md` seccion 2.4.
+
+**Historial:** creado tras auditoria pre-Entrega 1.
+
+## T-12 - Test E2E del flujo principal
+
+**Tipo:** tarea tecnica / calidad.
+
+**Descripcion:** implementar al menos un test end-to-end automatizado que recorra el flujo principal del MVP: autenticacion (o sesion de test) -> alta de vehiculo -> registro de mantenimiento ITV -> consulta de historial -> verificacion del recordatorio automatico.
+
+**Proposito:** cumplir el requisito de la entrega final ("al menos un test E2E del flujo principal") y proteger el flujo de valor completo contra regresiones.
+
+**Historias relacionadas:** US-01, US-02, US-04, US-05, US-06.
+
+**Prioridad:** Must-Have (entrega final).
+
+**Estimacion:** 5 story points.
+
+**Responsable:** calidad / frontend / shared.
+
+**Etiquetas:** `e2e`, `compose-ui-test`, `testing`, `quality`.
+
+**Alcance:**
+
+- Test instrumentado de Compose UI en Android (o test de UI Desktop si resulta mas estable en CI) que recorre el flujo E2E completo.
+- Doble o bypass del login Google para entorno de test (sesion fake o usuario de test).
+- Datos sobre base local SQLDelight en memoria o limpia por ejecucion.
+- Asercion final: el recordatorio generado tras la ITV es visible en la pantalla de recordatorios.
+- Integracion del test E2E en el pipeline de CI cuando sea viable (o documentado como paso de verificacion local si el emulador en CI resulta inestable).
+
+**Fuera de alcance:** suites E2E exhaustivas por pantalla, tests E2E de sincronizacion multi-dispositivo, tests de notificaciones locales.
+
+**Criterios de aceptacion:**
+
+- Dado un entorno limpio, cuando se ejecuta el test E2E, entonces completa el flujo alta de vehiculo -> mantenimiento -> historial -> recordatorio sin intervencion manual.
+- Dado el registro de una ITV con vencimiento, cuando finaliza el flujo, entonces el test verifica que el recordatorio aparece en la UI.
+- Dado un fallo en cualquier paso del flujo, cuando se ejecuta el test, entonces falla con un mensaje diagnosticable.
+
+**Tests TDD previstos:**
+
+- El propio test E2E (se escribe al final, cuando el flujo core esta implementado; los pasos intermedios ya estan cubiertos por tests unitarios y de integracion de T-01 a T-08).
+
+**Referencias:** instrucciones del proyecto final (suite de tests), flujo E2E prioritario en `docs/user-stories.md`, `readme.md` seccion 2.6.
+
+**Historial:** creado tras auditoria pre-Entrega 1.

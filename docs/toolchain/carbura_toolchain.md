@@ -27,7 +27,7 @@
 
 El proyecto combina metodologías complementarias en capas, manteniendo el alcance acotado al MVP:
 
-```
+```text
 ┌─────────────────────────────────────────────┐
 │              SDD (capa superior)            │
 │  Specification-Driven Development           │
@@ -79,7 +79,7 @@ Durante el paso de refactor se aplicarán principios de diseño pragmáticos, si
 
 ### Flujo combinado SDD + TDD + DDD ligero
 
-```
+```text
 Spec (OpenSpec)
      ↓
 Criterios de aceptación
@@ -101,7 +101,7 @@ BDD queda fuera del alcance metodológico del MVP para evitar duplicar documenta
 
 ## Cómo encajan las herramientas
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │                    ANDROID STUDIO                       │
 │  Compilar · Gradle · Emulador Android · Debug KMP      │
@@ -145,7 +145,7 @@ BDD queda fuera del alcance metodológico del MVP para evitar duplicar documenta
    openspec init
    ```
    Esto crea la estructura:
-   ```
+   ```text
    openspec/
      project.md      ← contexto general del proyecto
      prd.md          ← PRD completo del producto
@@ -176,7 +176,7 @@ Para cada feature o caso de uso:
 
 #### Paso 1 — Proposal (planificación SDD)
 Desde Warp, lanzar OpenCode y ejecutar:
-```
+```text
 /openspec-proposal
 ```
 El agente:
@@ -192,7 +192,7 @@ El agente:
 - El humano siempre decide; el agente siempre propone.
 
 #### Paso 3 — Apply: TDD Red (tests primero)
-```
+```text
 /openspec-apply
 ```
 El agente implementa **primero los tests**:
@@ -231,7 +231,7 @@ El agente implementa el código mínimo necesario para que los tests pasen:
 - Verificar el flujo visualmente en emulador Android y Desktop.
 
 #### Paso 7 — Archive (cierre del cambio SDD)
-```
+```text
 /openspec-archive
 ```
 El agente:
@@ -269,7 +269,7 @@ Ramas y PRs oficiales:
 3. Configurar **Row Level Security (RLS)** por `family_id` para cada tabla.
 4. Configurar **Google OAuth** en Supabase Auth.
 5. Añadir las variables de entorno a `local.properties`:
-   ```
+   ```properties
    SUPABASE_URL=https://xxxx.supabase.co
    SUPABASE_ANON_KEY=xxxx
    GOOGLE_CLIENT_ID=xxxx
@@ -321,7 +321,7 @@ Ramas y PRs oficiales:
 
 Usar **Conventional Commits** para mantener el historial limpio y legible:
 
-```
+```text
 feat(vehicles): implement UC-02 add vehicle flow with tests
 test(maintenance): add TDD tests for MaintenanceRecord validation
 fix(sync): resolve conflict on simultaneous offline edits
@@ -338,7 +338,7 @@ Tipos: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `style`
 
 ## Estructura del repositorio
 
-```
+```text
 carbura/
 ├── openspec/
 │   ├── project.md              ← contexto breve del proyecto para OpenCode
@@ -382,7 +382,7 @@ carbura/
 
 ## Flujo diario de trabajo (resumen)
 
-```
+```text
 1. Abrir Android Studio con el proyecto Carbura
 2. Abrir Warp en el directorio del proyecto
 3. (Opcional) Abrir VS Code en el mismo directorio
