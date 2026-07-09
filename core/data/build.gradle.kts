@@ -16,6 +16,7 @@ kotlin {
     }
 
     sourceSets.androidMain.dependencies {
+        implementation(libs.androidx.core.ktx)
         implementation(libs.koin.android)
         implementation(libs.sqldelight.android.driver)
     }

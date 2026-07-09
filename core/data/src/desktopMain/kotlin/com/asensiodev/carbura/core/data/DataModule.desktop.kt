@@ -6,6 +6,7 @@ import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.MaintenanceRecordRepository
 import com.asensiodev.carbura.core.domain.RemoteUserProfileGateway
+import com.asensiodev.carbura.core.domain.ReminderNotificationScheduler
 import com.asensiodev.carbura.core.domain.ReminderRepository
 import com.asensiodev.carbura.core.domain.SyncManager
 import com.asensiodev.carbura.core.domain.VehicleRepository
@@ -20,9 +21,10 @@ actual val dataModule: Module = module {
         }
     }
     single { CarburaDatabase(get()) }
-    single<VehicleRepository> { LocalVehicleRepository(get()) }
+    single<ReminderNotificationScheduler> { NoOpReminderNotificationScheduler() }
+    single<VehicleRepository> { LocalVehicleRepository(get(), get()) }
     single<MaintenanceRecordRepository> { LocalMaintenanceRecordRepository(get()) }
-    single<ReminderRepository> { LocalReminderRepository(get()) }
+    single<ReminderRepository> { LocalReminderRepository(get(), get()) }
     single<RemoteUserProfileGateway> { SupabaseUserProfileGateway(get()) }
     single<LocalSyncDataSource> { SqlDelightLocalSyncDataSource(get()) }
     single<RemoteSyncDataSource> { SupabaseSyncDataSource(get()) }

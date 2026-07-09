@@ -2,6 +2,7 @@ package com.asensiodev.carbura.core.data
 
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.data.local.Reminders
+import com.asensiodev.carbura.core.domain.ReminderNotificationScheduler
 import com.asensiodev.carbura.core.domain.ReminderRepository
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
@@ -12,6 +13,7 @@ import com.asensiodev.carbura.core.model.VehicleId
 
 class LocalReminderRepository(
     private val database: CarburaDatabase,
+    private val notificationScheduler: ReminderNotificationScheduler,
 ) : ReminderRepository {
     override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> =
         database.carburaDatabaseQueries
@@ -35,6 +37,11 @@ class LocalReminderRepository(
             pendingSync = 1,
             deletedAt = null,
         )
+        if (reminder.dueDate != null && !reminder.isCompleted) {
+            notificationScheduler.schedule(reminder)
+        } else {
+            notificationScheduler.cancel(reminder.id)
+        }
     }
 
     override suspend fun markReminderCompleted(reminderId: ReminderId) {
@@ -42,6 +49,7 @@ class LocalReminderRepository(
             updatedAt = currentTimeMillis(),
             id = reminderId.value,
         )
+        notificationScheduler.cancel(reminderId)
     }
 
     override suspend fun deleteReminder(reminderId: ReminderId) {
@@ -51,6 +59,7 @@ class LocalReminderRepository(
             updatedAt = now,
             id = reminderId.value,
         )
+        notificationScheduler.cancel(reminderId)
     }
 }
 

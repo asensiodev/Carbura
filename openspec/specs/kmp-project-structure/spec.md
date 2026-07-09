@@ -1,3 +1,7 @@
+## Purpose
+
+Define the modular Kotlin Multiplatform project structure and platform integration boundaries for Carbura.
+
 ## Requirements
 
 ### Requirement: Modular KMP project structure
@@ -53,6 +57,17 @@ The system SHALL define platform-dependent integrations through common KMP contr
 #### Scenario: Auth can vary by platform
 - **WHEN** authentication is implemented in later changes
 - **THEN** Android can use Credential Manager with Google ID while Desktop and future iOS can use their own adapters behind the same common contract
+
+### Requirement: Notification Integrations Use Common Contracts
+The system SHALL keep notification scheduling requests behind shared contracts with platform-specific implementations.
+
+#### Scenario: Reminder feature avoids Android notification APIs
+- **WHEN** a developer reviews shared reminder presentation and domain code
+- **THEN** it does not depend directly on Android notification, alarm, permission, or broadcast APIs
+
+#### Scenario: Non-Android targets remain buildable
+- **WHEN** non-Android source sets compile
+- **THEN** notification scheduling has a non-Android implementation that does not require Android APIs
 
 ### Requirement: Design system base exists
 The system SHALL include a minimal shared design system base for theme, visual tokens, and reusable Compose components.

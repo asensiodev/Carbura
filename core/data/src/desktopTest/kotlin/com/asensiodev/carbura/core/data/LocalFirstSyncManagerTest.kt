@@ -12,6 +12,7 @@ import com.asensiodev.carbura.core.model.VehicleType
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -73,6 +74,71 @@ class LocalFirstSyncManagerTest {
         assertTrue(local.vehicles.single().pendingSync)
     }
 
+    @Test
+    fun syncRetryClearsPreviouslyPendingLocalVehicle() = runTest {
+        val localVehicle = vehicle(id = "vehicle-1", updatedAt = 20, pendingSync = true)
+        val local = FakeLocalSyncDataSource(vehicles = mutableListOf(localVehicle))
+        val remote = FakeRemoteSyncDataSource(shouldFail = true)
+        val syncManager = syncManager(local, remote)
+
+        assertIs<SyncResult.Failure>(syncManager.syncNow())
+        remote.shouldFail = false
+        val result = syncManager.syncNow()
+
+        assertIs<SyncResult.Success>(result)
+        assertEquals(listOf(localVehicle), remote.vehicles)
+        assertFalse(local.vehicles.single().pendingSync)
+    }
+
+    @Test
+    fun syncFailurePreservesPendingDeletedVehicleTombstone() = runTest {
+        val deletedVehicle = vehicle(id = "vehicle-1", updatedAt = 20, pendingSync = true, deletedAt = 20)
+        val local = FakeLocalSyncDataSource(vehicles = mutableListOf(deletedVehicle))
+        val remote = FakeRemoteSyncDataSource(shouldFail = true)
+        val syncManager = syncManager(local, remote)
+
+        val result = syncManager.syncNow()
+
+        assertIs<SyncResult.Failure>(result)
+        assertEquals(20, local.vehicles.single().deletedAt)
+        assertTrue(local.vehicles.single().pendingSync)
+    }
+
+    @Test
+    fun syncPushesDeletedVehicleTombstoneAndMarksItSynced() = runTest {
+        val deletedVehicle = vehicle(id = "vehicle-1", updatedAt = 20, pendingSync = true, deletedAt = 20)
+        val local = FakeLocalSyncDataSource(vehicles = mutableListOf(deletedVehicle))
+        val remote = FakeRemoteSyncDataSource()
+        val syncManager = syncManager(local, remote)
+
+        val result = syncManager.syncNow()
+
+        assertIs<SyncResult.Success>(result)
+        assertEquals(20, remote.vehicles.single().deletedAt)
+        assertFalse(local.vehicles.single().pendingSync)
+    }
+
+    @Test
+    fun syncPullsRemoteFamilyDataIntoEmptyLocalStore() = runTest {
+        val remoteVehicle = vehicle(id = "vehicle-1", updatedAt = 20, pendingSync = false)
+        val remoteMaintenance = maintenanceRecord(id = "maintenance-1", vehicleId = remoteVehicle.id, updatedAt = 21)
+        val remoteReminder = reminder(id = "reminder-1", vehicleId = remoteVehicle.id, updatedAt = 22)
+        val local = FakeLocalSyncDataSource()
+        val remote = FakeRemoteSyncDataSource(
+            vehicles = mutableListOf(remoteVehicle),
+            maintenanceRecords = mutableListOf(remoteMaintenance),
+            reminders = mutableListOf(remoteReminder),
+        )
+        val syncManager = syncManager(local, remote)
+
+        val result = syncManager.syncNow()
+
+        assertIs<SyncResult.Success>(result)
+        assertEquals(listOf(remoteVehicle), local.vehicles)
+        assertEquals(listOf(remoteMaintenance), local.maintenanceRecords)
+        assertEquals(listOf(remoteReminder), local.reminders)
+    }
+
     private fun syncManager(
         local: LocalSyncDataSource,
         remote: RemoteSyncDataSource,
@@ -88,6 +154,7 @@ class LocalFirstSyncManagerTest {
         name: String = "Vehicle",
         updatedAt: Long,
         pendingSync: Boolean,
+        deletedAt: Long? = null,
     ): SyncVehicle = SyncVehicle(
         id = id,
         familyId = familyId.value,
@@ -97,6 +164,49 @@ class LocalFirstSyncManagerTest {
         model = null,
         licensePlate = null,
         currentOdometerKm = 1,
+        updatedAt = updatedAt,
+        pendingSync = pendingSync,
+        deletedAt = deletedAt,
+    )
+
+    private fun maintenanceRecord(
+        id: String,
+        vehicleId: String,
+        updatedAt: Long,
+        pendingSync: Boolean = false,
+    ): SyncMaintenanceRecord = SyncMaintenanceRecord(
+        id = id,
+        familyId = familyId.value,
+        vehicleId = vehicleId,
+        maintenanceTypeId = "type-$id",
+        maintenanceTypeCode = "Custom",
+        performedOn = "2026-07-01",
+        odometerKm = 1,
+        costCents = null,
+        currency = "EUR",
+        workshop = null,
+        notes = null,
+        nextDueDate = null,
+        updatedAt = updatedAt,
+        pendingSync = pendingSync,
+        deletedAt = null,
+    )
+
+    private fun reminder(
+        id: String,
+        vehicleId: String,
+        updatedAt: Long,
+        pendingSync: Boolean = false,
+    ): SyncReminder = SyncReminder(
+        id = id,
+        familyId = familyId.value,
+        vehicleId = vehicleId,
+        maintenanceTypeId = null,
+        title = "Reminder",
+        dueDate = "2026-08-01",
+        dueOdometerKm = null,
+        notifyDaysBefore = 7,
+        isCompleted = false,
         updatedAt = updatedAt,
         pendingSync = pendingSync,
         deletedAt = null,
@@ -131,29 +241,49 @@ private class FakeRemoteUserProfileGateway(
 
 private class FakeLocalSyncDataSource(
     val vehicles: MutableList<SyncVehicle> = mutableListOf(),
+    val maintenanceRecords: MutableList<SyncMaintenanceRecord> = mutableListOf(),
+    val reminders: MutableList<SyncReminder> = mutableListOf(),
 ) : LocalSyncDataSource {
     override suspend fun getPendingVehicles(): List<SyncVehicle> = vehicles.filter { it.pendingSync }
-    override suspend fun getPendingMaintenanceRecords(): List<SyncMaintenanceRecord> = emptyList()
-    override suspend fun getPendingReminders(): List<SyncReminder> = emptyList()
+    override suspend fun getPendingMaintenanceRecords(): List<SyncMaintenanceRecord> =
+        maintenanceRecords.filter { it.pendingSync }
+
+    override suspend fun getPendingReminders(): List<SyncReminder> = reminders.filter { it.pendingSync }
     override suspend fun getVehicles(familyId: FamilyId): List<SyncVehicle> = vehicles.filter { it.familyId == familyId.value }
-    override suspend fun getMaintenanceRecords(familyId: FamilyId): List<SyncMaintenanceRecord> = emptyList()
-    override suspend fun getReminders(familyId: FamilyId): List<SyncReminder> = emptyList()
+    override suspend fun getMaintenanceRecords(familyId: FamilyId): List<SyncMaintenanceRecord> =
+        maintenanceRecords.filter { it.familyId == familyId.value }
+
+    override suspend fun getReminders(familyId: FamilyId): List<SyncReminder> = reminders.filter { it.familyId == familyId.value }
 
     override suspend fun upsertSyncedVehicle(vehicle: SyncVehicle) {
         vehicles.removeAll { it.id == vehicle.id }
         vehicles += vehicle.copy(pendingSync = false)
     }
 
-    override suspend fun upsertSyncedMaintenanceRecord(record: SyncMaintenanceRecord) = Unit
-    override suspend fun upsertSyncedReminder(reminder: SyncReminder) = Unit
+    override suspend fun upsertSyncedMaintenanceRecord(record: SyncMaintenanceRecord) {
+        maintenanceRecords.removeAll { it.id == record.id }
+        maintenanceRecords += record.copy(pendingSync = false)
+    }
+
+    override suspend fun upsertSyncedReminder(reminder: SyncReminder) {
+        reminders.removeAll { it.id == reminder.id }
+        reminders += reminder.copy(pendingSync = false)
+    }
 
     override suspend fun markVehicleSynced(id: String) {
         val index = vehicles.indexOfFirst { it.id == id }
         vehicles[index] = vehicles[index].copy(pendingSync = false)
     }
 
-    override suspend fun markMaintenanceRecordSynced(id: String) = Unit
-    override suspend fun markReminderSynced(id: String) = Unit
+    override suspend fun markMaintenanceRecordSynced(id: String) {
+        val index = maintenanceRecords.indexOfFirst { it.id == id }
+        maintenanceRecords[index] = maintenanceRecords[index].copy(pendingSync = false)
+    }
+
+    override suspend fun markReminderSynced(id: String) {
+        val index = reminders.indexOfFirst { it.id == id }
+        reminders[index] = reminders[index].copy(pendingSync = false)
+    }
 
     override suspend fun adoptLegacyLocalFamily(familyId: FamilyId) {
         vehicles.replaceAll { vehicle ->
@@ -168,7 +298,9 @@ private class FakeLocalSyncDataSource(
 
 private class FakeRemoteSyncDataSource(
     val vehicles: MutableList<SyncVehicle> = mutableListOf(),
-    private val shouldFail: Boolean = false,
+    val maintenanceRecords: MutableList<SyncMaintenanceRecord> = mutableListOf(),
+    val reminders: MutableList<SyncReminder> = mutableListOf(),
+    var shouldFail: Boolean = false,
 ) : RemoteSyncDataSource {
     override suspend fun upsertVehicles(vehicles: List<SyncVehicle>) {
         failIfNeeded()
@@ -180,10 +312,18 @@ private class FakeRemoteSyncDataSource(
 
     override suspend fun upsertMaintenanceRecords(records: List<SyncMaintenanceRecord>) {
         failIfNeeded()
+        records.forEach { record ->
+            maintenanceRecords.removeAll { it.id == record.id }
+            maintenanceRecords += record
+        }
     }
 
     override suspend fun upsertReminders(reminders: List<SyncReminder>) {
         failIfNeeded()
+        reminders.forEach { reminder ->
+            this.reminders.removeAll { it.id == reminder.id }
+            this.reminders += reminder
+        }
     }
 
     override suspend fun getVehicles(familyId: FamilyId): List<SyncVehicle> {
@@ -193,12 +333,12 @@ private class FakeRemoteSyncDataSource(
 
     override suspend fun getMaintenanceRecords(familyId: FamilyId): List<SyncMaintenanceRecord> {
         failIfNeeded()
-        return emptyList()
+        return maintenanceRecords.filter { it.familyId == familyId.value }
     }
 
     override suspend fun getReminders(familyId: FamilyId): List<SyncReminder> {
         failIfNeeded()
-        return emptyList()
+        return reminders.filter { it.familyId == familyId.value }
     }
 
     private fun failIfNeeded() {

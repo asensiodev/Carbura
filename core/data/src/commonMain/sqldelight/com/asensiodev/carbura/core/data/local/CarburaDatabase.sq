@@ -179,6 +179,11 @@ SELECT *
 FROM reminders
 WHERE familyId = ?;
 
+selectSyncRemindersByVehicle:
+SELECT *
+FROM reminders
+WHERE vehicleId = ?;
+
 upsertReminder:
 INSERT OR REPLACE INTO reminders(
     id,
