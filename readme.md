@@ -58,6 +58,7 @@ El valor principal está en reducir olvidos y pérdida de información, creando 
 - Actualización rápida de odómetro.
 - Sincronización offline-first entre dispositivos.
 - Autenticación con Google mediante Supabase Auth.
+- En Android, Credential Manager con Google ID será la vía principal de login; se mantendrá fallback controlado a Google Sign-In/OAuth si el dispositivo o los servicios disponibles no lo soportan.
 - Invitación de familiares mediante código.
 - Exportación de historial a PDF o CSV como objetivo de MVP extendido.
 
@@ -84,17 +85,17 @@ La interfaz se diseñará con Compose Multiplatform, manteniendo una experiencia
 
 ### **1.4. Instrucciones de instalación:**
 
-El proyecto está en fase documental. Las instrucciones definitivas se completarán cuando se inicialice la base de código KMP.
+El proyecto ya cuenta con un scaffold Kotlin Multiplatform modular inicial. Android es la plataforma principal para Entrega 2; Desktop queda preparado como objetivo opcional posterior.
 
-Requisitos previstos:
+Requisitos:
 
 - Android Studio con soporte Kotlin Multiplatform.
 - JDK compatible con la versión de Gradle del proyecto.
 - Cuenta y proyecto Supabase.
 - Google OAuth configurado en Supabase Auth.
-- Variables locales en `local.properties`, nunca versionadas.
+- Variables locales en `local.properties`, nunca versionadas. La plantilla segura vive en [`local.properties.example`](local.properties.example) y la guia de setup en [`docs/supabase-setup.md`](docs/supabase-setup.md).
 
-Configuración local prevista:
+Configuración local prevista para cambios posteriores:
 
 ```properties
 SUPABASE_URL=https://xxxx.supabase.co
@@ -102,13 +103,15 @@ SUPABASE_ANON_KEY=xxxx
 GOOGLE_CLIENT_ID=xxxx
 ```
 
-Comandos previstos:
+Comandos de verificación del scaffold:
 
 ```bash
+./gradlew tasks
 ./gradlew test
 ./gradlew assembleDebug
-./gradlew desktopRun
 ```
+
+La APK debug se genera desde el módulo `app:android`. La configuración real de Supabase se realizará en cambios posteriores mediante OpenSpec.
 
 ---
 
@@ -158,11 +161,15 @@ flowchart TD
     Remote --> Storage
 ```
 
-La arquitectura sigue Clean Architecture y una estrategia offline-first. La aplicación lee y escribe primero en local mediante SQLDelight. La sincronización con Supabase se realiza de forma eventual cuando hay conexión.
+La arquitectura sigue Clean Architecture, modularizacion Gradle y una estrategia offline-first. La aplicación lee y escribe primero en local mediante SQLDelight. La sincronización con Supabase se realiza de forma eventual cuando hay conexión.
+
+Las dependencias nativas se aislan con un patron comun: contrato en KMP y adapter por plataforma. Esto aplica a autenticacion, permisos, notificaciones, storage seguro, deep links y APIs del sistema. Android implementa auth con Credential Manager + Google ID; Desktop, si entra, usara OAuth mediante navegador; iOS futuro tendra su adapter propio sin contaminar dominio ni casos de uso.
 
 Beneficios principales:
 
-- La lógica de negocio vive en `commonMain` y se comparte entre Android y Desktop.
+- La lógica de negocio vive en `commonMain` y se comparte entre Android, Desktop e iOS futuro.
+- Las integraciones nativas se aíslan con contratos comunes y adapters por plataforma.
+- El design system vive en un módulo compartido para reutilizar tema, tokens y componentes base.
 - La app sigue siendo usable sin conexión.
 - Los tests unitarios pueden concentrarse en dominio, casos de uso, repositorios y sincronización.
 - Supabase resuelve autenticación, base de datos remota, Row Level Security y almacenamiento.
@@ -171,7 +178,7 @@ Sacrificios o riesgos:
 
 - La sincronización offline-first añade complejidad al MVP.
 - La estrategia `last-write-wins` es simple, pero puede sobrescribir cambios concurrentes.
-- Desktop y Android comparten lógica, pero algunas capacidades como notificaciones requieren implementación específica por plataforma.
+- Desktop y Android comparten lógica y parte del design system, pero capacidades como auth, permisos, notificaciones, storage seguro y APIs de sistema requieren adapters específicos por plataforma.
 
 ### **2.2. Descripción de componentes principales:**
 
@@ -179,6 +186,8 @@ Sacrificios o riesgos:
 |---|---|---|
 | Android App | Compose for Android | UI móvil, permisos Android y notificaciones locales. |
 | Desktop App | Compose for Desktop | UI de escritorio para macOS y Windows. |
+| Platform Adapters | Android/Desktop/iOS futuro | Implementan contratos comunes para auth, permisos, notificaciones, secure storage y APIs nativas. |
+| Design System | Compose Multiplatform | Tema, tokens visuales y componentes base reutilizables. |
 | ViewModels + UiState | Kotlin Multiplatform | Estado de pantalla, eventos de usuario y exposición de datos a UI. |
 | Use Cases | Kotlin común | Reglas de negocio: crear vehículo, registrar mantenimiento, generar recordatorio. |
 | Domain Models | Kotlin común | Entidades del dominio independientes de infraestructura. |
@@ -194,13 +203,25 @@ Estructura objetivo del repositorio:
 
 ```text
 Carbura/
-├── androidApp/                 # UI Android y código específico Android
-├── desktopApp/                 # UI Desktop y código específico Desktop
-├── shared/                     # Código Kotlin Multiplatform compartido
-│   ├── src/commonMain/kotlin/  # Dominio, casos de uso, repositorios, ViewModels
-│   ├── src/commonMain/sqldelight/
-│   └── src/commonTest/kotlin/  # Tests unitarios TDD compartidos
-├── docs/                       # Documentación funcional y técnica
+├── build-logic/                # Convention plugins Gradle del proyecto
+├── app/
+│   ├── android/                # App Android, navegación, adapters Android
+│   └── desktop/                # App Desktop opcional
+├── core/
+│   ├── model/                  # Modelos compartidos
+│   ├── domain/                 # Entidades, use cases y contratos
+│   ├── data/                   # Repositorios e implementación coordinadora
+│   ├── database/               # SQLDelight y persistencia local
+│   ├── network/                # Ktor/Supabase remote data sources
+│   ├── auth/                   # Contratos comunes + adapters de auth
+│   ├── designsystem/           # Tema, tokens y componentes Compose base
+│   └── testing/                # Fakes y utilidades de test
+├── feature/
+│   ├── onboarding/
+│   ├── garage/
+│   ├── maintenance/
+│   └── reminders/
+├── docs/                       # Documentación funcional, técnica, herramientas IA y evidencias
 │   ├── user-stories.md
 │   └── toolchain/
 ├── openspec/                   # SDD: PRD, contexto, specs y cambios
@@ -209,7 +230,6 @@ Carbura/
 │   ├── specs/
 │   ├── changes/
 │   └── archive/
-├── prompts.md                  # Registro de prompts utilizados o preparados
 ├── readme.md                   # Documentación principal de entrega
 ├── local.properties.example    # Ejemplo de configuración local sin secretos
 └── .gitignore

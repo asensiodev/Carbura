@@ -14,11 +14,16 @@ El PRD completo vive en `openspec/prd.md` y debe usarse como contexto de product
 ## Stack
 
 - UI Android: Compose for Android.
-- UI Desktop: Compose for Desktop.
-- Logica compartida: Kotlin Multiplatform en `commonMain`.
+- UI Desktop: Compose for Desktop si entra en alcance; reutiliza design system y componentes compartidos cuando sea practico.
+- iOS futuro: preparado por arquitectura KMP; UI futura evaluable entre SwiftUI y Compose Multiplatform, sin implementacion en el MVP.
+- Logica compartida: Kotlin Multiplatform en `commonMain` para dominio, use cases, contratos, modelos, validaciones, UiState y logica testeable.
+- Modularizacion: modulos Gradle desde el inicio con convention plugins en `build-logic`.
+- Design system: modulo `core:designsystem` con tema, tokens y componentes Compose reutilizables.
 - Base de datos local: SQLDelight.
 - HTTP client: Ktor Client.
-- Auth cliente: KMPAuth con Google Sign-In.
+- Integraciones nativas: contratos en `commonMain` y adapters por plataforma (`androidMain`, `desktopMain`, `iosMain` futuro) para auth, permisos, notificaciones, storage seguro y APIs de sistema.
+- Auth cliente Android: adapter con Credential Manager + Google ID como opcion principal y fallback controlado a Google Sign-In/OAuth si el dispositivo no lo soporta.
+- Auth cliente Desktop: adapter OAuth mediante navegador o flujo equivalente, solo si Desktop entra en el alcance de la entrega.
 - DI: Koin.
 - Serializacion: kotlinx.serialization.
 - Backend: Supabase Auth, PostgreSQL y Storage.
@@ -35,9 +40,9 @@ ViewModel + UiState (commonMain)
       ↓
 Use Cases / Domain (commonMain)
       ↓
-Repository (commonMain)
+Repository contracts (commonMain)
       ↓
-LocalDataSource (SQLDelight) + RemoteDataSource (Ktor + Supabase)
+Platform adapters + LocalDataSource (SQLDelight) + RemoteDataSource (Ktor + Supabase)
       ↓
 SyncManager (commonMain)
 ```

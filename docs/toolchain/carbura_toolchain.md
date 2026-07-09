@@ -15,6 +15,12 @@
 | **OpenCode** | Agente de IA | Generación y modificación de código asistida por IA |
 | **OpenSpec** | Framework de specs | Gestión de especificaciones versionadas, metodología SDD |
 
+### Herramientas IA usadas
+
+- **OpenCode**: agente principal para explorar el repositorio, proponer cambios, editar documentación, generar código y ayudar en la verificación.
+- **OpenSpec**: flujo asistido por IA para convertir requisitos en proposals, tareas, specs versionadas y archives trazables.
+- **ChatGPT/OpenAI vía OpenCode**: soporte conversacional para decisiones de arquitectura, revisión de documentación, planificación y ejecución guiada.
+
 ---
 
 ## Metodología: SDD sobre TDD + DDD ligero
@@ -301,6 +307,14 @@ Ramas y PRs oficiales:
    - Incluir métricas de cobertura de tests como indicador de calidad.
 3. Preparar el guion de la **demo final**.
 
+### Evidencias
+
+- `openspec/specs/`: fuente de verdad viva de las capacidades aceptadas.
+- `openspec/changes/`: proposals y tareas durante la implementación.
+- `openspec/changes/archive/`: historial de cambios aplicados y cerrados.
+- Commits y PRs: trazabilidad entre documentación, specs, código y entregas.
+- Comandos de verificación: `./gradlew test`, `./gradlew assembleDebug` y revisiones manuales en Android Studio/emulador.
+
 ---
 
 ## Convenciones de commits
@@ -341,15 +355,24 @@ carbura/
 │   │   └── backend.md
 │   ├── changes/                ← propuestas en curso
 │   └── archive/                ← historial de cambios completados
-├── shared/                     ← KMP commonMain (lógica compartida)
-│   ├── domain/
-│   ├── data/
-│   ├── presentation/
-│   └── test/                   ← tests unitarios commonTest (TDD)
-├── androidApp/                 ← UI Android (Compose)
-│   └── test/                   ← tests instrumentados Android
-├── desktopApp/                 ← UI Desktop (Compose Desktop)
-│   └── test/                   ← tests Desktop
+├── build-logic/                ← convention plugins Gradle
+├── app/
+│   ├── android/                ← UI Android, navegación y adapters Android
+│   └── desktop/                ← UI Desktop opcional
+├── core/
+│   ├── model/                  ← modelos compartidos
+│   ├── domain/                 ← entidades, use cases y contratos
+│   ├── data/                   ← repositorios
+│   ├── database/               ← SQLDelight
+│   ├── network/                ← Ktor/Supabase
+│   ├── auth/                   ← contrato común + adapters de auth
+│   ├── designsystem/           ← tema, tokens y componentes base
+│   └── testing/                ← fakes y utilidades de test
+├── feature/
+│   ├── onboarding/
+│   ├── garage/
+│   ├── maintenance/
+│   └── reminders/
 ├── local.properties.example
 ├── README.md
 └── .gitignore

@@ -4,6 +4,31 @@ Este documento detalla los tickets de trabajo derivados de las historias de usua
 
 Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada bloque de trabajo se creara un cambio en `openspec/changes/` con `proposal.md`, `tasks.md` y spec delta cuando aplique. La implementacion seguira TDD: Red -> Green -> Refactor.
 
+## Scope MVP dia 10
+
+- Incluido y validado en Android: login Google real, perfil/familia MVP, garaje local persistente, historial de mantenimiento local persistente, recordatorios MVP locales, UI Android edge-to-edge y smoke visual manual.
+- Recordatorios MVP: crear, listar pendientes, marcar completados y borrar por familia/vehiculo, con fecha mediante date picker y/o kilometraje objetivo.
+- Mantenimiento MVP: crear con date picker, listar historial persistente por vehiculo y borrar registros con confirmacion.
+- Garaje MVP: crear coche/moto, listar y borrar vehiculos con limpieza local de mantenimientos y recordatorios asociados.
+- Diferido: notificaciones locales, recordatorios recurrentes, invitaciones familiares completas, Desktop y sync remoto completo.
+- Siguiente bloque recomendado: sync v0 funcional KMP con Supabase para vehiculos, mantenimientos y recordatorios, usando estrategia simple `last-write-wins` y sin realtime/background sync avanzado.
+- Roadmap de sincronizacion: `docs/sync-roadmap.md`.
+
+## Estado actual Entrega 2
+
+- Android MVP local-first: ~85-90% completado para demo.
+- MVP completo Android + Desktop + sync: ~65-70% completado.
+- OpenSpec archivados: `add-user-family-mvp`, `add-date-pickers-delete-mvp`, `add-reminders-mvp-edge-to-edge`.
+- Commits locales pendientes de push desde `0d9dd51`: polish UI, mantenimiento, date pickers, borrados, confirmaciones y capitalizacion de inputs.
+
+## Sync v0 previsto
+
+- Fuente de alcance: `docs/sync-roadmap.md`.
+- Debe ser funcional end-to-end, no solo preparatorio: subir cambios locales pendientes a Supabase y bajar datos remotos de la familia.
+- Alcance v0: vehiculos, mantenimientos y recordatorios; ejecucion manual o al iniciar sesion/app; resolucion simple por `updated_at` con `last-write-wins`.
+- Fuera de v0: realtime, background sync periodico, merge manual de conflictos, colas complejas, adjuntos y notificaciones remotas.
+- La implementacion debe vivir en KMP/shared (`core:domain`/`core:data`) para ser reutilizable por Android y Desktop.
+
 ## Orden de implementacion recomendado
 
 | Orden | Ticket | Area | Historias | Prioridad | Estimacion |
@@ -68,7 +93,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Tipo:** feature / auth.
 
-**Descripcion:** implementar el flujo inicial de autenticacion con Google mediante Supabase Auth y creacion/carga del garaje familiar.
+**Descripcion:** implementar el flujo inicial de autenticacion con Google mediante Supabase Auth y creacion/carga del garaje familiar. En Android, Credential Manager con Google ID sera la opcion principal, con fallback controlado a Google Sign-In/OAuth si no esta disponible.
 
 **Proposito:** permitir que el usuario entre en la app y tenga un espacio de datos aislado antes de registrar vehiculos.
 
@@ -85,6 +110,8 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 **Alcance:**
 
 - Configurar login Google en Supabase Auth.
+- Implementar login Android con Credential Manager y Google ID.
+- Definir fallback a Google Sign-In/OAuth para dispositivos o entornos no compatibles.
 - Crear o cargar `UserProfile` tras login.
 - Crear `Family` si el usuario no tiene garaje.
 - Exponer estado de sesion a la UI.
@@ -94,12 +121,16 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 **Criterios de aceptacion:**
 
 - Dado un usuario sin sesion, cuando inicia sesion con Google, entonces accede autenticado.
+- Dado un dispositivo compatible, cuando el usuario inicia sesion, entonces la app usa Credential Manager como flujo principal.
+- Dado que Credential Manager no devuelve credencial valida o no esta disponible, cuando el usuario intenta iniciar sesion, entonces la app ofrece un fallback controlado sin bloquear el onboarding.
 - Dado un usuario autenticado sin garaje, cuando completa onboarding, entonces se crea su garaje familiar.
 - Dado un usuario autenticado con garaje, cuando abre la app, entonces se carga su garaje activo.
 
 **Tests TDD previstos:**
 
 - Test de creacion de perfil si no existe.
+- Test de seleccion de flujo Credential Manager disponible.
+- Test de fallback cuando no hay credencial disponible.
 - Test de carga de garaje existente.
 - Test de error de autenticacion propagado como estado de UI.
 

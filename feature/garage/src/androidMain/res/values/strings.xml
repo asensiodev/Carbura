@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="garage_title">Garaje</string>
+    <string name="garage_sign_out_button">Cerrar sesión</string>
+    <string name="vehicle_form_title_first">Añade tu primer vehículo</string>
+    <string name="vehicle_form_title_next">Añade otro vehículo</string>
+    <string name="vehicle_name_label">Nombre</string>
+    <string name="vehicle_type_label">Tipo</string>
+    <string name="vehicle_type_car">Coche</string>
+    <string name="vehicle_type_motorcycle">Moto</string>
+    <string name="current_odometer_label">Kilómetros actuales</string>
+    <string name="add_vehicle_button">Añadir</string>
+    <string name="add_first_vehicle_button">Añadir vehículo</string>
+    <string name="save_vehicle_button">Guardar vehículo</string>
+    <string name="vehicle_list_title">Tus vehículos</string>
+    <string name="garage_loading_message">Cargando tu garaje...</string>
+    <string name="empty_garage_title">Tu garaje empieza aquí</string>
+    <string name="empty_garage_description">Añade tu coche o moto para tener historial, recordatorios y kilómetros bajo control desde un mismo sitio.</string>
+    <string name="empty_garage_hint">Después podrás registrar mantenimientos y planificar próximas revisiones.</string>
+    <string name="view_history_button">Ver historial</string>
+    <string name="delete_vehicle_content_description">Borrar vehículo</string>
+    <string name="delete_vehicle_dialog_title">Borrar vehículo</string>
+    <string name="delete_vehicle_dialog_description">Se eliminará este vehículo y sus mantenimientos y recordatorios asociados:</string>
+    <string name="delete_vehicle_confirm_button">Borrar</string>
+    <string name="delete_vehicle_cancel_button">Cancelar</string>
+    <string name="vehicle_created_message">%1$s guardado en el garaje.</string>
+    <string name="vehicle_deleted_message">%1$s eliminado del garaje.</string>
+    <string name="validation_blank_vehicle_name">Introduce un nombre para el vehículo.</string>
+    <string name="validation_negative_vehicle_odometer">Los kilómetros no pueden ser negativos.</string>
+    <string name="validation_generic">Revisa los datos introducidos.</string>
+</resources>

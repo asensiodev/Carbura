@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tab_garage">Garaje</string>
+    <string name="tab_reminders">Recordatorios</string>
+    <string name="tab_user">Usuario</string>
+    <string name="initial_sync_loading">Sincronizando tus datos...</string>
+    <string name="user_title">Usuario</string>
+    <string name="user_subtitle">Tu cuenta y tu espacio familiar en Carbura.</string>
+    <string name="user_profile_title">Perfil</string>
+    <string name="user_profile_fallback_name">Usuario</string>
+    <string name="user_family_title">Familia</string>
+    <string name="user_family_fallback_name">Familia personal</string>
+    <string name="user_family_description">Este es el espacio donde se agrupan tus vehículos, mantenimientos y recordatorios.</string>
+    <string name="user_family_deferred_note">Las invitaciones y miembros llegarán en una próxima versión.</string>
+    <string name="user_sync_title">Sincronización</string>
+    <string name="user_sync_description">Tus datos se guardan en este dispositivo y se comparten con tu familia cuando hay conexión.</string>
+    <string name="user_sync_now_button">Sincronizar ahora</string>
+    <string name="user_syncing_button">Sincronizando...</string>
+    <string name="user_sync_never">Aún no se ha sincronizado.</string>
+    <string name="user_sync_last">Última sincronización: %1$s</string>
+    <string name="user_sync_ready">Al día</string>
+    <string name="user_sync_pending">Pendiente</string>
+    <string name="user_syncing_status">En curso</string>
+    <string name="user_sync_error_title">No se pudo sincronizar</string>
+    <string name="user_sync_error_description">Revisa la conexión y vuelve a intentarlo. Tus cambios siguen guardados en el dispositivo.</string>
+    <string name="user_sync_error_detail">Detalle técnico: %1$s</string>
+    <string name="user_session_title">Sesión</string>
+    <string name="user_sign_out_button">Cerrar sesión</string>
+</resources>
