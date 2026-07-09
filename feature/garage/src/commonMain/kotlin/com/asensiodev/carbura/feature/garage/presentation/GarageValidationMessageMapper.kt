@@ -6,6 +6,9 @@ import com.asensiodev.carbura.core.stringresources.CarburaString
 internal fun ValidationFailure.toGarageMessage(): CarburaString = when (this) {
     ValidationFailure.BlankVehicleName -> CarburaString.ValidationBlankVehicleName
     ValidationFailure.NegativeVehicleOdometer -> CarburaString.ValidationNegativeVehicleOdometer
+    ValidationFailure.BlankMaintenanceType,
+    ValidationFailure.InvalidMaintenanceDate,
+    ValidationFailure.InvalidMaintenanceCost,
     ValidationFailure.NegativeMaintenanceOdometer,
     ValidationFailure.NegativeMaintenanceCost,
     ValidationFailure.BlankReminderTitle,

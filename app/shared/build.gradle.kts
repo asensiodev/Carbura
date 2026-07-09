@@ -5,14 +5,7 @@ plugins {
 
 kotlin {
     sourceSets.commonMain.dependencies {
-        implementation(projects.feature.garage)
-        implementation(projects.feature.maintenance)
-        implementation(projects.feature.onboarding)
-        implementation(projects.feature.reminders)
-        implementation(projects.core.auth)
-        implementation(projects.core.data)
         implementation(projects.core.model)
-        implementation(libs.koin.core)
         implementation(libs.androidx.navigation3.runtime)
         implementation(libs.kotlinx.serialization.json)
     }

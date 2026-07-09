@@ -2,18 +2,16 @@ package com.asensiodev.carbura.feature.maintenance.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.asensiodev.carbura.core.domain.CreateMaintenanceRecordUseCase
+import com.asensiodev.carbura.core.domain.CreateMaintenanceRecordFromInputUseCase
+import com.asensiodev.carbura.core.domain.CreateMaintenanceRecordInput
 import com.asensiodev.carbura.core.domain.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
 import com.asensiodev.carbura.core.domain.GetVehicleHistoryUseCase
 import com.asensiodev.carbura.core.domain.SyncManager
-import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
-import com.asensiodev.carbura.core.model.MaintenanceTypeCode
-import com.asensiodev.carbura.core.model.MaintenanceTypeId
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import kotlinx.coroutines.CoroutineScope
@@ -32,7 +30,7 @@ class MaintenanceHistoryViewModel(
     private val vehicleId: VehicleId,
     private val familyId: FamilyId,
     private val dispatchers: DispatcherProvider,
-    private val createMaintenanceRecordUseCase: CreateMaintenanceRecordUseCase,
+    private val createMaintenanceRecordFromInputUseCase: CreateMaintenanceRecordFromInputUseCase,
     private val getVehicleHistoryUseCase: GetVehicleHistoryUseCase,
     private val deleteMaintenanceRecordUseCase: DeleteMaintenanceRecordUseCase,
     private val syncManager: SyncManager? = null,
@@ -74,34 +72,19 @@ class MaintenanceHistoryViewModel(
 
     private suspend fun createMaintenance() {
         val state = _uiState.value
-        val type = state.type.trim()
-        if (type.isBlank()) {
-            emitValidation(CarburaString.ValidationBlankMaintenanceType)
-            return
-        }
-
-        val performedOn = runCatching { CalendarDate(state.performedOn.trim()) }.getOrNull()
-        if (performedOn == null) {
-            emitValidation(CarburaString.ValidationInvalidMaintenanceDate)
-            return
-        }
-
-        val odometerKm = state.odometerKm.toIntOrNull() ?: -1
-        val costCents = state.cost.toCostCentsOrNull()
-        val record = MaintenanceRecord(
+        val input = CreateMaintenanceRecordInput(
             id = nextRecordId(),
             familyId = familyId,
             vehicleId = vehicleId,
-            maintenanceTypeId = MaintenanceTypeId("type-${type.lowercase().replace(' ', '-')}"),
-            maintenanceTypeCode = MaintenanceTypeCode.Custom,
-            performedOn = performedOn,
-            odometerKm = odometerKm,
-            costCents = costCents,
-            workshop = state.workshop.trim().ifBlank { null },
-            notes = state.notes.trim().ifBlank { null },
+            type = state.type,
+            performedOn = state.performedOn,
+            odometerKm = state.odometerKm,
+            cost = state.cost,
+            workshop = state.workshop,
+            notes = state.notes,
         )
 
-        when (val result = withContext(dispatchers.io) { createMaintenanceRecordUseCase(record) }) {
+        when (val result = withContext(dispatchers.io) { createMaintenanceRecordFromInputUseCase(input) }) {
             is DomainResult.Success -> {
                 val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
                 _uiState.update {
@@ -115,7 +98,7 @@ class MaintenanceHistoryViewModel(
                         errorMessage = null,
                     )
                 }
-                _effects.send(MaintenanceHistoryEffect.MaintenanceCreated(type))
+                _effects.send(MaintenanceHistoryEffect.MaintenanceCreated(input.type.trim()))
                 syncAfterMutation()
             }
 
@@ -145,12 +128,6 @@ class MaintenanceHistoryViewModel(
 }
 
 internal fun MaintenanceRecord.displayType(): String = maintenanceTypeId.value.removePrefix("type-").replace('-', ' ')
-
-private fun String.toCostCentsOrNull(): Int? {
-    val trimmed = trim()
-    if (trimmed.isBlank()) return null
-    return trimmed.replace(',', '.').toDoubleOrNull()?.let { (it * 100).toInt() }
-}
 
 private fun randomMaintenanceRecordId(): MaintenanceRecordId =
     MaintenanceRecordId("maintenance-${Random.nextInt(1, Int.MAX_VALUE)}")

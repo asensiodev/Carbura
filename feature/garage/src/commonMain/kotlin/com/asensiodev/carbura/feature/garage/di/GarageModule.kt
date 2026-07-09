@@ -8,7 +8,7 @@ import org.koin.dsl.module
 
 val garageModule = module {
     factory { CreateVehicleUseCase(get()) }
-    factory { DeleteVehicleUseCase(get()) }
+    factory { DeleteVehicleUseCase(get(), get(), get()) }
     factory { parameters ->
         GarageViewModel(
             familyId = parameters.get<FamilyId>(),

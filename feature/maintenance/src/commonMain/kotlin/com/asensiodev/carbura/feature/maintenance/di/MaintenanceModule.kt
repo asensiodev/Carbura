@@ -1,5 +1,6 @@
 package com.asensiodev.carbura.feature.maintenance.di
 
+import com.asensiodev.carbura.core.domain.CreateMaintenanceRecordFromInputUseCase
 import com.asensiodev.carbura.core.domain.CreateMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.GetVehicleHistoryUseCase
@@ -10,6 +11,7 @@ import org.koin.dsl.module
 
 val maintenanceModule = module {
     factory { CreateMaintenanceRecordUseCase(get()) }
+    factory { CreateMaintenanceRecordFromInputUseCase(get()) }
     factory { GetVehicleHistoryUseCase(get()) }
     factory { DeleteMaintenanceRecordUseCase(get()) }
     factory { parameters ->
@@ -17,7 +19,7 @@ val maintenanceModule = module {
             vehicleId = parameters.get<VehicleId>(),
             familyId = parameters.get<FamilyId>(),
             dispatchers = get(),
-            createMaintenanceRecordUseCase = get(),
+            createMaintenanceRecordFromInputUseCase = get(),
             getVehicleHistoryUseCase = get(),
             deleteMaintenanceRecordUseCase = get(),
             syncManager = get(),

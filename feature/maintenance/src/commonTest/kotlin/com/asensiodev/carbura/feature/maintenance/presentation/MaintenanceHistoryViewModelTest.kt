@@ -1,6 +1,7 @@
 package com.asensiodev.carbura.feature.maintenance.presentation
 
 import app.cash.turbine.test
+import com.asensiodev.carbura.core.domain.CreateMaintenanceRecordFromInputUseCase
 import com.asensiodev.carbura.core.domain.CreateMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.GetVehicleHistoryUseCase
@@ -166,7 +167,9 @@ class MaintenanceHistoryViewModelTest {
                 default = dispatcher,
                 main = dispatcher,
             ),
-            createMaintenanceRecordUseCase = CreateMaintenanceRecordUseCase(repository),
+            createMaintenanceRecordFromInputUseCase = CreateMaintenanceRecordFromInputUseCase(
+                CreateMaintenanceRecordUseCase(repository),
+            ),
             getVehicleHistoryUseCase = GetVehicleHistoryUseCase(repository),
             deleteMaintenanceRecordUseCase = DeleteMaintenanceRecordUseCase(repository),
             nextRecordId = nextRecordId,

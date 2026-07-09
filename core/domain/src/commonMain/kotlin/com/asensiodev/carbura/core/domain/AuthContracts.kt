@@ -1,4 +1,4 @@
-package com.asensiodev.carbura.core.auth
+package com.asensiodev.carbura.core.domain
 
 interface AuthGateway {
     suspend fun currentSession(): AuthSession?

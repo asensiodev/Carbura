@@ -27,6 +27,28 @@ class ReminderUseCasesTest {
     }
 
     @Test
+    fun dateReminderSchedulesNotificationAfterSave() = runTest {
+        val scheduler = FakeReminderNotificationScheduler()
+        val reminder = reminder(id = "itv", dueDate = "2026-07-10")
+
+        CreateReminderUseCase(FakeReminderRepository(), scheduler)(reminder)
+
+        assertEquals(listOf("itv"), scheduler.scheduledReminderIds)
+        assertEquals(emptyList(), scheduler.cancelledReminderIds)
+    }
+
+    @Test
+    fun odometerOnlyReminderDoesNotScheduleDateNotification() = runTest {
+        val scheduler = FakeReminderNotificationScheduler()
+        val reminder = reminder(id = "oil", dueOdometerKm = 20000)
+
+        CreateReminderUseCase(FakeReminderRepository(), scheduler)(reminder)
+
+        assertEquals(emptyList(), scheduler.scheduledReminderIds)
+        assertEquals(listOf("oil"), scheduler.cancelledReminderIds)
+    }
+
+    @Test
     fun blankTitleReturnsValidationError() = runTest {
         val result = CreateReminderUseCase(FakeReminderRepository())(reminder(title = " "))
 
@@ -76,6 +98,24 @@ class ReminderUseCasesTest {
         CompleteReminderUseCase(repository)(ReminderId("reminder-1"))
 
         assertEquals(emptyList(), repository.getPendingReminders(familyId))
+    }
+
+    @Test
+    fun completeReminderCancelsNotification() = runTest {
+        val scheduler = FakeReminderNotificationScheduler()
+
+        CompleteReminderUseCase(FakeReminderRepository(), scheduler)(ReminderId("reminder-1"))
+
+        assertEquals(listOf("reminder-1"), scheduler.cancelledReminderIds)
+    }
+
+    @Test
+    fun deleteReminderCancelsNotification() = runTest {
+        val scheduler = FakeReminderNotificationScheduler()
+
+        DeleteReminderUseCase(FakeReminderRepository(), scheduler)(ReminderId("reminder-1"))
+
+        assertEquals(listOf("reminder-1"), scheduler.cancelledReminderIds)
     }
 
     private fun reminder(

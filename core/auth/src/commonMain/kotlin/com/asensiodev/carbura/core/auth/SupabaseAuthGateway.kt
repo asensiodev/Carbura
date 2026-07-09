@@ -1,5 +1,8 @@
 package com.asensiodev.carbura.core.auth
 
+import com.asensiodev.carbura.core.domain.AuthGateway
+import com.asensiodev.carbura.core.domain.AuthSession
+import com.asensiodev.carbura.core.domain.AuthUser
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google

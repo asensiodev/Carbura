@@ -44,6 +44,9 @@ internal class FakeReminderRepository : ReminderRepository {
     override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> =
         savedReminders.filter { it.familyId == familyId && !it.isCompleted }
 
+    override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> =
+        savedReminders.filter { it.vehicleId == vehicleId }
+
     override suspend fun saveReminder(reminder: Reminder) {
         savedReminders += reminder
     }
@@ -57,5 +60,18 @@ internal class FakeReminderRepository : ReminderRepository {
 
     override suspend fun deleteReminder(reminderId: ReminderId) {
         savedReminders.removeAll { it.id == reminderId }
+    }
+}
+
+internal class FakeReminderNotificationScheduler : ReminderNotificationScheduler {
+    val scheduledReminderIds = mutableListOf<String>()
+    val cancelledReminderIds = mutableListOf<String>()
+
+    override suspend fun schedule(reminder: Reminder) {
+        scheduledReminderIds += reminder.id.value
+    }
+
+    override suspend fun cancel(reminderId: ReminderId) {
+        cancelledReminderIds += reminderId.value
     }
 }

@@ -2,17 +2,14 @@ package com.asensiodev.carbura.core.data
 
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.data.local.Vehicles
-import com.asensiodev.carbura.core.domain.ReminderNotificationScheduler
 import com.asensiodev.carbura.core.domain.VehicleRepository
 import com.asensiodev.carbura.core.model.FamilyId
-import com.asensiodev.carbura.core.model.ReminderId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
 
 class LocalVehicleRepository(
     private val database: CarburaDatabase,
-    private val notificationScheduler: ReminderNotificationScheduler,
 ) : VehicleRepository {
     override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> =
         database.carburaDatabaseQueries
@@ -39,10 +36,6 @@ class LocalVehicleRepository(
 
     override suspend fun deleteVehicle(vehicleId: VehicleId) {
         val now = currentTimeMillis()
-        val reminderIds = database.carburaDatabaseQueries
-            .selectSyncRemindersByVehicle(vehicleId.value)
-            .executeAsList()
-            .map { it.id }
         database.carburaDatabaseQueries.transaction {
             database.carburaDatabaseQueries.deleteMaintenanceRecordsByVehicle(
                 deletedAt = now,
@@ -60,7 +53,6 @@ class LocalVehicleRepository(
                 id = vehicleId.value,
             )
         }
-        reminderIds.forEach { notificationScheduler.cancel(ReminderId(it)) }
     }
 }
 

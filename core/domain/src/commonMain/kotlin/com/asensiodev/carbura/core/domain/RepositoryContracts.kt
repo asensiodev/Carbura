@@ -22,6 +22,7 @@ interface MaintenanceRecordRepository {
 
 interface ReminderRepository {
     suspend fun getPendingReminders(familyId: FamilyId): List<Reminder>
+    suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder>
     suspend fun saveReminder(reminder: Reminder)
     suspend fun markReminderCompleted(reminderId: ReminderId)
     suspend fun deleteReminder(reminderId: ReminderId)

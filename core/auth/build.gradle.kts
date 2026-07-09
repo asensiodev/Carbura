@@ -5,6 +5,7 @@ plugins {
 
 kotlin {
     sourceSets.commonMain.dependencies {
+        implementation(projects.core.domain)
         implementation(libs.koin.core)
         implementation(libs.supabase.auth)
         implementation(libs.supabase.postgrest)

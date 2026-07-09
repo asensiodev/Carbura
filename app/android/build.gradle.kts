@@ -29,6 +29,7 @@ dependencies {
     implementation(projects.app.shared)
     implementation(projects.core.designsystem)
     implementation(projects.core.auth)
+    implementation(projects.core.data)
     implementation(projects.core.domain)
     implementation(projects.feature.onboarding)
     implementation(projects.feature.garage)

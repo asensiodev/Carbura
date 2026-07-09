@@ -25,9 +25,9 @@ actual val dataModule: Module = module {
     }
     single { CarburaDatabase(get()) }
     single<ReminderNotificationScheduler> { AndroidReminderNotificationScheduler(get()) }
-    single<VehicleRepository> { LocalVehicleRepository(get(), get()) }
+    single<VehicleRepository> { LocalVehicleRepository(get()) }
     single<MaintenanceRecordRepository> { LocalMaintenanceRecordRepository(get()) }
-    single<ReminderRepository> { LocalReminderRepository(get(), get()) }
+    single<ReminderRepository> { LocalReminderRepository(get()) }
     single<RemoteUserProfileGateway> { SupabaseUserProfileGateway(get()) }
     single<LocalSyncDataSource> { SqlDelightLocalSyncDataSource(get()) }
     single<RemoteSyncDataSource> { SupabaseSyncDataSource(get()) }

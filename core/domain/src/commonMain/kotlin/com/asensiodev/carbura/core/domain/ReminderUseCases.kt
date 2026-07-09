@@ -8,6 +8,7 @@ import com.asensiodev.carbura.core.model.ReminderId
 
 class CreateAutomaticReminderUseCase(
     private val repository: ReminderRepository,
+    private val notificationScheduler: ReminderNotificationScheduler = NoOpReminderNotificationScheduler,
     private val idFactory: () -> ReminderId,
 ) : SuspendUseCase<MaintenanceRecord, Reminder?> {
     override suspend fun invoke(params: MaintenanceRecord): Reminder? {
@@ -28,12 +29,14 @@ class CreateAutomaticReminderUseCase(
             notifyDaysBefore = 30,
         )
         repository.saveReminder(reminder)
+        notificationScheduler.schedule(reminder)
         return reminder
     }
 }
 
 class CreateReminderUseCase(
     private val repository: ReminderRepository,
+    private val notificationScheduler: ReminderNotificationScheduler = NoOpReminderNotificationScheduler,
 ) : SuspendUseCase<Reminder, DomainResult<Reminder>> {
     override suspend fun invoke(params: Reminder): DomainResult<Reminder> {
         if (params.title.isBlank()) {
@@ -54,6 +57,11 @@ class CreateReminderUseCase(
         }
 
         repository.saveReminder(params)
+        if (params.dueDate != null && !params.isCompleted) {
+            notificationScheduler.schedule(params)
+        } else {
+            notificationScheduler.cancel(params.id)
+        }
         return DomainResult.Success(params)
     }
 }
@@ -71,16 +79,20 @@ class GetPendingRemindersUseCase(
 
 class CompleteReminderUseCase(
     private val repository: ReminderRepository,
+    private val notificationScheduler: ReminderNotificationScheduler = NoOpReminderNotificationScheduler,
 ) : SuspendUseCase<ReminderId, Unit> {
     override suspend fun invoke(params: ReminderId) {
         repository.markReminderCompleted(params)
+        notificationScheduler.cancel(params)
     }
 }
 
 class DeleteReminderUseCase(
     private val repository: ReminderRepository,
+    private val notificationScheduler: ReminderNotificationScheduler = NoOpReminderNotificationScheduler,
 ) : SuspendUseCase<ReminderId, Unit> {
     override suspend fun invoke(params: ReminderId) {
         repository.deleteReminder(params)
+        notificationScheduler.cancel(params)
     }
 }

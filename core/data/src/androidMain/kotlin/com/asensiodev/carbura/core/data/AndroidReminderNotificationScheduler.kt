@@ -64,7 +64,6 @@ internal class AndroidReminderNotificationScheduler(
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val notificationManager = context.getSystemService(NotificationManager::class.java)
         val channel = NotificationChannel(
             REMINDER_NOTIFICATION_CHANNEL_ID,

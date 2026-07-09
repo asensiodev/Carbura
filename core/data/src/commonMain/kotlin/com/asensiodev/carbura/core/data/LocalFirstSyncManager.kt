@@ -1,6 +1,6 @@
 package com.asensiodev.carbura.core.data
 
-import com.asensiodev.carbura.core.auth.AuthGateway
+import com.asensiodev.carbura.core.domain.AuthGateway
 import com.asensiodev.carbura.core.domain.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.domain.SyncManager
 import com.asensiodev.carbura.core.domain.SyncResult

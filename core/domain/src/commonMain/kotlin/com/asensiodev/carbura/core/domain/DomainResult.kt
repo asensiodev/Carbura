@@ -8,6 +8,9 @@ sealed interface DomainResult<out T> {
 enum class ValidationFailure {
     BlankVehicleName,
     NegativeVehicleOdometer,
+    BlankMaintenanceType,
+    InvalidMaintenanceDate,
+    InvalidMaintenanceCost,
     NegativeMaintenanceOdometer,
     NegativeMaintenanceCost,
     BlankReminderTitle,

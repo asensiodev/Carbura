@@ -9,10 +9,10 @@ import com.asensiodev.carbura.feature.reminders.presentation.RemindersViewModel
 import org.koin.dsl.module
 
 val remindersModule = module {
-    factory { CreateReminderUseCase(get()) }
+    factory { CreateReminderUseCase(get(), get()) }
     factory { GetPendingRemindersUseCase(get()) }
-    factory { CompleteReminderUseCase(get()) }
-    factory { DeleteReminderUseCase(get()) }
+    factory { CompleteReminderUseCase(get(), get()) }
+    factory { DeleteReminderUseCase(get(), get()) }
     factory { parameters ->
         RemindersViewModel(
             familyId = parameters.get<FamilyId>(),

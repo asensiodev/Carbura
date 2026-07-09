@@ -4,7 +4,6 @@ plugins {
 
 kotlin {
     sourceSets.commonMain.dependencies {
-        implementation(projects.core.auth)
         implementation(projects.core.domain)
         implementation(projects.core.model)
         implementation(projects.core.stringResources)
@@ -20,6 +19,7 @@ kotlin {
     }
 
     sourceSets.androidMain.dependencies {
+        implementation(projects.core.auth)
         implementation(projects.core.designsystem)
         implementation(project.dependencies.platform(libs.androidx.compose.bom))
         implementation(libs.androidx.compose.material3)
