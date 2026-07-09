@@ -1,0 +1,66 @@
+# macOS
+.DS_Store
+._*
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# Gradle / Kotlin / Compose
+.gradle/
+build/
+**/build/
+out/
+.kotlin/
+*.class
+
+# Android
+local.properties
+captures/
+*.apk
+*.ap_
+*.aab
+*.dex
+
+# Kotlin/Native
+.konan/
+*.klib
+
+# Desktop packaging
+*.dmg
+*.pkg
+*.msi
+*.exe
+
+# Node / OpenCode local dependencies
+node_modules/
+.opencode/node_modules/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+secrets.*
+credentials.*
+
+# Logs and reports
+*.log
+logs/
+test-results/
+reports/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+
+# Local instructions
+instructions/instructions.md
