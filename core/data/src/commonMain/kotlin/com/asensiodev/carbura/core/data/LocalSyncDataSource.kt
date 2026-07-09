@@ -1,11 +1,7 @@
 package com.asensiodev.carbura.core.data
 
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
-import com.asensiodev.carbura.core.data.local.MaintenanceRecords
-import com.asensiodev.carbura.core.data.local.Reminders
-import com.asensiodev.carbura.core.data.local.Vehicles
 import com.asensiodev.carbura.core.model.FamilyId
-import com.asensiodev.carbura.core.model.VehicleType
 
 internal interface LocalSyncDataSource {
     suspend fun getPendingVehicles(): List<SyncVehicle>
@@ -118,50 +114,3 @@ internal class SqlDelightLocalSyncDataSource(
         }
     }
 }
-
-private fun Vehicles.toSyncVehicle(): SyncVehicle = SyncVehicle(
-    id = id,
-    familyId = familyId,
-    name = name,
-    type = VehicleType.valueOf(type),
-    brand = brand,
-    model = model,
-    licensePlate = licensePlate,
-    currentOdometerKm = currentOdometerKm.toInt(),
-    updatedAt = updatedAt,
-    pendingSync = pendingSync == 1L,
-    deletedAt = deletedAt,
-)
-
-private fun MaintenanceRecords.toSyncMaintenanceRecord(): SyncMaintenanceRecord = SyncMaintenanceRecord(
-    id = id,
-    familyId = familyId,
-    vehicleId = vehicleId,
-    maintenanceTypeId = maintenanceTypeId,
-    maintenanceTypeCode = maintenanceTypeCode,
-    performedOn = performedOn,
-    odometerKm = odometerKm?.toInt(),
-    costCents = costCents?.toInt(),
-    currency = currency,
-    workshop = workshop,
-    notes = notes,
-    nextDueDate = nextDueDate,
-    updatedAt = updatedAt,
-    pendingSync = pendingSync == 1L,
-    deletedAt = deletedAt,
-)
-
-private fun Reminders.toSyncReminder(): SyncReminder = SyncReminder(
-    id = id,
-    familyId = familyId,
-    vehicleId = vehicleId,
-    maintenanceTypeId = maintenanceTypeId,
-    title = title,
-    dueDate = dueDate,
-    dueOdometerKm = dueOdometerKm?.toInt(),
-    notifyDaysBefore = notifyDaysBefore.toInt(),
-    isCompleted = isCompleted == 1L,
-    updatedAt = updatedAt,
-    pendingSync = pendingSync == 1L,
-    deletedAt = deletedAt,
-)

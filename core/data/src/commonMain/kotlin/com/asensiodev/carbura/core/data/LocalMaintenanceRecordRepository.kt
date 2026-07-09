@@ -1,14 +1,9 @@
 package com.asensiodev.carbura.core.data
 
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
-import com.asensiodev.carbura.core.data.local.MaintenanceRecords
 import com.asensiodev.carbura.core.domain.maintenance.repository.MaintenanceRecordRepository
-import com.asensiodev.carbura.core.model.CalendarDate
-import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
-import com.asensiodev.carbura.core.model.MaintenanceTypeCode
-import com.asensiodev.carbura.core.model.MaintenanceTypeId
 import com.asensiodev.carbura.core.model.VehicleId
 
 class LocalMaintenanceRecordRepository(
@@ -50,18 +45,3 @@ class LocalMaintenanceRecordRepository(
         )
     }
 }
-
-private fun MaintenanceRecords.toMaintenanceRecord(): MaintenanceRecord = MaintenanceRecord(
-    id = MaintenanceRecordId(id),
-    familyId = FamilyId(familyId),
-    vehicleId = VehicleId(vehicleId),
-    maintenanceTypeId = MaintenanceTypeId(maintenanceTypeId),
-    maintenanceTypeCode = maintenanceTypeCode?.let(MaintenanceTypeCode::valueOf),
-    performedOn = CalendarDate(performedOn),
-    odometerKm = odometerKm?.toInt(),
-    costCents = costCents?.toInt(),
-    currency = currency,
-    workshop = workshop,
-    notes = notes,
-    nextDueDate = nextDueDate?.let(::CalendarDate),
-)
