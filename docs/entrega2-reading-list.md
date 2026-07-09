@@ -116,7 +116,8 @@ Decision Carbura:
 core:* = dominio, modelos, datos, auth, design system, testing y contratos compartidos.
 feature:* = funcionalidades verticales como onboarding, garage, maintenance y reminders.
 app:android = UI Android, navegacion y adapters Android.
-app:desktop = UI Desktop opcional.
+app:shared = rutas y contratos compartidos de app.
+app:desktop = UI Desktop opcional futura, fuera de Entrega 2 si bloquea Android.
 iOS futuro = adapter propio y UI SwiftUI o Compose Multiplatform segun evaluacion posterior.
 ```
 

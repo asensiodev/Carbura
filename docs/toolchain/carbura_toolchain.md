@@ -226,9 +226,8 @@ El agente implementa el código mínimo necesario para que los tests pasen:
 - Compilar y lanzar en emulador:
   ```bash
   ./gradlew assembleDebug
-  ./gradlew desktopRun
   ```
-- Verificar el flujo visualmente en emulador Android y Desktop.
+- Verificar el flujo visualmente en emulador o dispositivo Android. Desktop queda diferido para Entrega 2.
 
 #### Paso 7 — Archive (cierre del cambio SDD)
 ```text
@@ -253,8 +252,8 @@ Ramas y PRs oficiales:
 
 | Entrega | Rama origen | Rama destino | Contenido |
 |---|---|---|---|
-| Entrega 1 | `feature-entrega1-AAC` | `dev` | Documentacion tecnica: README, prompts, PRD, user stories, arquitectura, modelo de datos, API y tickets. |
-| Entrega 2 | `feature-entrega2-AAC` | `main` | MVP funcional casi completo: frontend, backend/datos, base de datos y flujo principal. |
+| Entrega 1 | `feature-entrega1-AAC` | `dev` | Documentacion tecnica: README, PRD, user stories, arquitectura, modelo de datos, API y tickets. |
+| Entrega 2 | `feature-entrega2-AAC` | `dev` | MVP funcional Android-first: frontend, backend/datos, base de datos, sync v0, notificaciones locales y flujo principal. |
 | Entrega final | `finalproject-AAC` | `main` | Version final con flujo E2E, tests, despliegue/evidencia y documentacion cerrada. |
 
 ---
@@ -264,18 +263,21 @@ Ramas y PRs oficiales:
 **Herramientas:** Warp + VS Code (para la spec) + Dashboard de Supabase
 
 1. Crear proyecto en Supabase.
-2. Crear las tablas según `openspec/specs/data-model.md`:
-   - `families`, `users`, `vehicles`, `maintenance_types`, `maintenance_records`, `reminders`.
+2. Aplicar las migraciones versionadas en `supabase/migrations/`:
+   - `202607010001_initial_schema.sql`
+   - `202607070001_ensure_user_profile_rpc.sql`
+   - `202607080001_sync_v0_schema.sql`
+   - `202607080002_sync_v0_text_entity_ids.sql`
 3. Configurar **Row Level Security (RLS)** por `family_id` para cada tabla.
 4. Configurar **Google OAuth** en Supabase Auth.
 5. Añadir las variables de entorno a `local.properties`:
    ```properties
    SUPABASE_URL=https://xxxx.supabase.co
    SUPABASE_ANON_KEY=xxxx
-   GOOGLE_CLIENT_ID=xxxx
+   GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
    ```
-6. Verificar conectividad desde la app.
-7. Escribir tests de integración para el módulo de sync (TDD sobre el SyncManager).
+6. Verificar conectividad desde la app Android.
+7. Ejecutar los tests de sync (`:core:data:desktopTest`) y dominio.
 
 ---
 
@@ -283,7 +285,7 @@ Ramas y PRs oficiales:
 
 **Herramientas:** todas
 
-1. Revisar UX en emulador Android y en Desktop.
+1. Revisar UX en emulador o dispositivo Android.
 2. Revisar cobertura de tests (`./gradlew koverReport`).
 3. Añadir tests de integración para flujos críticos (auth, sync, reminders).
 4. Pulir animaciones, estados vacíos, estados de error, estados de carga.
@@ -297,7 +299,7 @@ Ramas y PRs oficiales:
 
 1. Generar **README.md** con:
    - Nombre + slogan ("Tu garaje, siempre a punto").
-   - Screenshots o GIFs de la app.
+   - Screenshots o GIFs de la app si se preparan para la entrega final.
    - Stack tecnológico y metodología (SDD + TDD).
    - Sección "AI-assisted development": cómo se usó IA en cada fase.
    - Instrucciones de setup con `local.properties.example`.
@@ -343,30 +345,27 @@ carbura/
 ├── openspec/
 │   ├── project.md              ← contexto breve del proyecto para OpenCode
 │   ├── prd.md                  ← PRD completo del producto
-│   ├── agents.md               ← instrucciones para el agente (no editar)
 │   ├── specs/                  ← fuente de verdad viva
-│   │   ├── auth/
-│   │   │   └── UC-01-signin.md ← incluye criterios de aceptación para TDD
-│   │   ├── vehicles/
-│   │   ├── maintenance/
-│   │   ├── reminders/
-│   │   ├── sync/
-│   │   ├── data-model.md
-│   │   └── backend.md
+│   │   ├── auth-session/
+│   │   ├── login-onboarding/
+│   │   ├── vehicle-management/
+│   │   ├── maintenance-history/
+│   │   ├── reminders-mvp/
+│   │   ├── sync-v0/
+│   │   └── supabase-backend/
 │   ├── changes/                ← propuestas en curso
 │   └── archive/                ← historial de cambios completados
 ├── build-logic/                ← convention plugins Gradle
 ├── app/
 │   ├── android/                ← UI Android, navegación y adapters Android
-│   └── desktop/                ← UI Desktop opcional
+│   └── shared/                 ← rutas/contratos compartidos de app
 ├── core/
 │   ├── model/                  ← modelos compartidos
 │   ├── domain/                 ← entidades, use cases y contratos
 │   ├── data/                   ← repositorios
-│   ├── database/               ← SQLDelight
-│   ├── network/                ← Ktor/Supabase
-│   ├── auth/                   ← contrato común + adapters de auth
+│   ├── auth/                   ← adapter Supabase/Auth Android y settings
 │   ├── designsystem/           ← tema, tokens y componentes base
+│   ├── string-resources/       ← strings compartidas/type-safe
 │   └── testing/                ← fakes y utilidades de test
 ├── feature/
 │   ├── onboarding/

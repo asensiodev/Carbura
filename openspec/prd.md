@@ -190,7 +190,7 @@ Patron general para dependencias de plataforma: auth, permisos, notificaciones, 
 
 | Fecha | Hito |
 |---|---|
-| **12 junio 2026** | Entrega de documentacion (PRD, user stories, tickets, readme.md, prompts.md y toolchain de IA/proceso) |
+| **12 junio 2026** | Entrega de documentacion (PRD, user stories, tickets, readme.md y toolchain de IA/proceso) |
 | **10 julio 2026** | Codigo funcional: MVP Android con auth, vehiculos, mantenimientos, historial, recordatorios, notificaciones locales y sync con backend/base de datos conectados |
 | **29 julio 2026** | Entrega final refinada: UX pulida, tests (unitarios, integracion y E2E), CI/CD, evidencia de despliegue y documentacion completa |
 
@@ -199,9 +199,9 @@ Patron general para dependencias de plataforma: auth, permisos, notificaciones, 
 ```text
 Mayo 2026        -> Documentacion: PRD, specs, user stories, tickets, readme.md
 Junio 2026       -> Implementacion core: auth, vehiculos, mantenimientos, historial
-Julio (1-10)     -> Recordatorios, pantalla de avisos, CI basico, cierre del flujo E2E
+Julio (1-10)     -> Recordatorios, notificaciones locales, sync v0, UX polish, cierre del flujo E2E Android
 Julio (10-29)    -> Tests E2E, CI/CD + release, refinado UX, extendido si hay margen
-                    (notificaciones, Desktop, sync, exportacion), documentacion final
+                    (Desktop, exportacion, invitaciones), documentacion final
 ```
 
 ### Nota sobre dedicacion

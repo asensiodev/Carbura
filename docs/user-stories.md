@@ -37,7 +37,7 @@ Usuario inicia sesion
   -> ve un recordatorio automatico del proximo vencimiento
 ```
 
-Para cumplir las instrucciones del proyecto, este flujo se planifica con 5 historias Must-Have y 2 Should-Have.
+Para Entrega 2, este flujo queda implementado en Android-first con persistencia local, sincronizacion v0 y notificaciones locales. Desktop, invitaciones y exportacion quedan para iteraciones posteriores.
 
 ## Must-Have - Entrega E2E
 
@@ -122,7 +122,7 @@ Para cumplir las instrucciones del proyecto, este flujo se planifica con 5 histo
 
 ---
 
-## Should-Have - Opcionales de la entrega
+## Should-Have - Implementados en Entrega 2 Android-first
 
 ### US-07 - Ver proximos recordatorios
 
@@ -156,7 +156,7 @@ Para cumplir las instrucciones del proyecto, este flujo se planifica con 5 histo
 
 ---
 
-## Could-Have - Backlog MVP extendido
+## Could-Have - Backlog MVP extendido / Entrega final
 
 ### US-03 - Ver listado y detalle de vehiculos
 
@@ -269,4 +269,4 @@ Los tickets se derivan de las historias Must-Have y Should-Have. Cada ticket deb
 
 ## Siguiente paso
 
-Convertir las historias Must-Have en specs OpenSpec por capacidad, empezando por `vehicles`, `maintenance-records` y `reminders`. Despues, derivar tickets tecnicos y tests TDD desde los criterios de aceptacion.
+Las historias Must-Have y los Should-Have principales ya fueron convertidos en specs OpenSpec, implementados y archivados. El siguiente paso natural es preparar Entrega final: CI/release, test E2E, edicion de entidades si entra en alcance, recordatorios proactivos, invitaciones familiares o exportacion.

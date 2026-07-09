@@ -27,7 +27,7 @@ Carbura
 
 ### **0.3. Descripción breve del proyecto:**
 
-Carbura es una aplicación multiplataforma para Android y Desktop orientada a familias que necesitan gestionar el mantenimiento de sus vehículos. Permite registrar vehículos, mantenimientos, averías, costes, kilometraje y recordatorios de vencimientos como ITV o seguro, manteniendo el historial accesible desde distintos dispositivos.
+Carbura es una aplicación Android-first, preparada con arquitectura Kotlin Multiplatform, orientada a familias que necesitan gestionar el mantenimiento de sus vehículos. Permite registrar vehículos, mantenimientos, averías, costes, kilometraje y recordatorios de vencimientos como ITV o seguro, con persistencia local y sincronización eventual mediante Supabase.
 
 ### **0.4. URL del proyecto:**
 
@@ -55,17 +55,18 @@ Funcionalidades del MVP core:
 - Alta y consulta de vehículos.
 - Registro de mantenimientos, averías, ITV, seguro, aceite, neumáticos y revisiones.
 - Historial por vehículo con fecha, kilómetros y coste.
-- Recordatorios automáticos por fecha tras registrar ITV o seguro.
+- Recordatorios por fecha y/o kilometraje, creados manualmente o desde mantenimientos con vencimiento.
 - Autenticación con Google mediante Supabase Auth.
-- En Android, Credential Manager con Google ID será la vía principal de login; se mantendrá fallback controlado a Google Sign-In/OAuth si el dispositivo o los servicios disponibles no lo soportan.
+- En Android, Credential Manager con Google ID es la vía principal de login; existe fallback controlado a Google Sign-In/OAuth si el dispositivo o los servicios disponibles no lo soportan.
 - Persistencia local offline-first.
+- Sincronización v0 con Supabase para vehículos, mantenimientos y recordatorios usando `last-write-wins`.
+- Notificaciones locales Android para recordatorios.
 
-Funcionalidades del MVP extendido (si el tiempo lo permite):
+Funcionalidades post-MVP o de Entrega final:
 
-- Pantalla de próximos recordatorios y notificaciones locales para vencimientos.
 - App Desktop desde la misma base KMP.
-- Recordatorios por kilometraje y actualización rápida de odómetro.
-- Sincronización entre dispositivos de la misma familia.
+- Recordatorios proactivos desde el alta/edición de vehículo.
+- Actualización rápida de odómetro.
 - Invitación de familiares mediante código.
 - Exportación de historial a PDF o CSV.
 
@@ -83,18 +84,19 @@ El flujo principal del MVP será:
 
 ```text
 Inicio de sesión
-  -> Crear o unirse a garaje
+  -> Cargar o crear garaje familiar personal
   -> Añadir vehículo
-  -> Registrar mantenimiento o ITV
+  -> Registrar mantenimiento
   -> Consultar historial
-  -> Ver recordatorio automático
+  -> Crear o ver recordatorio
+  -> Sincronizar con Supabase
 ```
 
-La interfaz se diseñará con Compose Multiplatform, manteniendo una experiencia coherente en Android y Desktop, pero adaptada a cada tamaño de pantalla.
+La interfaz de Entrega 2 está implementada en Compose for Android. La arquitectura conserva dominio, datos y estado reutilizables para Desktop/iOS futuro, pero esos targets no forman parte del entregable funcional actual.
 
 ### **1.4. Instrucciones de instalación:**
 
-El proyecto ya cuenta con un scaffold Kotlin Multiplatform modular inicial. Android es la plataforma principal para Entrega 2; Desktop queda preparado como objetivo opcional posterior.
+El proyecto ya cuenta con una base Kotlin Multiplatform modular. Android es la plataforma principal para Entrega 2; Desktop queda diferido como objetivo posterior.
 
 Requisitos:
 
@@ -104,15 +106,15 @@ Requisitos:
 - Google OAuth configurado en Supabase Auth.
 - Variables locales en `local.properties`, nunca versionadas. La plantilla segura vive en [`local.properties.example`](local.properties.example) y la guia de setup en [`docs/supabase-setup.md`](docs/supabase-setup.md).
 
-Configuración local prevista para cambios posteriores:
+Configuración local:
 
 ```properties
 SUPABASE_URL=https://xxxx.supabase.co
 SUPABASE_ANON_KEY=xxxx
-GOOGLE_CLIENT_ID=xxxx
+GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
 ```
 
-Comandos de verificación del scaffold:
+Comandos de verificación:
 
 ```bash
 ./gradlew tasks
@@ -120,7 +122,7 @@ Comandos de verificación del scaffold:
 ./gradlew assembleDebug
 ```
 
-La APK debug se genera desde el módulo `app:android`. La configuración real de Supabase se realizará en cambios posteriores mediante OpenSpec.
+La APK debug se genera desde el módulo `app:android`. La configuración real de Supabase se lee desde `local.properties` y no debe commitearse.
 
 ---
 
@@ -134,7 +136,7 @@ flowchart TD
 
     subgraph Clients[Clientes]
         Android[Android App\nCompose for Android]
-        Desktop[Desktop App\nCompose for Desktop]
+        Desktop[Desktop App futura\nCompose for Desktop]
     end
 
     subgraph Shared[Kotlin Multiplatform - commonMain]
@@ -154,9 +156,9 @@ flowchart TD
     end
 
     User --> Android
-    User --> Desktop
+    User -. futuro .-> Desktop
     Android --> VM
-    Desktop --> VM
+    Desktop -. futuro .-> VM
     VM --> UseCases
     UseCases --> Domain
     UseCases --> Repo
@@ -194,7 +196,7 @@ Sacrificios o riesgos:
 | Componente | Tecnología | Responsabilidad |
 |---|---|---|
 | Android App | Compose for Android | UI móvil, permisos Android y notificaciones locales. |
-| Desktop App | Compose for Desktop | UI de escritorio para macOS y Windows. |
+| Desktop App | Compose for Desktop | UI de escritorio futura para macOS y Windows. Diferida en Entrega 2. |
 | Platform Adapters | Android/Desktop/iOS futuro | Implementan contratos comunes para auth, permisos, notificaciones, secure storage y APIs nativas. |
 | Design System | Compose Multiplatform | Tema, tokens visuales y componentes base reutilizables. |
 | ViewModels + UiState | Kotlin Multiplatform | Estado de pantalla, eventos de usuario y exposición de datos a UI. |
@@ -215,16 +217,15 @@ Carbura/
 ├── build-logic/                # Convention plugins Gradle del proyecto
 ├── app/
 │   ├── android/                # App Android, navegación, adapters Android
-│   └── desktop/                # App Desktop opcional
+│   └── shared/                 # Rutas y contratos compartidos de app
 ├── core/
 │   ├── model/                  # Modelos compartidos
 │   ├── domain/                 # Entidades, use cases y contratos
 │   ├── data/                   # Repositorios e implementación coordinadora
-│   ├── database/               # SQLDelight y persistencia local
-│   ├── network/                # Ktor/Supabase remote data sources
-│   ├── auth/                   # Contratos comunes + adapters de auth
+│   ├── auth/                   # Adapter Supabase/Auth Android y configuración
 │   ├── designsystem/           # Tema, tokens y componentes Compose base
-│   └── testing/                # Fakes y utilidades de test
+│   ├── string-resources/       # Recursos de texto compartidos/type-safe
+│   └── testing/                # Utilidades base de test
 ├── feature/
 │   ├── onboarding/
 │   ├── garage/
@@ -251,23 +252,23 @@ Infraestructura prevista para el MVP:
 ```mermaid
 flowchart LR
     Android[Android App]
-    Desktop[Desktop App]
+    Desktop[Desktop App futura]
     LocalDB[(SQLDelight local)]
     SupabaseAuth[Supabase Auth\nGoogle OAuth]
     SupabaseDB[(Supabase PostgreSQL)]
     SupabaseStorage[Supabase Storage]
 
     Android <--> LocalDB
-    Desktop <--> LocalDB
+    Desktop -. futuro .-> LocalDB
     Android <--> SupabaseAuth
-    Desktop <--> SupabaseAuth
+    Desktop -. futuro .-> SupabaseAuth
     Android <--> SupabaseDB
-    Desktop <--> SupabaseDB
+    Desktop -. futuro .-> SupabaseDB
     Android -. adjuntos futuros .-> SupabaseStorage
     Desktop -. adjuntos futuros .-> SupabaseStorage
 ```
 
-El despliegue del backend se apoya en Supabase. No se prevé servidor propio para el MVP. La aplicación se distribuirá como build Android y aplicación Desktop generada con Compose for Desktop.
+El despliegue del backend se apoya en Supabase. No se prevé servidor propio para el MVP. La Entrega 2 se verifica como build Android; Desktop queda preparado en arquitectura pero no como artefacto funcional de esta entrega.
 
 **CI/CD y evidencia de despliegue (ticket T-11):**
 
@@ -275,7 +276,7 @@ Al ser Carbura una aplicación KMP nativa (Android + Desktop), no existe una URL
 
 - **CI con GitHub Actions:** compilación y ejecución de `./gradlew test` en cada push y pull request.
 - **Gestión de secretos:** credenciales de Supabase y Google OAuth fuera del repositorio (`local.properties` en local, GitHub Secrets en CI).
-- **Release:** artefactos instalables (APK Android + paquete Desktop) publicados en GitHub Releases con tag `v1.0-final-AAC`.
+- **Release final:** artefactos instalables, como mínimo APK Android, publicados en GitHub Releases con tag `v1.0-final-AAC`. El paquete Desktop se añadirá solo si entra en alcance final.
 - **Sistema "en vivo":** el backend Supabase (Auth + PostgreSQL con RLS) es el entorno desplegado y accesible; el flujo principal se documentará además con un vídeo demo de 2-3 minutos y capturas.
 
 ### **2.5. Seguridad**
@@ -285,7 +286,7 @@ Al ser Carbura una aplicación KMP nativa (Android + Desktop), no existe una URL
 - Row Level Security en Supabase para evitar acceso cruzado entre familias.
 - Variables sensibles fuera del repositorio mediante `local.properties` o entorno local.
 - `.gitignore` preparado para excluir `.env`, `local.properties`, claves, keystores y credenciales.
-- Códigos de invitación limitados al alta en un garaje familiar.
+- Invitaciones familiares completas quedan fuera de Entrega 2; cada usuario crea/carga una familia personal inicial.
 
 ### **2.6. Tests**
 
@@ -301,7 +302,7 @@ Spec OpenSpec
   -> verificación
 ```
 
-Tests previstos:
+Tests previstos y en evolución:
 
 - Tests unitarios de casos de uso: alta de vehículo, registro de mantenimiento, generación de recordatorio.
 - Tests de repositorio con dobles de LocalDataSource y RemoteDataSource.
@@ -515,7 +516,7 @@ Los 3 endpoints HTTP principales que consume la app, en formato OpenAPI 3.0. Tod
 
 > **Nota de alcance:** se documentan únicamente estos 3 endpoints como simplificación intencional para la entrega (la plantilla pide un máximo de 3). PostgREST expone el mismo patrón `GET`/`POST` para el resto de tablas del modelo (`maintenance_records` en lectura, `reminders`, `maintenance_types`, `families`, `user_profiles`), que siguen exactamente la misma semántica de seguridad, filtro incremental por `updated_at` y upsert. El ciclo completo de sincronización está descrito en el contrato lógico `syncGarageData` (sección 4.2).
 >
-> **Documentación completa:** Supabase genera automáticamente la especificación OpenAPI de todas las tablas expuestas en `GET /rest/v1/` (con la cabecera `apikey` del proyecto). El contrato detallado para implementación —tablas, RLS, cabeceras de upsert y filtros de sync— se documentará en `openspec/specs/backend.md` durante la Entrega 2, siguiendo el flujo SDD con OpenSpec.
+> **Documentación completa:** Supabase genera automáticamente la especificación OpenAPI de todas las tablas expuestas en `GET /rest/v1/` (con la cabecera `apikey` del proyecto). El contrato detallado para implementación —tablas, RLS, cabeceras de upsert y filtros de sync— vive en `openspec/specs/supabase-backend/spec.md` y `openspec/specs/sync-v0/spec.md`.
 
 ```yaml
 openapi: 3.0.3
@@ -705,7 +706,7 @@ Historias principales seleccionadas para la entrega:
 
 ## 6. Tickets de Trabajo
 
-Los tickets de trabajo se derivan de las historias Must-Have y Should-Have del flujo E2E. En la primera entrega se documenta el backlog inicial; los tickets se implementarán progresivamente en las siguientes entregas usando OpenSpec y TDD.
+Los tickets de trabajo se derivan de las historias Must-Have y Should-Have del flujo E2E. En Entrega 2 ya se implementó el bloque Android-first principal usando OpenSpec y TDD; T-11/T-12 quedan orientados a entrega final.
 
 El backlog completo y detallado está en [`docs/backlog.md`](docs/backlog.md). El orden recomendado prioriza datos, dominio/backend y después frontend/plataforma para reducir dependencias bloqueantes.
 
@@ -866,10 +867,10 @@ El backlog completo y detallado está en [`docs/backlog.md`](docs/backlog.md). E
 
 Esta sección se completará con exactamente 3 Pull Requests, alineadas con las entregas oficiales del proyecto.
 
-Para la Entrega 1 se crea una rama `dev` como base de comparación porque la documentación inicial ya fue sincronizada previamente en `main`. La PR oficial de Entrega 1 se abrirá desde `feature-entrega1-AAC` hacia `dev` para que GitHub muestre correctamente el diff documental. A partir de la Entrega 2, el flujo vuelve al esquema normal: trabajar solo en ramas feature y abrir PR hacia `main`.
+Para la Entrega 1 se crea una rama `dev` como base de comparación porque la documentación inicial ya fue sincronizada previamente en `main`. Para la Entrega 2 se mantiene la PR académica desde `feature-entrega2-AAC` hacia `dev` para mostrar el diff de la entrega, y además se sincroniza `main` con los cambios aprobados para mantener la rama principal actualizada.
 
 PRs previstas:
 
-- **PR 1 - Entrega 1 / Documentación técnica:** PR desde `feature-entrega1-AAC` hacia `dev` con PRD, user stories, arquitectura, modelo de datos, API, tickets y prompts iniciales.
-- **PR 2 - Entrega 2 / MVP funcional:** PR desde `feature-entrega2-AAC` hacia `main` con backend, frontend, base de datos y flujo principal casi completo.
+- **PR 1 - Entrega 1 / Documentación técnica:** PR desde `feature-entrega1-AAC` hacia `dev` con PRD, user stories, arquitectura, modelo de datos, API y tickets iniciales.
+- **PR 2 - Entrega 2 / MVP funcional:** PR desde `feature-entrega2-AAC` hacia `dev` con backend, frontend, base de datos, sync v0, notificaciones locales y flujo principal Android-first.
 - **PR 3 - Entrega final:** PR desde `finalproject-AAC` hacia `main` con flujo E2E completo, tests, despliegue/evidencia y documentación cerrada.

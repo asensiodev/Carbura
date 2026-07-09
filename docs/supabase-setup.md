@@ -7,10 +7,10 @@ Este documento guia la configuracion inicial de Supabase para Carbura. No incluy
 Supabase se usa como backend remoto para:
 
 - PostgreSQL: datos compartidos del garaje familiar.
-- Auth: autenticacion con Google en un cambio posterior.
+- Auth: autenticacion con Google mediante Supabase Auth.
 - RLS: aislamiento de datos por `family_id`.
 
-La app Android seguira siendo Android-first. La conexion completa desde KMP se implementara en cambios posteriores.
+La app Android es Android-first en Entrega 2. La conexion Supabase ya se usa desde los modulos KMP para auth, perfil familiar y sync v0.
 
 ## Crear Proyecto
 
@@ -30,16 +30,17 @@ GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
 
 No commitees `local.properties` ni claves reales.
 
-## Aplicar Migracion Inicial
+## Aplicar Migraciones
 
-Opcion recomendada para empezar:
+Opcion recomendada:
 
-1. Abre `supabase/migrations/202607010001_initial_schema.sql`.
-2. Copia el contenido completo.
-3. En Supabase Dashboard, abre `SQL Editor`.
-4. Pega el SQL.
-5. Ejecuta la query.
-6. Revisa en `Table Editor` que existan las tablas:
+1. En Supabase Dashboard, abre `SQL Editor`.
+2. Ejecuta, en orden, las migraciones de `supabase/migrations/`:
+   - `202607010001_initial_schema.sql`
+   - `202607070001_ensure_user_profile_rpc.sql`
+   - `202607080001_sync_v0_schema.sql`
+   - `202607080002_sync_v0_text_entity_ids.sql`
+3. Revisa en `Table Editor` que existan las tablas principales:
    - `families`
    - `user_profiles`
    - `vehicles`
@@ -47,7 +48,7 @@ Opcion recomendada para empezar:
    - `maintenance_records`
    - `reminders`
 
-Alternativa posterior: usar Supabase CLI para aplicar migraciones desde local. No es obligatorio para Entrega 2.
+Alternativa posterior: usar Supabase CLI para aplicar migraciones desde local si el flujo de backend crece.
 
 ## GitHub Integration
 
@@ -64,11 +65,11 @@ Tras aplicar la migracion:
 1. Verifica que Row Level Security esta activo en las tablas publicas creadas.
 2. Verifica que existen policies en cada tabla.
 3. Verifica que `maintenance_types` contiene los tipos globales iniciales.
-4. Crea un usuario de prueba desde Supabase Auth o mediante login cuando el cambio de auth exista.
-5. Inserta una `family` con `created_by` igual al usuario autenticado.
-6. Inserta un `user_profile` con `user_id` igual al usuario autenticado y `family_id` de esa familia.
-7. Comprueba que ese usuario puede leer/escribir vehiculos de su familia.
-8. Comprueba con otro usuario que no puede leer datos de una familia ajena.
+4. Inicia sesion desde la app Android con Google.
+5. Verifica que la RPC de perfil crea o carga `family` y `user_profile`.
+6. Crea un vehiculo, mantenimiento o recordatorio desde la app.
+7. Ejecuta sync manual desde la pantalla Usuario.
+8. Comprueba que ese usuario puede leer/escribir datos de su familia y que otro usuario no puede leer datos ajenos.
 
 ## Notas De Seguridad
 

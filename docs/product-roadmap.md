@@ -1,6 +1,6 @@
 # Carbura Product Roadmap
 
-Este documento recoge mejoras de producto que tienen sentido, pero quedan fuera del MVP parcial actual para proteger estabilidad.
+Este documento recoge mejoras de producto que tienen sentido, pero quedan fuera de Entrega 2 para proteger estabilidad.
 
 ## Recordatorios Proactivos Por Vehiculo
 
@@ -44,7 +44,7 @@ En el MVP parcial basta con abrir Recordatorios. Mas adelante se podria navegar 
 
 Al restaurar una sesion existente en un dispositivo sin datos locales, la app debe sincronizar antes de mostrar las pantallas principales. Si no, la UI puede cargar listas vacias y requerir una sincronizacion manual posterior.
 
-La estrategia actual debe ser:
+La estrategia actual de Entrega 2 es:
 
 - Restaurar sesion.
 - Resolver perfil/familia.

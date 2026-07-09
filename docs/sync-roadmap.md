@@ -13,7 +13,7 @@ Este documento fija el alcance de sincronizacion para no depender del contexto d
 
 ## Sync v0 - Funcional MVP
 
-Objetivo: sincronizacion end-to-end simple y funcional para Android y reutilizable por Desktop.
+Objetivo: sincronizacion end-to-end simple y funcional para Android y reutilizable por Desktop. Implementada en Entrega 2.
 
 ### Incluido
 
@@ -23,9 +23,8 @@ Objetivo: sincronizacion end-to-end simple y funcional para Android y reutilizab
 - Bajar datos remotos de la familia activa.
 - Resolver conflictos simples con `last-write-wins` usando `updated_at`.
 - Ejecutar sync despues de login o restauracion de sesion.
-- Ejecutar sync al abrir la app o volver a foreground si paso un intervalo minimo.
-- Ejecutar sync periodica mientras la app este abierta.
-- Intentar sync despues de mutaciones locales si hay sesion.
+- Ejecutar sync inicial al restaurar sesion para evitar mostrar garaje vacio antes del pull remoto.
+- Ejecutar sync manual desde la pantalla Usuario.
 - Accion manual `Sincronizar ahora`, probablemente en `Usuario`.
 - Mostrar estado minimo: sincronizando, ultima sincronizacion y error no bloqueante.
 - Tests de merge, pending sync y conservacion local ante error remoto.
@@ -74,4 +73,4 @@ Objetivo: cubrir escenarios de colaboracion familiar y datos frescos sin interac
 
 ## Decision Actual
 
-Empezar por `Sync v0`. No implementar WorkManager ni realtime todavia. El objetivo de v0 es funcionalidad completa pero acotada: datos locales y remotos convergen cuando la app se usa, sin prometer actividad con la app cerrada.
+`Sync v0` ya esta implementado. No se implementa WorkManager ni realtime todavia. El objetivo de v0 es funcionalidad completa pero acotada: datos locales y remotos convergen cuando la app se usa, sin prometer actividad con la app cerrada.

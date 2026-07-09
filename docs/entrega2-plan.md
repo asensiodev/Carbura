@@ -2,6 +2,8 @@
 
 Este documento define como empezar y ejecutar la Entrega 2 de Carbura. La meta es llegar al 10 de julio con un primer MVP ejecutable: backend, frontend y base de datos conectados, con el flujo principal casi completo.
 
+> Estado actual: plan historico de ejecucion. La Entrega 2 se cerro como MVP Android-first con auth Google/Supabase, vehiculos, mantenimientos, recordatorios, notificaciones locales y sync v0. Desktop, invitaciones completas, exportacion, CI/release final y test E2E quedan para Entrega final o post-MVP.
+
 ## 1. Objetivo de la Entrega 2
 
 La Entrega 2 debe demostrar que Carbura ya no es solo documentacion: debe existir una app Android ejecutable con un flujo vertical funcional.
@@ -32,8 +34,8 @@ Desktop queda como objetivo opcional. La arquitectura seguira siendo Kotlin Mult
 - Persistencia local preparada para offline-first.
 - Flujo principal casi completo en Android.
 - Tests unitarios clave para dominio/use cases.
-- README y prompts actualizados con decisiones y avances.
-- PR oficial `feature-entrega2-AAC` -> `main`.
+- README y documentacion actualizados con decisiones y avances.
+- PR academica `feature-entrega2-AAC` -> `dev`, manteniendo `main` sincronizada con los cambios aprobados.
 
 ### Opcional
 
@@ -93,7 +95,7 @@ Herramienta principal de asistencia para:
 - generar tests TDD;
 - implementar dominio, repositorios y UI;
 - refactorizar con SOLID/CUPID;
-- actualizar documentacion y prompts.
+- actualizar documentacion.
 
 ### Supabase Dashboard
 
@@ -121,13 +123,13 @@ feature-entrega2-AAC
 PR oficial:
 
 ```text
-feature-entrega2-AAC -> main
+feature-entrega2-AAC -> dev
 ```
 
 Reglas:
 
 - No trabajar directamente en `main`.
-- No usar `dev` para Entrega 2; `dev` queda como base historica usada solo para visualizar la PR de Entrega 1.
+- Usar `dev` como rama destino academica de Entrega 2 para visualizar el diff; mantener `main` actualizada con los cambios aprobados.
 - Hacer commits pequenos y trazables por bloque: `docs`, `chore`, `feat`, `test`, `refactor`, `fix`.
 - Antes de abrir la PR, ejecutar los comandos disponibles de build/test.
 
@@ -188,7 +190,7 @@ Antes de empezar con codigo, revisar la guia de lecturas previas en [`docs/entre
 - Crear `build-logic` con convention plugins basicos.
 - Mantener modulos esperados:
   - `app:android` para Android.
-  - `app:desktop` opcional si el template lo facilita.
+  - `app:shared` para rutas/contratos compartidos de app.
   - `core:model`, `core:domain`, `core:data`, `core:auth`, `core:designsystem`.
   - `feature:onboarding`, `feature:garage`, `feature:maintenance`, `feature:reminders` cuando el scaffold lo permita sin bloquear.
 - Verificar que Android compila antes de seguir.
@@ -212,7 +214,7 @@ Variables previstas:
 ```properties
 SUPABASE_URL=https://xxxx.supabase.co
 SUPABASE_ANON_KEY=xxxx
-GOOGLE_CLIENT_ID=xxxx
+GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
 ```
 
 ### Paso 4 - Supabase minimo
@@ -301,12 +303,12 @@ La entrega se considera lista si cumple esto:
 - Se puede crear un vehiculo.
 - Se puede registrar un mantenimiento o ITV.
 - Se puede consultar historial del vehiculo.
-- Se genera un recordatorio automatico basico para ITV o seguro.
-- Hay base de datos/backend conectado o, como minimo, persistencia local real y Supabase parcialmente integrado.
+- Se pueden crear y gestionar recordatorios por fecha y/o kilometraje.
+- Hay persistencia local real, Supabase integrado y sync v0 funcional para entidades principales.
 - Hay tests unitarios clave en dominio/use cases.
 - README incluye instrucciones actualizadas para ejecutar.
 - `docs/toolchain/carbura_toolchain.md` incluye herramientas IA, proceso y evidencias de Entrega 2.
-- Existe PR `feature-entrega2-AAC` -> `main`.
+- Existe PR academica `feature-entrega2-AAC` -> `dev`.
 
 ## 10. Riesgos y mitigaciones
 
@@ -336,7 +338,7 @@ Resultado esperado: plan operativo claro y cambio OpenSpec listo para iniciar el
 
 - Crear el proyecto Kotlin Multiplatform con Android como target principal.
 - Crear estructura modular base `app`, `core`, `feature` y `build-logic`.
-- Dejar `app:desktop` solo si el template lo facilita sin bloquear.
+- Dejar Desktop fuera si bloquea Android; usar `app:shared` para rutas/contratos compartidos.
 - Confirmar que Gradle lista tareas correctamente.
 - Crear `local.properties.example` si todavia no existe.
 
@@ -477,14 +479,14 @@ Resultado esperado: Entrega 2 funcionalmente cerrada antes del colchon.
 
 ### 9 julio - Preparacion PR
 
-- Actualizar README, prompts y evidencia.
+- Actualizar README, documentacion y evidencia.
 - Ejecutar checks disponibles.
 - Revisar PR description.
 - Confirmar trazabilidad tickets -> OpenSpec -> tests/codigo.
 
 ### 10 julio - Entrega
 
-- Abrir o finalizar PR `feature-entrega2-AAC` -> `main`.
+- Abrir o finalizar PR `feature-entrega2-AAC` -> `dev`.
 - Enviar URL de PR en Typeform.
 - Guardar notas de riesgos conocidos para Entrega Final.
 

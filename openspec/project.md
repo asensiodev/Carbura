@@ -8,8 +8,8 @@ El PRD completo vive en `openspec/prd.md` y debe usarse como contexto de product
 
 - Slogan: "Tu garaje, siempre a punto."
 - Usuarios principales: propietario del vehiculo y familiares que comparten un garaje.
-- MVP: vehiculos, mantenimientos, recordatorios locales, historial, costes, sync familiar, Google Auth, invitaciones y exportacion PDF/CSV.
-- Fuera del MVP: iOS, combustible, OBD2, push remoto, OCR, recomendaciones IA, multi-familia y roles avanzados.
+- MVP Entrega 2: Android-first con vehiculos, mantenimientos, recordatorios locales, notificaciones locales, historial, costes, sync v0 familiar, Google Auth y familia personal inicial.
+- Fuera de Entrega 2: Desktop funcional, invitaciones familiares completas, exportacion PDF/CSV, iOS, combustible, OBD2, push remoto, OCR, recomendaciones IA, multi-familia y roles avanzados.
 
 ## Stack
 
