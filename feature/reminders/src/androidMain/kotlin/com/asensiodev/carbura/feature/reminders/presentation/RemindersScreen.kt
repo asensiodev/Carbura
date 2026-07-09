@@ -1,5 +1,10 @@
 package com.asensiodev.carbura.feature.reminders.presentation
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,10 +23,12 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -156,6 +164,18 @@ private fun RemindersScreen(
     var reminderPendingDeletion by remember { mutableStateOf<Reminder?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    var hasNotificationPermission by remember {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        hasNotificationPermission = granted
+    }
 
     LaunchedEffect(reminderCreatedSignal) {
         if (reminderCreatedSignal > 0) {
@@ -186,6 +206,15 @@ private fun RemindersScreen(
                         showAddReminderAction = !state.isEmpty,
                         onAddReminder = { showReminderSheet = true },
                     )
+                }
+                if (!hasNotificationPermission) {
+                    item {
+                        NotificationPermissionCard(
+                            onEnableNotifications = {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            },
+                        )
+                    }
                 }
                 item {
                     Text(
@@ -458,22 +487,64 @@ private fun VehicleSelector(
 }
 
 @Composable
+private fun NotificationPermissionCard(
+    onEnableNotifications: () -> Unit,
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacings.spacing16),
+            verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
+        ) {
+            Text(
+                text = stringResource(R.string.notification_permission_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            Text(
+                text = stringResource(R.string.notification_permission_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            Button(onClick = onEnableNotifications) {
+                Text(stringResource(R.string.notification_permission_action))
+            }
+        }
+    }
+}
+
+@Composable
 private fun EmptyRemindersCard(
     onAddReminder: () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        ),
+    ) {
         Column(
-            modifier = Modifier.padding(Spacings.spacing16),
+            modifier = Modifier.padding(Spacings.spacing24),
             verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
         ) {
             Text(
                 text = stringResource(R.string.empty_reminders_title),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
             Text(
                 text = stringResource(R.string.empty_reminders_description),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Text(
+                text = stringResource(R.string.empty_reminders_hint),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
             Button(onClick = onAddReminder) {
                 Text(stringResource(R.string.add_first_reminder_button))
@@ -489,7 +560,7 @@ private fun ReminderCard(
     onCompleteReminder: (Reminder) -> Unit,
     onDeleteReminder: (Reminder) -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(Spacings.spacing16),
             verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),

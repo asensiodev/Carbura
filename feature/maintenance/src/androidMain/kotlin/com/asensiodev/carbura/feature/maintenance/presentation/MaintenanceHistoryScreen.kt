@@ -20,10 +20,12 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -462,19 +464,30 @@ private fun MaintenanceDatePickerField(
 
 @Composable
 private fun EmptyHistoryCard(onAddMaintenance: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        ),
+    ) {
         Column(
-            modifier = Modifier.padding(Spacings.spacing16),
+            modifier = Modifier.padding(Spacings.spacing24),
             verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
         ) {
             Text(
                 text = stringResource(R.string.empty_maintenance_history_title),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
             Text(
                 text = stringResource(R.string.empty_maintenance_history_description),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Text(
+                text = stringResource(R.string.empty_maintenance_history_hint),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
             Button(onClick = onAddMaintenance) {
                 Text(stringResource(R.string.add_maintenance_button))
@@ -488,7 +501,7 @@ private fun MaintenanceRecordCard(
     record: MaintenanceRecord,
     onDeleteMaintenance: (MaintenanceRecord) -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(Spacings.spacing16),
             verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),

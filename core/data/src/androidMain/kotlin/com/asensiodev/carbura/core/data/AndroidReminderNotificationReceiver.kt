@@ -23,6 +23,8 @@ class AndroidReminderNotificationReceiver : BroadcastReceiver() {
         val title = intent.getStringExtra(EXTRA_REMINDER_TITLE).orEmpty().ifBlank { DEFAULT_NOTIFICATION_TITLE }
         val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
         val contentIntent = launchIntent?.let {
+            it.putExtra(EXTRA_START_ROUTE, START_ROUTE_REMINDERS)
+            it.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             PendingIntent.getActivity(
                 context,
                 reminderId.hashCode(),
@@ -46,6 +48,8 @@ class AndroidReminderNotificationReceiver : BroadcastReceiver() {
     companion object {
         const val EXTRA_REMINDER_ID = "extra_reminder_id"
         const val EXTRA_REMINDER_TITLE = "extra_reminder_title"
+        private const val EXTRA_START_ROUTE = "com.asensiodev.carbura.START_ROUTE"
+        private const val START_ROUTE_REMINDERS = "reminders"
         private const val DEFAULT_NOTIFICATION_TITLE = "Recordatorio pendiente"
         private const val NOTIFICATION_BODY = "Tienes un recordatorio de Carbura pendiente."
     }

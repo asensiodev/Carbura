@@ -14,8 +14,9 @@
     <string name="save_vehicle_button">Guardar vehículo</string>
     <string name="vehicle_list_title">Tus vehículos</string>
     <string name="garage_loading_message">Cargando tu garaje...</string>
-    <string name="empty_garage_title">Garaje vacío</string>
-    <string name="empty_garage_description">Crea un vehículo para empezar a registrar mantenimientos y recordatorios.</string>
+    <string name="empty_garage_title">Tu garaje empieza aquí</string>
+    <string name="empty_garage_description">Añade tu coche o moto para tener historial, recordatorios y kilómetros bajo control desde un mismo sitio.</string>
+    <string name="empty_garage_hint">Después podrás registrar mantenimientos y planificar próximas revisiones.</string>
     <string name="view_history_button">Ver historial</string>
     <string name="delete_vehicle_content_description">Borrar vehículo</string>
     <string name="delete_vehicle_dialog_title">Borrar vehículo</string>

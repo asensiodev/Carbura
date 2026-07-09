@@ -1,9 +1,7 @@
 package com.asensiodev.carbura
 
-import android.Manifest
+import android.content.Intent
 import android.graphics.Color
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -11,7 +9,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -46,9 +43,12 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -80,32 +80,45 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
+    private var startRoute by mutableStateOf<String?>(null)
+    private var startRouteVersion by mutableIntStateOf(0)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requestNotificationPermissionIfNeeded()
+        startRoute = intent?.getStringExtra(EXTRA_START_ROUTE)
+        if (startRoute != null) startRouteVersion += 1
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
         )
         setContent {
             CarburaTheme {
-                CarburaApp()
+                CarburaApp(
+                    startRoute = startRoute,
+                    startRouteVersion = startRouteVersion,
+                )
             }
         }
     }
 
-    private fun requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
-        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), NOTIFICATION_PERMISSION_REQUEST_CODE)
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        startRoute = intent.getStringExtra(EXTRA_START_ROUTE)
+        if (startRoute != null) startRouteVersion += 1
     }
 }
 
-private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 2001
+private const val EXTRA_START_ROUTE = "com.asensiodev.carbura.START_ROUTE"
+private const val START_ROUTE_REMINDERS = "reminders"
 
 @Composable
-private fun CarburaApp() {
-    val backStack = rememberNavBackStack(CarburaRoute.Garage)
+private fun CarburaApp(
+    startRoute: String?,
+    startRouteVersion: Int,
+) {
+    val initialRoute = if (startRoute == START_ROUTE_REMINDERS) CarburaRoute.Reminders else CarburaRoute.Garage
+    val backStack = rememberNavBackStack(initialRoute)
     val onboardingViewModel = rememberOnboardingViewModel()
     val syncManager = rememberSyncManager()
     val onboardingState by onboardingViewModel.uiState.collectAsState()
@@ -149,9 +162,29 @@ private fun CarburaApp() {
         return
     }
 
-    LaunchedEffect(onboardingState.isAuthenticated) {
-        if (onboardingState.isAuthenticated) {
+    var initialSyncCompleted by remember(familyId) { mutableStateOf(false) }
+
+    LaunchedEffect(familyId) {
+        try {
             syncManager.syncNow()
+        } finally {
+            initialSyncCompleted = true
+        }
+    }
+
+    if (!initialSyncCompleted) {
+        CarburaLoadingScreen(message = stringResource(R.string.initial_sync_loading))
+        return
+    }
+
+    LaunchedEffect(startRouteVersion, initialSyncCompleted) {
+        if (startRoute == START_ROUTE_REMINDERS) {
+            while (backStack.size > 1) {
+                backStack.removeLastOrNull()
+            }
+            if (backStack.lastOrNull() != CarburaRoute.Reminders) {
+                backStack.add(CarburaRoute.Reminders)
+            }
         }
     }
 
@@ -530,18 +563,28 @@ private fun rememberSyncManager(): SyncManager = remember {
 }
 
 @Composable
-private fun CarburaLoadingScreen() {
+private fun CarburaLoadingScreen(message: String? = null) {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .safeDrawingPadding(),
-            contentAlignment = Alignment.Center,
+                .safeDrawingPadding()
+                .padding(Spacings.spacing24),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
             CircularProgressIndicator(strokeWidth = Size.size4)
+            if (message != null) {
+                Text(
+                    text = message,
+                    modifier = Modifier.padding(top = Spacings.spacing16),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

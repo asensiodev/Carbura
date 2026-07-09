@@ -14,8 +14,9 @@
     <string name="save_maintenance_button">Guardar mantenimiento</string>
     <string name="maintenance_history_title">Historial</string>
     <string name="maintenance_loading_message">Cargando historial...</string>
-    <string name="empty_maintenance_history_title">Sin historial</string>
-    <string name="empty_maintenance_history_description">Registra el primer mantenimiento para empezar a construir el historial.</string>
+    <string name="empty_maintenance_history_title">Historial todavía limpio</string>
+    <string name="empty_maintenance_history_description">Registra el primer mantenimiento para recordar fechas, kilómetros, taller y coste.</string>
+    <string name="empty_maintenance_history_hint">Un buen historial te ayuda a preparar la siguiente revisión y justificar el cuidado del vehículo.</string>
     <string name="maintenance_created_message">%1$s guardado en el historial.</string>
     <string name="maintenance_deleted_message">%1$s eliminado del historial.</string>
     <string name="delete_maintenance_content_description">Borrar mantenimiento</string>
