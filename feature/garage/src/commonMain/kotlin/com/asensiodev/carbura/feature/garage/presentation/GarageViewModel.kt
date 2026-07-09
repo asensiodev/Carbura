@@ -2,12 +2,12 @@ package com.asensiodev.carbura.feature.garage.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.asensiodev.carbura.core.domain.CreateVehicleUseCase
-import com.asensiodev.carbura.core.domain.DeleteVehicleUseCase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
-import com.asensiodev.carbura.core.domain.SyncManager
-import com.asensiodev.carbura.core.domain.VehicleRepository
+import com.asensiodev.carbura.core.domain.sync.SyncManager
+import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
+import com.asensiodev.carbura.core.domain.vehicle.usecase.CreateVehicleUseCase
+import com.asensiodev.carbura.core.domain.vehicle.usecase.DeleteVehicleUseCase
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
@@ -29,7 +29,7 @@ class GarageViewModel(
     private val vehicleRepository: VehicleRepository,
     private val dispatchers: DispatcherProvider,
     private val createVehicleUseCase: CreateVehicleUseCase = CreateVehicleUseCase(vehicleRepository),
-    private val deleteVehicleUseCase: DeleteVehicleUseCase = DeleteVehicleUseCase(vehicleRepository),
+    private val deleteVehicleUseCase: DeleteVehicleUseCase,
     private val syncManager: SyncManager? = null,
     private val nextVehicleId: () -> VehicleId = ::randomVehicleId,
     private val coroutineScope: CoroutineScope? = null,

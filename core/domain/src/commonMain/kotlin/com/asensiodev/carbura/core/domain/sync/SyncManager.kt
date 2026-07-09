@@ -1,4 +1,4 @@
-package com.asensiodev.carbura.core.domain
+package com.asensiodev.carbura.core.domain.sync
 
 import kotlinx.coroutines.flow.StateFlow
 
@@ -16,16 +16,4 @@ sealed interface SyncResult {
 interface SyncManager {
     val status: StateFlow<SyncStatus>
     suspend fun syncNow(): SyncResult
-}
-
-class SyncNowUseCase(
-    private val syncManager: SyncManager,
-) : SuspendUseCase<Unit, SyncResult> {
-    override suspend fun invoke(params: Unit): SyncResult = syncManager.syncNow()
-}
-
-class ObserveSyncStatusUseCase(
-    private val syncManager: SyncManager,
-) {
-    operator fun invoke(): StateFlow<SyncStatus> = syncManager.status
 }

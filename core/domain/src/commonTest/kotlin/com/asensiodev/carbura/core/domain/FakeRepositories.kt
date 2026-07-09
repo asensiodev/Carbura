@@ -1,5 +1,9 @@
 package com.asensiodev.carbura.core.domain
 
+import com.asensiodev.carbura.core.domain.maintenance.repository.MaintenanceRecordRepository
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
+import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
+import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceRecordId

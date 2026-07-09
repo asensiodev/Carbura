@@ -4,13 +4,13 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
-import com.asensiodev.carbura.core.domain.MaintenanceRecordRepository
-import com.asensiodev.carbura.core.domain.NoOpReminderNotificationScheduler
-import com.asensiodev.carbura.core.domain.RemoteUserProfileGateway
-import com.asensiodev.carbura.core.domain.ReminderNotificationScheduler
-import com.asensiodev.carbura.core.domain.ReminderRepository
-import com.asensiodev.carbura.core.domain.SyncManager
-import com.asensiodev.carbura.core.domain.VehicleRepository
+import com.asensiodev.carbura.core.domain.maintenance.repository.MaintenanceRecordRepository
+import com.asensiodev.carbura.core.domain.reminder.notification.NoOpReminderNotificationScheduler
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
+import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
+import com.asensiodev.carbura.core.domain.sync.SyncManager
+import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
+import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import org.koin.core.module.Module
 import org.koin.dsl.module
 

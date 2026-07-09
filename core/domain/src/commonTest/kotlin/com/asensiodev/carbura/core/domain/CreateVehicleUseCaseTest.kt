@@ -1,5 +1,6 @@
 package com.asensiodev.carbura.core.domain
 
+import com.asensiodev.carbura.core.domain.vehicle.usecase.CreateVehicleUseCase
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals

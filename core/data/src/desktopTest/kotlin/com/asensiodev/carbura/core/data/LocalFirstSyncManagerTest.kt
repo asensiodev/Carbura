@@ -1,11 +1,11 @@
 package com.asensiodev.carbura.core.data
 
-import com.asensiodev.carbura.core.domain.AuthGateway
-import com.asensiodev.carbura.core.domain.AuthSession
-import com.asensiodev.carbura.core.domain.AuthUser
-import com.asensiodev.carbura.core.domain.RemoteUserProfile
-import com.asensiodev.carbura.core.domain.RemoteUserProfileGateway
-import com.asensiodev.carbura.core.domain.SyncResult
+import com.asensiodev.carbura.core.domain.auth.AuthGateway
+import com.asensiodev.carbura.core.domain.auth.AuthSession
+import com.asensiodev.carbura.core.domain.auth.AuthUser
+import com.asensiodev.carbura.core.domain.sync.SyncResult
+import com.asensiodev.carbura.core.domain.user.RemoteUserProfile
+import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import com.asensiodev.carbura.core.model.VehicleType

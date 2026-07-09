@@ -1,10 +1,10 @@
 package com.asensiodev.carbura.core.data
 
-import com.asensiodev.carbura.core.domain.AuthGateway
-import com.asensiodev.carbura.core.domain.RemoteUserProfileGateway
-import com.asensiodev.carbura.core.domain.SyncManager
-import com.asensiodev.carbura.core.domain.SyncResult
-import com.asensiodev.carbura.core.domain.SyncStatus
+import com.asensiodev.carbura.core.domain.auth.AuthGateway
+import com.asensiodev.carbura.core.domain.sync.SyncManager
+import com.asensiodev.carbura.core.domain.sync.SyncResult
+import com.asensiodev.carbura.core.domain.sync.SyncStatus
+import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import kotlinx.coroutines.flow.MutableStateFlow

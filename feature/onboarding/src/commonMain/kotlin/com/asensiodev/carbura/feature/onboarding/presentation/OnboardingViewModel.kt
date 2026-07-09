@@ -2,11 +2,11 @@ package com.asensiodev.carbura.feature.onboarding.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.asensiodev.carbura.core.domain.AuthGateway
-import com.asensiodev.carbura.core.domain.AuthSession
+import com.asensiodev.carbura.core.domain.auth.AuthGateway
+import com.asensiodev.carbura.core.domain.auth.AuthSession
 import com.asensiodev.carbura.core.domain.DispatcherProvider
-import com.asensiodev.carbura.core.domain.RemoteUserProfile
-import com.asensiodev.carbura.core.domain.RemoteUserProfileGateway
+import com.asensiodev.carbura.core.domain.user.RemoteUserProfile
+import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import kotlinx.coroutines.CoroutineScope

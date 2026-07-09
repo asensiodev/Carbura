@@ -1,5 +1,9 @@
 package com.asensiodev.carbura.core.domain
 
+import com.asensiodev.carbura.core.domain.reminder.usecase.CompleteReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.CreateReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.DeleteReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.GetPendingRemindersUseCase
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
@@ -17,7 +21,7 @@ class ReminderUseCasesTest {
     @Test
     fun validReminderIsSaved() = runTest {
         val repository = FakeReminderRepository()
-        val useCase = CreateReminderUseCase(repository)
+        val useCase = CreateReminderUseCase(repository, FakeReminderNotificationScheduler())
         val reminder = reminder(dueDate = "2026-07-10")
 
         val result = useCase(reminder)
@@ -50,7 +54,7 @@ class ReminderUseCasesTest {
 
     @Test
     fun blankTitleReturnsValidationError() = runTest {
-        val result = CreateReminderUseCase(FakeReminderRepository())(reminder(title = " "))
+        val result = CreateReminderUseCase(FakeReminderRepository(), FakeReminderNotificationScheduler())(reminder(title = " "))
 
         assertEquals(
             ValidationFailure.BlankReminderTitle,
@@ -60,7 +64,7 @@ class ReminderUseCasesTest {
 
     @Test
     fun missingDueTargetReturnsValidationError() = runTest {
-        val result = CreateReminderUseCase(FakeReminderRepository())(reminder())
+        val result = CreateReminderUseCase(FakeReminderRepository(), FakeReminderNotificationScheduler())(reminder())
 
         assertEquals(
             ValidationFailure.MissingReminderDueTarget,
@@ -70,7 +74,7 @@ class ReminderUseCasesTest {
 
     @Test
     fun negativeDueOdometerReturnsValidationError() = runTest {
-        val result = CreateReminderUseCase(FakeReminderRepository())(reminder(dueOdometerKm = -1))
+        val result = CreateReminderUseCase(FakeReminderRepository(), FakeReminderNotificationScheduler())(reminder(dueOdometerKm = -1))
 
         assertEquals(
             ValidationFailure.NegativeReminderDueOdometer,
@@ -95,7 +99,7 @@ class ReminderUseCasesTest {
         val repository = FakeReminderRepository()
         repository.saveReminder(reminder(id = "reminder-1", dueDate = "2026-07-01"))
 
-        CompleteReminderUseCase(repository)(ReminderId("reminder-1"))
+        CompleteReminderUseCase(repository, FakeReminderNotificationScheduler())(ReminderId("reminder-1"))
 
         assertEquals(emptyList(), repository.getPendingReminders(familyId))
     }

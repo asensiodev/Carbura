@@ -1,9 +1,9 @@
 package com.asensiodev.carbura.feature.reminders.di
 
-import com.asensiodev.carbura.core.domain.CompleteReminderUseCase
-import com.asensiodev.carbura.core.domain.CreateReminderUseCase
-import com.asensiodev.carbura.core.domain.DeleteReminderUseCase
-import com.asensiodev.carbura.core.domain.GetPendingRemindersUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.CompleteReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.CreateReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.DeleteReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.GetPendingRemindersUseCase
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.feature.reminders.presentation.RemindersViewModel
 import org.koin.dsl.module

@@ -63,8 +63,8 @@ import com.asensiodev.carbura.app.shared.CarburaRoute
 import com.asensiodev.carbura.core.designsystem.CarburaTheme
 import com.asensiodev.carbura.core.designsystem.Size
 import com.asensiodev.carbura.core.designsystem.Spacings
-import com.asensiodev.carbura.core.domain.SyncManager
-import com.asensiodev.carbura.core.domain.SyncStatus
+import com.asensiodev.carbura.core.domain.sync.SyncManager
+import com.asensiodev.carbura.core.domain.sync.SyncStatus
 import com.asensiodev.carbura.feature.garage.presentation.GarageRoute
 import com.asensiodev.carbura.feature.maintenance.presentation.MaintenanceHistoryRoute
 import com.asensiodev.carbura.feature.onboarding.presentation.OnboardingEffect

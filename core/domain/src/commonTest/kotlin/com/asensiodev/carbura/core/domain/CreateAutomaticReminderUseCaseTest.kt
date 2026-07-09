@@ -1,5 +1,6 @@
 package com.asensiodev.carbura.core.domain
 
+import com.asensiodev.carbura.core.domain.reminder.usecase.CreateAutomaticReminderUseCase
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.ReminderId
@@ -12,7 +13,7 @@ class CreateAutomaticReminderUseCaseTest {
     @Test
     fun itvRecordWithDueDateCreatesReminder() = runTest {
         val repository = FakeReminderRepository()
-        val useCase = CreateAutomaticReminderUseCase(repository) { ReminderId("reminder-1") }
+        val useCase = CreateAutomaticReminderUseCase(repository, FakeReminderNotificationScheduler()) { ReminderId("reminder-1") }
         val record = testMaintenanceRecord(
             code = MaintenanceTypeCode.Itv,
             nextDueDate = "2027-07-01",
@@ -30,7 +31,7 @@ class CreateAutomaticReminderUseCaseTest {
     @Test
     fun insuranceRecordWithDueDateCreatesReminder() = runTest {
         val repository = FakeReminderRepository()
-        val useCase = CreateAutomaticReminderUseCase(repository) { ReminderId("reminder-1") }
+        val useCase = CreateAutomaticReminderUseCase(repository, FakeReminderNotificationScheduler()) { ReminderId("reminder-1") }
         val record = testMaintenanceRecord(
             code = MaintenanceTypeCode.Insurance,
             nextDueDate = "2027-07-01",
@@ -45,7 +46,7 @@ class CreateAutomaticReminderUseCaseTest {
     @Test
     fun recordWithoutDueDateSkipsReminder() = runTest {
         val repository = FakeReminderRepository()
-        val useCase = CreateAutomaticReminderUseCase(repository) { ReminderId("reminder-1") }
+        val useCase = CreateAutomaticReminderUseCase(repository, FakeReminderNotificationScheduler()) { ReminderId("reminder-1") }
 
         val reminder = useCase(testMaintenanceRecord(nextDueDate = null))
 
@@ -56,7 +57,7 @@ class CreateAutomaticReminderUseCaseTest {
     @Test
     fun nonReminderMaintenanceSkipsReminder() = runTest {
         val repository = FakeReminderRepository()
-        val useCase = CreateAutomaticReminderUseCase(repository) { ReminderId("reminder-1") }
+        val useCase = CreateAutomaticReminderUseCase(repository, FakeReminderNotificationScheduler()) { ReminderId("reminder-1") }
         val record = testMaintenanceRecord(
             code = MaintenanceTypeCode.OilChange,
             nextDueDate = "2027-07-01",

@@ -1,12 +1,13 @@
 package com.asensiodev.carbura.feature.reminders.presentation
 
 import app.cash.turbine.test
-import com.asensiodev.carbura.core.domain.CompleteReminderUseCase
-import com.asensiodev.carbura.core.domain.CreateReminderUseCase
-import com.asensiodev.carbura.core.domain.DeleteReminderUseCase
-import com.asensiodev.carbura.core.domain.GetPendingRemindersUseCase
-import com.asensiodev.carbura.core.domain.ReminderRepository
-import com.asensiodev.carbura.core.domain.VehicleRepository
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
+import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
+import com.asensiodev.carbura.core.domain.reminder.usecase.CompleteReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.CreateReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.DeleteReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.GetPendingRemindersUseCase
+import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
@@ -146,6 +147,7 @@ class RemindersViewModelTest {
         reminderRepository: FakeReminderRepository = FakeReminderRepository(),
     ): RemindersViewModel {
         val dispatcher = StandardTestDispatcher(testScheduler)
+        val notificationScheduler = FakeReminderNotificationScheduler()
         return RemindersViewModel(
             familyId = familyId,
             vehicleRepository = vehicleRepository,
@@ -154,10 +156,10 @@ class RemindersViewModelTest {
                 default = dispatcher,
                 main = dispatcher,
             ),
-            createReminderUseCase = CreateReminderUseCase(reminderRepository),
+            createReminderUseCase = CreateReminderUseCase(reminderRepository, notificationScheduler),
             getPendingRemindersUseCase = GetPendingRemindersUseCase(reminderRepository),
-            completeReminderUseCase = CompleteReminderUseCase(reminderRepository),
-            deleteReminderUseCase = DeleteReminderUseCase(reminderRepository),
+            completeReminderUseCase = CompleteReminderUseCase(reminderRepository, notificationScheduler),
+            deleteReminderUseCase = DeleteReminderUseCase(reminderRepository, notificationScheduler),
             nextReminderId = { ReminderId("created-reminder") },
             coroutineScope = this,
         )
@@ -209,4 +211,9 @@ private class FakeReminderRepository(
     override suspend fun deleteReminder(reminderId: ReminderId) {
         savedReminders.removeAll { it.id == reminderId }
     }
+}
+
+private class FakeReminderNotificationScheduler : ReminderNotificationScheduler {
+    override suspend fun schedule(reminder: Reminder) = Unit
+    override suspend fun cancel(reminderId: ReminderId) = Unit
 }

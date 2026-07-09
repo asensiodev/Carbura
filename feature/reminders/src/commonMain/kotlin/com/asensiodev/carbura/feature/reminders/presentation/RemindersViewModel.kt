@@ -2,14 +2,14 @@ package com.asensiodev.carbura.feature.reminders.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.asensiodev.carbura.core.domain.CompleteReminderUseCase
-import com.asensiodev.carbura.core.domain.CreateReminderUseCase
-import com.asensiodev.carbura.core.domain.DeleteReminderUseCase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
-import com.asensiodev.carbura.core.domain.GetPendingRemindersUseCase
-import com.asensiodev.carbura.core.domain.SyncManager
-import com.asensiodev.carbura.core.domain.VehicleRepository
+import com.asensiodev.carbura.core.domain.reminder.usecase.CompleteReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.CreateReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.DeleteReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.GetPendingRemindersUseCase
+import com.asensiodev.carbura.core.domain.sync.SyncManager
+import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder

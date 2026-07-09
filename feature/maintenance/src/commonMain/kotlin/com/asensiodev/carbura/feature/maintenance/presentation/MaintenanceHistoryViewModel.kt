@@ -2,13 +2,13 @@ package com.asensiodev.carbura.feature.maintenance.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.asensiodev.carbura.core.domain.CreateMaintenanceRecordFromInputUseCase
-import com.asensiodev.carbura.core.domain.CreateMaintenanceRecordInput
-import com.asensiodev.carbura.core.domain.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
-import com.asensiodev.carbura.core.domain.GetVehicleHistoryUseCase
-import com.asensiodev.carbura.core.domain.SyncManager
+import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceRecordFromInputUseCase
+import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceRecordInput
+import com.asensiodev.carbura.core.domain.maintenance.usecase.DeleteMaintenanceRecordUseCase
+import com.asensiodev.carbura.core.domain.maintenance.usecase.GetVehicleHistoryUseCase
+import com.asensiodev.carbura.core.domain.sync.SyncManager
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceRecordId

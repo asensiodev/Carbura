@@ -1,8 +1,13 @@
 package com.asensiodev.carbura.feature.garage.presentation
 
 import app.cash.turbine.test
-import com.asensiodev.carbura.core.domain.VehicleRepository
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
+import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
+import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
+import com.asensiodev.carbura.core.domain.vehicle.usecase.DeleteVehicleUseCase
 import com.asensiodev.carbura.core.model.FamilyId
+import com.asensiodev.carbura.core.model.Reminder
+import com.asensiodev.carbura.core.model.ReminderId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
@@ -159,13 +164,19 @@ class GarageViewModelTest {
         nextVehicleId: () -> VehicleId = { VehicleId("vehicle-test") },
     ): GarageViewModel {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        val vehicleRepository = FakeVehicleRepository()
         return GarageViewModel(
             familyId = familyId,
-            vehicleRepository = FakeVehicleRepository(),
+            vehicleRepository = vehicleRepository,
             dispatchers = TestDispatcherProvider(
                 io = dispatcher,
                 default = dispatcher,
                 main = dispatcher,
+            ),
+            deleteVehicleUseCase = DeleteVehicleUseCase(
+                repository = vehicleRepository,
+                reminderRepository = FakeReminderRepository(),
+                notificationScheduler = FakeReminderNotificationScheduler(),
             ),
             nextVehicleId = nextVehicleId,
             coroutineScope = this,
@@ -186,4 +197,17 @@ private class FakeVehicleRepository : VehicleRepository {
     override suspend fun deleteVehicle(vehicleId: VehicleId) {
         vehicles.removeAll { it.id == vehicleId }
     }
+}
+
+private class FakeReminderRepository : ReminderRepository {
+    override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> = emptyList()
+    override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> = emptyList()
+    override suspend fun saveReminder(reminder: Reminder) = Unit
+    override suspend fun markReminderCompleted(reminderId: ReminderId) = Unit
+    override suspend fun deleteReminder(reminderId: ReminderId) = Unit
+}
+
+private class FakeReminderNotificationScheduler : ReminderNotificationScheduler {
+    override suspend fun schedule(reminder: Reminder) = Unit
+    override suspend fun cancel(reminderId: ReminderId) = Unit
 }
