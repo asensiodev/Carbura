@@ -91,8 +91,19 @@ class OnboardingViewModel(
                         isLoading = false,
                     )
                 }
-            }.onFailure {
-                applyAuthenticatedSessionFallback(session)
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isInitializing = false,
+                        isLoading = false,
+                        isAuthenticated = false,
+                        displayName = session.displayName,
+                        email = session.user.email,
+                        familyId = null,
+                        familyName = null,
+                        errorMessage = error.message ?: "Unable to load profile.",
+                    )
+                }
             }
         }
     }
@@ -203,21 +214,6 @@ class OnboardingViewModel(
                 email = profile.email,
                 familyId = profile.familyId.value,
                 familyName = profile.familyName,
-                errorMessage = null,
-            )
-        }
-    }
-
-    private fun applyAuthenticatedSessionFallback(session: AuthSession) {
-        _uiState.update {
-            it.copy(
-                isInitializing = false,
-                isLoading = false,
-                isAuthenticated = true,
-                displayName = session.displayName,
-                email = session.user.email,
-                familyId = null,
-                familyName = null,
                 errorMessage = null,
             )
         }

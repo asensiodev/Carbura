@@ -496,7 +496,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Tipo:** tarea tecnica / infraestructura.
 
-**Descripcion:** configurar un pipeline basico de CI/CD con GitHub Actions y preparar la evidencia de despliegue de la entrega final. Al ser Carbura una app KMP (Android + Desktop) sin URL publica, la evidencia se basa en artefactos instalables, el backend Supabase desplegado y un video demo del flujo principal.
+**Descripcion:** configurar un pipeline basico de CI/CD con GitHub Actions y preparar la evidencia de despliegue de la entrega final. Al ser Carbura una app KMP nativa sin URL publica, la evidencia se basa en artefactos instalables, el backend Supabase desplegado y un video demo del flujo principal.
 
 **Proposito:** cumplir el artefacto obligatorio de la entrega final (pipeline CI/CD, gestion de secretos y sistema verificable "en vivo") y detectar regresiones en cada push.
 
@@ -514,7 +514,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 - Workflow de GitHub Actions que compila y ejecuta `./gradlew test` en cada push y PR.
 - Gestion de secretos via GitHub Secrets (sin credenciales en el repositorio).
-- Workflow de release que genera artefactos: APK Android y paquete Desktop.
+- Workflow de release que genera artefactos: APK Android y, solo si entra en alcance final, paquete Desktop.
 - Publicacion de artefactos en GitHub Releases con tag `v1.0-final-AAC`.
 - Evidencia de despliegue: backend Supabase activo, instrucciones de instalacion y video demo de 2-3 minutos del flujo E2E.
 
@@ -524,14 +524,14 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 - Dado un push a una rama con PR, cuando se ejecuta el pipeline, entonces compila el proyecto y ejecuta la suite de tests.
 - Dado un fallo de tests, cuando se ejecuta el pipeline, entonces la PR queda marcada en rojo.
-- Dada la rama final, cuando se genera la release, entonces incluye APK y artefacto Desktop descargables.
+- Dada la rama final, cuando se genera la release, entonces incluye APK Android descargable y paquete Desktop solo si ese target entra en alcance final.
 - Dado el repositorio publico, cuando se inspecciona, entonces no contiene secretos ni credenciales.
 
 **Tests TDD previstos:**
 
 - Verificacion del pipeline en verde sobre un cambio trivial.
 - Verificacion de fallo del pipeline ante un test roto (prueba controlada).
-- Checklist manual de release: instalacion del APK y arranque del Desktop desde artefactos.
+- Checklist manual de release: instalacion del APK y, si aplica, arranque del Desktop desde artefactos.
 
 **Referencias:** instrucciones del proyecto final (artefactos de infra y despliegue), `readme.md` seccion 2.4.
 

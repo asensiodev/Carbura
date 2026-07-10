@@ -37,11 +37,11 @@ Desktop queda como objetivo opcional. La arquitectura seguira siendo Kotlin Mult
 - README y documentacion actualizados con decisiones y avances.
 - PR academica `feature-entrega2-AAC` -> `dev`, manteniendo `main` sincronizada con los cambios aprobados.
 
-### Opcional
+### Opcional planificado inicialmente
 
 - App Desktop ejecutable desde la misma base KMP.
-- Notificaciones locales completas.
-- Sincronizacion avanzada entre dispositivos.
+- Notificaciones locales completas. Se implementaron en Android para Entrega 2.
+- Sincronizacion avanzada entre dispositivos. En Entrega 2 se implemento sync v0; WorkManager/realtime quedan fuera.
 - UI mas pulida, animaciones o estados visuales avanzados.
 
 ### Fuera de alcance hasta Entrega Final

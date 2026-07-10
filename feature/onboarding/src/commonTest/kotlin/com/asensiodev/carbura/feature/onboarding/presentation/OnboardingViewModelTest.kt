@@ -57,6 +57,26 @@ class OnboardingViewModelTest {
     }
 
     @Test
+    fun startupWithSessionAndProfileFailureReturnsToLoginWithError() = runTest {
+        val viewModel = onboardingViewModel(
+            authGateway = FakeAuthGateway(currentSession = authSession()),
+            remoteUserProfileGateway = FakeRemoteUserProfileGateway(
+                profile = null,
+                getProfileError = IllegalStateException("Profile unavailable"),
+            ),
+        )
+
+        viewModel.onEvent(OnboardingEvent.Started)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isInitializing)
+        assertFalse(state.isAuthenticated)
+        assertEquals(null, state.familyId)
+        assertEquals("Profile unavailable", state.errorMessage)
+    }
+
+    @Test
     fun googleLoginEmitsLoadingThenNavigateWhenProfileExists() = runTest {
         val signInGate = CompletableDeferred<Unit>()
         val viewModel = onboardingViewModel(
@@ -302,12 +322,15 @@ private class FakeAuthGateway(
 
 private class FakeRemoteUserProfileGateway(
     private val profile: RemoteUserProfile?,
+    private val getProfileError: Throwable? = null,
     private val ensureProfileError: Throwable? = null,
 ) : RemoteUserProfileGateway {
     private val createdProfiles = mutableMapOf<UserId, RemoteUserProfile>()
 
-    override suspend fun getProfileForUser(userId: UserId): RemoteUserProfile? =
-        createdProfiles[userId] ?: profile
+    override suspend fun getProfileForUser(userId: UserId): RemoteUserProfile? {
+        getProfileError?.let { throw it }
+        return createdProfiles[userId] ?: profile
+    }
 
     override suspend fun ensureProfile(
         displayName: String,
