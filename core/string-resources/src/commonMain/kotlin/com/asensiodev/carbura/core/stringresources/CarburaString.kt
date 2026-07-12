@@ -12,6 +12,7 @@ enum class CarburaString {
     ViewHistoryButton,
     VehicleCreatedMessage,
     VehicleDeletedMessage,
+    VehicleUpdatedMessage,
     ValidationBlankVehicleName,
     ValidationNegativeVehicleOdometer,
     ValidationGeneric,

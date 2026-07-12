@@ -25,6 +25,17 @@
     <string name="delete_vehicle_cancel_button">Cancelar</string>
     <string name="vehicle_created_message">%1$s guardado en el garaje.</string>
     <string name="vehicle_deleted_message">%1$s eliminado del garaje.</string>
+    <string name="vehicle_updated_message">%1$s actualizado.</string>
+    <string name="edit_vehicle_content_description">Editar vehículo</string>
+    <string name="edit_vehicle_title">Editar vehículo</string>
+    <string name="update_odometer_button">Actualizar km</string>
+    <string name="update_odometer_title">Actualizar kilómetros</string>
+    <string name="license_plate_label">Matrícula (opcional)</string>
+    <string name="save_changes_button">Guardar cambios</string>
+    <string name="cancel_button">Cancelar</string>
+    <string name="odometer_decrease_title">Confirmar kilómetros</string>
+    <string name="odometer_decrease_message">Vas a cambiar los kilómetros de %1$d km a %2$d km. ¿Quieres continuar?</string>
+    <string name="confirm_button">Confirmar</string>
     <string name="validation_blank_vehicle_name">Introduce un nombre para el vehículo.</string>
     <string name="validation_negative_vehicle_odometer">Los kilómetros no pueden ser negativos.</string>
     <string name="validation_generic">Revisa los datos introducidos.</string>

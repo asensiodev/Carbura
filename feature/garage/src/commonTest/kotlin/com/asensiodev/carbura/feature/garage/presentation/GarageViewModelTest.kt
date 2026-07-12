@@ -175,9 +175,150 @@ class GarageViewModelTest {
             )
         }
 
-    private fun TestScope.garageViewModel(nextVehicleId: () -> VehicleId = { VehicleId("vehicle-test") }): GarageViewModel {
+    @Test
+    fun openingVehicleEditPrefillsAllEditableFields() =
+        runTest {
+            val vehicle = vehicle(licensePlate = "1234 ABC")
+            val viewModel = garageViewModel(initialVehicles = listOf(vehicle))
+            viewModel.onEvent(GarageEvent.Started)
+            advanceUntilIdle()
+
+            viewModel.onEvent(GarageEvent.EditVehicleRequested(vehicle.id))
+
+            val state = viewModel.uiState.value
+            assertEquals(VehicleEditMode.Full, state.editMode)
+            assertEquals(vehicle.id, state.editingVehicleId)
+            assertEquals(vehicle.name, state.editName)
+            assertEquals("1234 ABC", state.editLicensePlate)
+            assertEquals("12000", state.editOdometerKm)
+            assertEquals(vehicle.type, state.editType)
+        }
+
+    @Test
+    fun validVehicleEditUpdatesSameVehicleAndClearsEditState() =
+        runTest {
+            val vehicle = vehicle()
+            val viewModel = garageViewModel(initialVehicles = listOf(vehicle))
+            viewModel.onEvent(GarageEvent.Started)
+            advanceUntilIdle()
+
+            viewModel.effects.test {
+                viewModel.onEvent(GarageEvent.EditVehicleRequested(vehicle.id))
+                viewModel.onEvent(GarageEvent.EditNameChanged("Moto familiar"))
+                viewModel.onEvent(GarageEvent.EditTypeSelected(VehicleType.Motorcycle))
+                viewModel.onEvent(GarageEvent.EditLicensePlateChanged("5678 XYZ"))
+                viewModel.onEvent(GarageEvent.EditOdometerChanged("13000"))
+                viewModel.onEvent(GarageEvent.SubmitVehicleEdit)
+                advanceUntilIdle()
+
+                assertIs<GarageEffect.VehicleUpdated>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            val state = viewModel.uiState.value
+            val updated = state.vehicles.single()
+            assertEquals(vehicle.id, updated.id)
+            assertEquals("Moto familiar", updated.name)
+            assertEquals(VehicleType.Motorcycle, updated.type)
+            assertEquals("5678 XYZ", updated.licensePlate)
+            assertEquals(13000, updated.currentOdometerKm)
+            assertEquals(null, state.editingVehicleId)
+        }
+
+    @Test
+    fun invalidVehicleEditKeepsOriginalVehicleAndShowsError() =
+        runTest {
+            val vehicle = vehicle()
+            val viewModel = garageViewModel(initialVehicles = listOf(vehicle))
+            viewModel.onEvent(GarageEvent.Started)
+            advanceUntilIdle()
+
+            viewModel.effects.test {
+                viewModel.onEvent(GarageEvent.EditVehicleRequested(vehicle.id))
+                viewModel.onEvent(GarageEvent.EditNameChanged(" "))
+                viewModel.onEvent(GarageEvent.SubmitVehicleEdit)
+                advanceUntilIdle()
+
+                assertIs<GarageEffect.ValidationFailed>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(
+                vehicle,
+                viewModel.uiState.value.vehicles
+                    .single(),
+            )
+            assertNotNull(viewModel.uiState.value.editErrorMessage)
+        }
+
+    @Test
+    fun quickOdometerDecreaseRequiresConfirmationAndCanBeCancelled() =
+        runTest {
+            val vehicle = vehicle()
+            val viewModel = garageViewModel(initialVehicles = listOf(vehicle))
+            viewModel.onEvent(GarageEvent.Started)
+            advanceUntilIdle()
+            viewModel.onEvent(GarageEvent.QuickOdometerUpdateRequested(vehicle.id))
+            viewModel.onEvent(GarageEvent.EditOdometerChanged("11000"))
+
+            viewModel.onEvent(GarageEvent.SubmitVehicleEdit)
+            advanceUntilIdle()
+
+            assertEquals(
+                OdometerDecreaseConfirmation(12000, 11000),
+                viewModel.uiState.value.odometerDecreaseConfirmation,
+            )
+            assertEquals(
+                12000,
+                viewModel.uiState.value.vehicles
+                    .single()
+                    .currentOdometerKm,
+            )
+
+            viewModel.onEvent(GarageEvent.CancelOdometerDecrease)
+            assertEquals(null, viewModel.uiState.value.odometerDecreaseConfirmation)
+            assertEquals(
+                12000,
+                viewModel.uiState.value.vehicles
+                    .single()
+                    .currentOdometerKm,
+            )
+        }
+
+    @Test
+    fun confirmedQuickOdometerDecreaseUpdatesVehicle() =
+        runTest {
+            val vehicle = vehicle()
+            val viewModel = garageViewModel(initialVehicles = listOf(vehicle))
+            viewModel.onEvent(GarageEvent.Started)
+            advanceUntilIdle()
+
+            viewModel.effects.test {
+                viewModel.onEvent(GarageEvent.QuickOdometerUpdateRequested(vehicle.id))
+                viewModel.onEvent(GarageEvent.EditOdometerChanged("11000"))
+                viewModel.onEvent(GarageEvent.SubmitVehicleEdit)
+                advanceUntilIdle()
+                viewModel.onEvent(GarageEvent.ConfirmOdometerDecrease)
+                advanceUntilIdle()
+
+                assertIs<GarageEffect.VehicleUpdated>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(
+                11000,
+                viewModel.uiState.value.vehicles
+                    .single()
+                    .currentOdometerKm,
+            )
+        }
+
+    private fun TestScope.garageViewModel(
+        nextVehicleId: () -> VehicleId = { VehicleId("vehicle-test") },
+        initialVehicles: List<Vehicle> = emptyList(),
+    ): GarageViewModel {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
-        val vehicleRepository = FakeVehicleRepository()
+        val vehicleRepository = FakeVehicleRepository(initialVehicles)
         return GarageViewModel(
             familyId = familyId,
             vehicleRepository = vehicleRepository,
@@ -197,14 +338,27 @@ class GarageViewModelTest {
             coroutineScope = this,
         )
     }
+
+    private fun vehicle(licensePlate: String? = null): Vehicle =
+        Vehicle(
+            id = VehicleId("vehicle-existing"),
+            familyId = familyId,
+            name = "Coche familiar",
+            type = VehicleType.Car,
+            licensePlate = licensePlate,
+            currentOdometerKm = 12000,
+        )
 }
 
-private class FakeVehicleRepository : VehicleRepository {
-    private val vehicles = mutableListOf<Vehicle>()
+private class FakeVehicleRepository(
+    initialVehicles: List<Vehicle> = emptyList(),
+) : VehicleRepository {
+    private val vehicles = initialVehicles.toMutableList()
 
     override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> = vehicles.filter { it.familyId == familyId }
 
     override suspend fun saveVehicle(vehicle: Vehicle) {
+        vehicles.removeAll { it.id == vehicle.id }
         vehicles += vehicle
     }
 

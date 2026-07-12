@@ -12,6 +12,10 @@ sealed interface GarageEffect {
         val vehicleName: String,
     ) : GarageEffect
 
+    data class VehicleUpdated(
+        val vehicleName: String,
+    ) : GarageEffect
+
     data class ValidationFailed(
         val message: CarburaString,
     ) : GarageEffect

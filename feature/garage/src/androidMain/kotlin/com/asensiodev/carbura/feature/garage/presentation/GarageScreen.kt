@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -89,6 +90,12 @@ fun GarageRoute(
                     vehicleSuccessSignal += 1
                 }
 
+                is GarageEffect.VehicleUpdated -> {
+                    effectMessage = CarburaString.VehicleUpdatedMessage
+                    effectMessageArg = effect.vehicleName
+                    vehicleSuccessSignal += 1
+                }
+
                 is GarageEffect.ValidationFailed -> {
                     effectMessage = effect.message
                     effectMessageArg = null
@@ -122,6 +129,16 @@ fun GarageRoute(
         onCreateVehicle = { viewModel.onEvent(GarageEvent.SubmitVehicle) },
         onSelectVehicle = { vehicle -> viewModel.onEvent(GarageEvent.VehicleSelected(vehicle.id)) },
         onDeleteVehicle = { vehicle -> viewModel.onEvent(GarageEvent.DeleteVehicleConfirmed(vehicle.id)) },
+        onEditVehicle = { vehicle -> viewModel.onEvent(GarageEvent.EditVehicleRequested(vehicle.id)) },
+        onQuickOdometerUpdate = { vehicle -> viewModel.onEvent(GarageEvent.QuickOdometerUpdateRequested(vehicle.id)) },
+        onEditNameChange = { viewModel.onEvent(GarageEvent.EditNameChanged(it)) },
+        onEditLicensePlateChange = { viewModel.onEvent(GarageEvent.EditLicensePlateChanged(it)) },
+        onEditOdometerChange = { viewModel.onEvent(GarageEvent.EditOdometerChanged(it)) },
+        onEditTypeSelected = { viewModel.onEvent(GarageEvent.EditTypeSelected(it)) },
+        onSubmitEdit = { viewModel.onEvent(GarageEvent.SubmitVehicleEdit) },
+        onDismissEdit = { viewModel.onEvent(GarageEvent.DismissVehicleEdit) },
+        onConfirmOdometerDecrease = { viewModel.onEvent(GarageEvent.ConfirmOdometerDecrease) },
+        onCancelOdometerDecrease = { viewModel.onEvent(GarageEvent.CancelOdometerDecrease) },
         modifier = modifier,
     )
 }
@@ -145,6 +162,16 @@ private fun GarageScreen(
     onCreateVehicle: () -> Unit,
     onSelectVehicle: (Vehicle) -> Unit,
     onDeleteVehicle: (Vehicle) -> Unit,
+    onEditVehicle: (Vehicle) -> Unit,
+    onQuickOdometerUpdate: (Vehicle) -> Unit,
+    onEditNameChange: (String) -> Unit,
+    onEditLicensePlateChange: (String) -> Unit,
+    onEditOdometerChange: (String) -> Unit,
+    onEditTypeSelected: (VehicleType) -> Unit,
+    onSubmitEdit: () -> Unit,
+    onDismissEdit: () -> Unit,
+    onConfirmOdometerDecrease: () -> Unit,
+    onCancelOdometerDecrease: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showVehicleSheet by remember { mutableStateOf(false) }
@@ -206,6 +233,8 @@ private fun GarageScreen(
                             vehicle = vehicle,
                             onSelectVehicle = onSelectVehicle,
                             onDeleteVehicle = { vehiclePendingDeletion = vehicle },
+                            onEditVehicle = onEditVehicle,
+                            onQuickOdometerUpdate = onQuickOdometerUpdate,
                         )
                     }
                 }
@@ -277,6 +306,94 @@ private fun GarageScreen(
             dismissButton = {
                 TextButton(onClick = { vehiclePendingDeletion = null }) {
                     Text(stringResource(R.string.delete_vehicle_cancel_button))
+                }
+            },
+        )
+    }
+
+    if (state.editingVehicleId != null && state.odometerDecreaseConfirmation == null) {
+        AlertDialog(
+            onDismissRequest = onDismissEdit,
+            title = {
+                Text(
+                    stringResource(
+                        if (state.editMode == VehicleEditMode.Full) {
+                            R.string.edit_vehicle_title
+                        } else {
+                            R.string.update_odometer_title
+                        },
+                    ),
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing12)) {
+                    if (state.editMode == VehicleEditMode.Full) {
+                        OutlinedTextField(
+                            value = state.editName,
+                            onValueChange = onEditNameChange,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.vehicle_name_label)) },
+                            singleLine = true,
+                        )
+                        VehicleTypeSelector(state.editType, onEditTypeSelected)
+                        OutlinedTextField(
+                            value = state.editLicensePlate,
+                            onValueChange = onEditLicensePlateChange,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.license_plate_label)) },
+                            singleLine = true,
+                        )
+                    }
+                    OutlinedTextField(
+                        value = state.editOdometerKm,
+                        onValueChange = onEditOdometerChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(stringResource(R.string.current_odometer_label)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                    )
+                    state.editErrorMessage?.let {
+                        Text(
+                            text = stringResource(it.garageStringRes()),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = onSubmitEdit) {
+                    Text(stringResource(R.string.save_changes_button))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissEdit) {
+                    Text(stringResource(R.string.cancel_button))
+                }
+            },
+        )
+    }
+
+    state.odometerDecreaseConfirmation?.let { confirmation ->
+        AlertDialog(
+            onDismissRequest = onCancelOdometerDecrease,
+            title = { Text(stringResource(R.string.odometer_decrease_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.odometer_decrease_message,
+                        confirmation.currentOdometerKm,
+                        confirmation.proposedOdometerKm,
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = onConfirmOdometerDecrease) {
+                    Text(stringResource(R.string.confirm_button))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onCancelOdometerDecrease) {
+                    Text(stringResource(R.string.cancel_button))
                 }
             },
         )
@@ -462,6 +579,8 @@ private fun VehicleCard(
     vehicle: Vehicle,
     onSelectVehicle: (Vehicle) -> Unit,
     onDeleteVehicle: (Vehicle) -> Unit,
+    onEditVehicle: (Vehicle) -> Unit,
+    onQuickOdometerUpdate: (Vehicle) -> Unit,
 ) {
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -498,10 +617,21 @@ private fun VehicleCard(
                             tint = MaterialTheme.colorScheme.error,
                         )
                     }
+                    IconButton(onClick = { onEditVehicle(vehicle) }) {
+                        Icon(
+                            imageVector = Icons.Filled.Edit,
+                            contentDescription = stringResource(R.string.edit_vehicle_content_description),
+                        )
+                    }
                 }
             }
-            OutlinedButton(onClick = { onSelectVehicle(vehicle) }) {
-                Text(stringResource(R.string.view_history_button))
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+                OutlinedButton(onClick = { onSelectVehicle(vehicle) }) {
+                    Text(stringResource(R.string.view_history_button))
+                }
+                TextButton(onClick = { onQuickOdometerUpdate(vehicle) }) {
+                    Text(stringResource(R.string.update_odometer_button))
+                }
             }
         }
     }

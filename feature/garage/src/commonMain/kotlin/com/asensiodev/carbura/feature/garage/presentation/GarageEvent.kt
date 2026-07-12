@@ -26,5 +26,37 @@ sealed interface GarageEvent {
         val vehicleId: VehicleId,
     ) : GarageEvent
 
+    data class EditVehicleRequested(
+        val vehicleId: VehicleId,
+    ) : GarageEvent
+
+    data class QuickOdometerUpdateRequested(
+        val vehicleId: VehicleId,
+    ) : GarageEvent
+
+    data class EditNameChanged(
+        val value: String,
+    ) : GarageEvent
+
+    data class EditLicensePlateChanged(
+        val value: String,
+    ) : GarageEvent
+
+    data class EditOdometerChanged(
+        val value: String,
+    ) : GarageEvent
+
+    data class EditTypeSelected(
+        val value: VehicleType,
+    ) : GarageEvent
+
     data object SubmitVehicle : GarageEvent
+
+    data object SubmitVehicleEdit : GarageEvent
+
+    data object ConfirmOdometerDecrease : GarageEvent
+
+    data object CancelOdometerDecrease : GarageEvent
+
+    data object DismissVehicleEdit : GarageEvent
 }

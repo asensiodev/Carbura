@@ -11,6 +11,7 @@ internal class FakeVehicleRepository : VehicleRepository {
     override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> = savedVehicles.filter { it.familyId == familyId }
 
     override suspend fun saveVehicle(vehicle: Vehicle) {
+        savedVehicles.removeAll { it.id == vehicle.id }
         savedVehicles += vehicle
     }
 

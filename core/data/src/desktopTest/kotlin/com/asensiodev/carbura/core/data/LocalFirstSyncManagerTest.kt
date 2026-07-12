@@ -35,6 +35,41 @@ class LocalFirstSyncManagerTest {
         }
 
     @Test
+    fun syncPushesEditedVehicleWithSameIdentityAndClearsPendingState() =
+        runTest {
+            val editedVehicle =
+                vehicle(
+                    id = "vehicle-1",
+                    name = "Edited vehicle",
+                    odometerKm = 15000,
+                    updatedAt = 20,
+                    pendingSync = true,
+                )
+            val local = FakeLocalSyncDataSource(vehicles = mutableListOf(editedVehicle))
+            val remote =
+                FakeRemoteSyncDataSource(
+                    vehicles =
+                        mutableListOf(
+                            vehicle(
+                                id = "vehicle-1",
+                                name = "Original vehicle",
+                                odometerKm = 12000,
+                                updatedAt = 10,
+                                pendingSync = false,
+                            ),
+                        ),
+                )
+
+            val result = syncManager(local, remote).syncNow()
+
+            assertIs<SyncResult.Success>(result)
+            assertEquals("vehicle-1", remote.vehicles.single().id)
+            assertEquals("Edited vehicle", remote.vehicles.single().name)
+            assertEquals(15000, remote.vehicles.single().currentOdometerKm)
+            assertFalse(local.vehicles.single().pendingSync)
+        }
+
+    @Test
     fun syncKeepsNewerPendingLocalRecordOverOlderRemote() =
         runTest {
             val localVehicle = vehicle(id = "vehicle-1", updatedAt = 20, pendingSync = true)
@@ -162,6 +197,7 @@ class LocalFirstSyncManagerTest {
     private fun vehicle(
         id: String,
         name: String = "Vehicle",
+        odometerKm: Int = 1,
         updatedAt: Long,
         pendingSync: Boolean,
         deletedAt: Long? = null,
@@ -174,7 +210,7 @@ class LocalFirstSyncManagerTest {
             brand = null,
             model = null,
             licensePlate = null,
-            currentOdometerKm = 1,
+            currentOdometerKm = odometerKm,
             updatedAt = updatedAt,
             pendingSync = pendingSync,
             deletedAt = deletedAt,

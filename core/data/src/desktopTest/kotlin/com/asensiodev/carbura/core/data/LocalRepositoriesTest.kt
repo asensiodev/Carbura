@@ -45,6 +45,45 @@ class LocalRepositoriesTest {
         }
 
     @Test
+    fun vehicleRepositoryUpdatesExistingVehicleAndMarksItPending() =
+        runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
+            val repository = LocalVehicleRepository(firstDatabase)
+            val original =
+                Vehicle(
+                    id = vehicleId,
+                    familyId = familyId,
+                    name = "Coche",
+                    type = VehicleType.Car,
+                    licensePlate = "1234 ABC",
+                    currentOdometerKm = 12000,
+                )
+            repository.saveVehicle(original)
+
+            repository.saveVehicle(
+                original.copy(
+                    name = "Coche familiar",
+                    type = VehicleType.Van,
+                    licensePlate = "5678 XYZ",
+                    currentOdometerKm = 15000,
+                ),
+            )
+
+            val vehicles = LocalVehicleRepository(recreatedDatabase).observeVehicles(familyId)
+            val pendingVehicle = SqlDelightLocalSyncDataSource(recreatedDatabase).getPendingVehicles().single()
+            assertEquals(1, vehicles.size)
+            assertEquals(vehicleId, vehicles.single().id)
+            assertEquals(familyId, vehicles.single().familyId)
+            assertEquals("Coche familiar", vehicles.single().name)
+            assertEquals(VehicleType.Van, vehicles.single().type)
+            assertEquals("5678 XYZ", vehicles.single().licensePlate)
+            assertEquals(15000, vehicles.single().currentOdometerKm)
+            assertEquals(vehicleId.value, pendingVehicle.id)
+            assertEquals(true, pendingVehicle.pendingSync)
+            assertEquals(null, pendingVehicle.deletedAt)
+            assertEquals(true, pendingVehicle.updatedAt > 0)
+        }
+
+    @Test
     fun maintenanceRepositoryReadsHistoryOrderedByDateFromRecreatedDatabase() =
         runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
             val repository = LocalMaintenanceRecordRepository(firstDatabase)
