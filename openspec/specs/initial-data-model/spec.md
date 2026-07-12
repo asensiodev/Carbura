@@ -1,5 +1,7 @@
-## Requirements
+## Purpose
 
+Define Carbura's shared MVP garage entities, validation rules, and core domain behavior.
+## Requirements
 ### Requirement: Shared MVP Entities
 The system SHALL define shared KMP models for the MVP garage domain: family, user profile, vehicle, maintenance type, maintenance record and reminder.
 
@@ -73,3 +75,14 @@ The system SHALL create a basic reminder for ITV or insurance maintenance record
 #### Scenario: Non-reminder maintenance skips reminder
 - **WHEN** a maintenance record type is not ITV or insurance
 - **THEN** no automatic reminder is created automatically
+
+### Requirement: Vehicle Planning Fields
+The shared vehicle model and local and remote vehicle records SHALL support nullable next ITV date, insurance renewal date, and next service odometer fields.
+
+#### Scenario: Existing vehicle has no planning fields
+- **WHEN** an existing vehicle created before the planning-field migration is loaded
+- **THEN** its new planning fields are represented as empty without losing existing vehicle data
+
+#### Scenario: Vehicle planning fields round trip
+- **WHEN** a vehicle with planning fields is saved and loaded
+- **THEN** all provided due targets retain their typed values

@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
+import com.asensiodev.carbura.core.domain.reminder.usecase.DeriveVehicleReminderSuggestionsUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.SaveVehicleWithRemindersParams
+import com.asensiodev.carbura.core.domain.reminder.usecase.SaveVehicleWithRemindersUseCase
 import com.asensiodev.carbura.core.domain.sync.SyncManager
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.domain.vehicle.usecase.CreateVehicleUseCase
@@ -11,6 +14,7 @@ import com.asensiodev.carbura.core.domain.vehicle.usecase.DeleteVehicleUseCase
 import com.asensiodev.carbura.core.domain.vehicle.usecase.UpdateVehicleParams
 import com.asensiodev.carbura.core.domain.vehicle.usecase.UpdateVehicleResult
 import com.asensiodev.carbura.core.domain.vehicle.usecase.UpdateVehicleUseCase
+import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
@@ -35,6 +39,8 @@ class GarageViewModel(
     private val createVehicleUseCase: CreateVehicleUseCase = CreateVehicleUseCase(vehicleRepository),
     private val deleteVehicleUseCase: DeleteVehicleUseCase,
     private val updateVehicleUseCase: UpdateVehicleUseCase = UpdateVehicleUseCase(vehicleRepository),
+    private val deriveVehicleReminderSuggestions: DeriveVehicleReminderSuggestionsUseCase = DeriveVehicleReminderSuggestionsUseCase(),
+    private val saveVehicleWithRemindersUseCase: SaveVehicleWithRemindersUseCase? = null,
     private val syncManager: SyncManager? = null,
     private val nextVehicleId: () -> VehicleId = ::randomVehicleId,
     private val coroutineScope: CoroutineScope? = null,
@@ -44,11 +50,16 @@ class GarageViewModel(
 
     private val _effects = Channel<GarageEffect>(capacity = Channel.BUFFERED)
     val effects: Flow<GarageEffect> = _effects.receiveAsFlow()
+    private var pendingReminderVehicle: Vehicle? = null
 
     private val scope: CoroutineScope
         get() = coroutineScope ?: viewModelScope
 
     fun onEvent(event: GarageEvent) {
+        if (!handlePlanningFieldEvent(event)) handleGeneralEvent(event)
+    }
+
+    private fun handleGeneralEvent(event: GarageEvent) {
         when (event) {
             is GarageEvent.NameChanged ->
                 _uiState.update {
@@ -70,6 +81,16 @@ class GarageViewModel(
             is GarageEvent.EditOdometerChanged -> updateEditState { it.copy(editOdometerKm = event.value) }
             is GarageEvent.EditTypeSelected -> updateEditState { it.copy(editType = event.value) }
 
+            is GarageEvent.NextItvDateChanged,
+            is GarageEvent.InsuranceRenewalDateChanged,
+            is GarageEvent.NextServiceOdometerChanged,
+            is GarageEvent.EditNextItvDateChanged,
+            is GarageEvent.EditInsuranceRenewalDateChanged,
+            is GarageEvent.EditNextServiceOdometerChanged,
+            GarageEvent.ConfirmReminderSuggestions,
+            GarageEvent.DeclineReminderSuggestions,
+            -> Unit
+
             GarageEvent.Started -> scope.launch { loadVehicles() }
             GarageEvent.SubmitVehicle -> scope.launch { createVehicle() }
             GarageEvent.SubmitVehicleEdit -> scope.launch { updateVehicle() }
@@ -86,6 +107,25 @@ class GarageViewModel(
                     _effects.send(GarageEffect.NavigateToVehicleHistory(event.vehicleId))
                 }
         }
+    }
+
+    private fun handlePlanningFieldEvent(event: GarageEvent): Boolean {
+        when (event) {
+            is GarageEvent.NextItvDateChanged -> updateCreatePlanning { it.copy(nextItvDate = event.value) }
+            is GarageEvent.InsuranceRenewalDateChanged -> updateCreatePlanning { it.copy(insuranceRenewalDate = event.value) }
+            is GarageEvent.NextServiceOdometerChanged -> updateCreatePlanning { it.copy(nextServiceOdometerKm = event.value) }
+            is GarageEvent.EditNextItvDateChanged -> updateEditState { it.copy(editNextItvDate = event.value) }
+            is GarageEvent.EditInsuranceRenewalDateChanged -> updateEditState { it.copy(editInsuranceRenewalDate = event.value) }
+            is GarageEvent.EditNextServiceOdometerChanged -> updateEditState { it.copy(editNextServiceOdometerKm = event.value) }
+            GarageEvent.ConfirmReminderSuggestions -> scope.launch { completePendingReminderSave(true) }
+            GarageEvent.DeclineReminderSuggestions -> scope.launch { completePendingReminderSave(false) }
+            else -> return false
+        }
+        return true
+    }
+
+    private fun updateCreatePlanning(transform: (GarageUiState) -> GarageUiState) {
+        _uiState.update { transform(it).copy(errorMessage = null) }
     }
 
     private fun updateEditState(transform: (GarageUiState) -> GarageUiState) {
@@ -105,6 +145,9 @@ class GarageViewModel(
                 editLicensePlate = vehicle.licensePlate.orEmpty(),
                 editOdometerKm = vehicle.currentOdometerKm.toString(),
                 editType = vehicle.type,
+                editNextItvDate = vehicle.nextItvDate?.iso8601.orEmpty(),
+                editInsuranceRenewalDate = vehicle.insuranceRenewalDate?.iso8601.orEmpty(),
+                editNextServiceOdometerKm = vehicle.nextServiceOdometerKm?.toString().orEmpty(),
                 editErrorMessage = null,
                 odometerDecreaseConfirmation = null,
             )
@@ -120,6 +163,9 @@ class GarageViewModel(
                 editLicensePlate = "",
                 editOdometerKm = "",
                 editType = VehicleType.Car,
+                editNextItvDate = "",
+                editInsuranceRenewalDate = "",
+                editNextServiceOdometerKm = "",
                 editErrorMessage = null,
                 odometerDecreaseConfirmation = null,
             )
@@ -144,6 +190,10 @@ class GarageViewModel(
 
     private suspend fun createVehicle() {
         val state = _uiState.value
+        if (state.nextServiceOdometerKm.isInvalidOptionalOdometer()) {
+            _uiState.update { it.copy(errorMessage = CarburaString.ValidationNegativeVehicleOdometer) }
+            return
+        }
         val odometerKm = state.odometerKm.toIntOrNull() ?: -1
         val vehicle =
             Vehicle(
@@ -152,8 +202,20 @@ class GarageViewModel(
                 name = state.name.trim(),
                 type = state.selectedType,
                 currentOdometerKm = odometerKm,
+                nextItvDate = state.nextItvDate.toCalendarDateOrNull(),
+                insuranceRenewalDate = state.insuranceRenewalDate.toCalendarDateOrNull(),
+                nextServiceOdometerKm = state.nextServiceOdometerKm.toIntOrNull(),
             )
 
+        if (showReminderConfirmation(vehicle, VehicleSaveMode.Create)) return
+
+        persistCreatedVehicle(vehicle, reconcileReminders = false)
+    }
+
+    private suspend fun persistCreatedVehicle(
+        vehicle: Vehicle,
+        reconcileReminders: Boolean,
+    ) {
         when (val result = withContext(dispatchers.io) { createVehicleUseCase(vehicle) }) {
             is DomainResult.Success -> {
                 val vehicles =
@@ -165,9 +227,15 @@ class GarageViewModel(
                         vehicles = vehicles,
                         name = "",
                         odometerKm = "0",
+                        nextItvDate = "",
+                        insuranceRenewalDate = "",
+                        nextServiceOdometerKm = "",
                         errorMessage = null,
+                        reminderSuggestions = emptyList(),
+                        reminderConfirmationMode = null,
                     )
                 }
+                if (reconcileReminders) reconcileReminders(result.value)
                 _effects.send(GarageEffect.VehicleCreated(result.value.name))
                 syncAfterMutation()
             }
@@ -198,8 +266,15 @@ class GarageViewModel(
         syncAfterMutation()
     }
 
-    private suspend fun updateVehicle(allowOdometerDecrease: Boolean = false) {
+    private suspend fun updateVehicle(
+        allowOdometerDecrease: Boolean = false,
+        skipReminderConfirmation: Boolean = false,
+    ) {
         val state = _uiState.value
+        if (state.editNextServiceOdometerKm.isInvalidOptionalOdometer()) {
+            _uiState.update { it.copy(editErrorMessage = CarburaString.ValidationNegativeVehicleOdometer) }
+            return
+        }
         val vehicle = state.vehicles.firstOrNull { it.id == state.editingVehicleId } ?: return
         val params =
             UpdateVehicleParams(
@@ -208,8 +283,32 @@ class GarageViewModel(
                 type = state.editType,
                 licensePlate = state.editLicensePlate,
                 odometerKm = state.editOdometerKm.toIntOrNull() ?: -1,
+                nextItvDate = state.editNextItvDate.toCalendarDateOrNull(),
+                insuranceRenewalDate = state.editInsuranceRenewalDate.toCalendarDateOrNull(),
+                nextServiceOdometerKm = state.editNextServiceOdometerKm.toIntOrNull(),
                 allowOdometerDecrease = allowOdometerDecrease,
             )
+        val candidate =
+            vehicle.copy(
+                name = params.name.trim(),
+                type = params.type,
+                licensePlate = params.licensePlate,
+                currentOdometerKm = params.odometerKm,
+                nextItvDate = params.nextItvDate,
+                insuranceRenewalDate = params.insuranceRenewalDate,
+                nextServiceOdometerKm = params.nextServiceOdometerKm,
+            )
+        val removedTarget =
+            (vehicle.nextItvDate != null && candidate.nextItvDate == null) ||
+                (vehicle.insuranceRenewalDate != null && candidate.insuranceRenewalDate == null) ||
+                (vehicle.nextServiceOdometerKm != null && candidate.nextServiceOdometerKm == null)
+        if (
+            !allowOdometerDecrease &&
+            !skipReminderConfirmation &&
+            showReminderConfirmation(candidate, VehicleSaveMode.Edit, force = removedTarget)
+        ) {
+            return
+        }
         val result =
             try {
                 withContext(dispatchers.io) { updateVehicleUseCase(params) }
@@ -246,9 +345,47 @@ class GarageViewModel(
         }
     }
 
+    private fun showReminderConfirmation(
+        vehicle: Vehicle,
+        mode: VehicleSaveMode,
+        force: Boolean = false,
+    ): Boolean {
+        val suggestions = deriveVehicleReminderSuggestions(vehicle)
+        if (suggestions.isEmpty() && !force) return false
+        pendingReminderVehicle = vehicle
+        _uiState.update { it.copy(reminderSuggestions = suggestions, reminderConfirmationMode = mode) }
+        return true
+    }
+
+    private suspend fun completePendingReminderSave(reconcile: Boolean) {
+        val mode = _uiState.value.reminderConfirmationMode ?: return
+        val pendingVehicle = pendingReminderVehicle ?: return
+        pendingReminderVehicle = null
+        _uiState.update { it.copy(reminderSuggestions = emptyList(), reminderConfirmationMode = null) }
+        when (mode) {
+            VehicleSaveMode.Create -> {
+                persistCreatedVehicle(pendingVehicle, reconcile)
+            }
+            VehicleSaveMode.Edit -> {
+                if (reconcile) reconcileReminders(pendingVehicle)
+                updateVehicle(skipReminderConfirmation = true)
+            }
+        }
+    }
+
+    private suspend fun reconcileReminders(vehicle: Vehicle) {
+        withContext(dispatchers.io) {
+            saveVehicleWithRemindersUseCase?.invoke(SaveVehicleWithRemindersParams(vehicle, true))
+        }
+    }
+
     private fun syncAfterMutation() {
         scope.launch { syncManager?.syncNow() }
     }
 }
 
 private fun randomVehicleId(): VehicleId = VehicleId("vehicle-${Random.nextInt(1, Int.MAX_VALUE)}")
+
+private fun String.toCalendarDateOrNull(): CalendarDate? = trim().takeIf { it.isNotEmpty() }?.let(::CalendarDate)
+
+private fun String.isInvalidOptionalOdometer(): Boolean = isNotBlank() && (toIntOrNull()?.let { it < 0 } != false)

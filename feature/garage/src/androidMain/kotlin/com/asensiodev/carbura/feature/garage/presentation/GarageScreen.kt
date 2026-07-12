@@ -21,6 +21,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -34,6 +36,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,6 +59,9 @@ import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.featuregarage.R
 import org.koin.core.context.GlobalContext
 import org.koin.core.parameter.parametersOf
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 @Composable
 fun GarageRoute(
@@ -126,6 +132,9 @@ fun GarageRoute(
         onNameChange = { value -> viewModel.onEvent(GarageEvent.NameChanged(value)) },
         onOdometerChange = { value -> viewModel.onEvent(GarageEvent.OdometerChanged(value)) },
         onTypeSelected = { value -> viewModel.onEvent(GarageEvent.TypeSelected(value)) },
+        onNextItvDateChange = { viewModel.onEvent(GarageEvent.NextItvDateChanged(it)) },
+        onInsuranceRenewalDateChange = { viewModel.onEvent(GarageEvent.InsuranceRenewalDateChanged(it)) },
+        onNextServiceOdometerChange = { viewModel.onEvent(GarageEvent.NextServiceOdometerChanged(it)) },
         onCreateVehicle = { viewModel.onEvent(GarageEvent.SubmitVehicle) },
         onSelectVehicle = { vehicle -> viewModel.onEvent(GarageEvent.VehicleSelected(vehicle.id)) },
         onDeleteVehicle = { vehicle -> viewModel.onEvent(GarageEvent.DeleteVehicleConfirmed(vehicle.id)) },
@@ -135,10 +144,15 @@ fun GarageRoute(
         onEditLicensePlateChange = { viewModel.onEvent(GarageEvent.EditLicensePlateChanged(it)) },
         onEditOdometerChange = { viewModel.onEvent(GarageEvent.EditOdometerChanged(it)) },
         onEditTypeSelected = { viewModel.onEvent(GarageEvent.EditTypeSelected(it)) },
+        onEditNextItvDateChange = { viewModel.onEvent(GarageEvent.EditNextItvDateChanged(it)) },
+        onEditInsuranceRenewalDateChange = { viewModel.onEvent(GarageEvent.EditInsuranceRenewalDateChanged(it)) },
+        onEditNextServiceOdometerChange = { viewModel.onEvent(GarageEvent.EditNextServiceOdometerChanged(it)) },
         onSubmitEdit = { viewModel.onEvent(GarageEvent.SubmitVehicleEdit) },
         onDismissEdit = { viewModel.onEvent(GarageEvent.DismissVehicleEdit) },
         onConfirmOdometerDecrease = { viewModel.onEvent(GarageEvent.ConfirmOdometerDecrease) },
         onCancelOdometerDecrease = { viewModel.onEvent(GarageEvent.CancelOdometerDecrease) },
+        onConfirmReminderSuggestions = { viewModel.onEvent(GarageEvent.ConfirmReminderSuggestions) },
+        onDeclineReminderSuggestions = { viewModel.onEvent(GarageEvent.DeclineReminderSuggestions) },
         modifier = modifier,
     )
 }
@@ -159,6 +173,9 @@ private fun GarageScreen(
     onNameChange: (String) -> Unit,
     onOdometerChange: (String) -> Unit,
     onTypeSelected: (VehicleType) -> Unit,
+    onNextItvDateChange: (String) -> Unit,
+    onInsuranceRenewalDateChange: (String) -> Unit,
+    onNextServiceOdometerChange: (String) -> Unit,
     onCreateVehicle: () -> Unit,
     onSelectVehicle: (Vehicle) -> Unit,
     onDeleteVehicle: (Vehicle) -> Unit,
@@ -168,10 +185,15 @@ private fun GarageScreen(
     onEditLicensePlateChange: (String) -> Unit,
     onEditOdometerChange: (String) -> Unit,
     onEditTypeSelected: (VehicleType) -> Unit,
+    onEditNextItvDateChange: (String) -> Unit,
+    onEditInsuranceRenewalDateChange: (String) -> Unit,
+    onEditNextServiceOdometerChange: (String) -> Unit,
     onSubmitEdit: () -> Unit,
     onDismissEdit: () -> Unit,
     onConfirmOdometerDecrease: () -> Unit,
     onCancelOdometerDecrease: () -> Unit,
+    onConfirmReminderSuggestions: () -> Unit,
+    onDeclineReminderSuggestions: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showVehicleSheet by remember { mutableStateOf(false) }
@@ -265,10 +287,16 @@ private fun GarageScreen(
                 name = state.name,
                 odometer = state.odometerKm,
                 selectedType = state.selectedType,
+                nextItvDate = state.nextItvDate,
+                insuranceRenewalDate = state.insuranceRenewalDate,
+                nextServiceOdometer = state.nextServiceOdometerKm,
                 errorMessage = state.errorMessage,
                 onNameChange = onNameChange,
                 onOdometerChange = onOdometerChange,
                 onTypeSelected = onTypeSelected,
+                onNextItvDateChange = onNextItvDateChange,
+                onInsuranceRenewalDateChange = onInsuranceRenewalDateChange,
+                onNextServiceOdometerChange = onNextServiceOdometerChange,
                 onCreateVehicle = onCreateVehicle,
                 modifier =
                     Modifier.padding(
@@ -343,6 +371,24 @@ private fun GarageScreen(
                             label = { Text(stringResource(R.string.license_plate_label)) },
                             singleLine = true,
                         )
+                        OptionalDatePickerField(
+                            label = stringResource(R.string.next_itv_date_label),
+                            value = state.editNextItvDate,
+                            onValueChange = onEditNextItvDateChange,
+                        )
+                        OptionalDatePickerField(
+                            label = stringResource(R.string.insurance_renewal_date_label),
+                            value = state.editInsuranceRenewalDate,
+                            onValueChange = onEditInsuranceRenewalDateChange,
+                        )
+                        OutlinedTextField(
+                            value = state.editNextServiceOdometerKm,
+                            onValueChange = onEditNextServiceOdometerChange,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.next_service_odometer_label)) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                        )
                     }
                     OutlinedTextField(
                         value = state.editOdometerKm,
@@ -398,6 +444,71 @@ private fun GarageScreen(
             },
         )
     }
+
+    if (state.reminderConfirmationMode != null) {
+        AlertDialog(
+            onDismissRequest = onDeclineReminderSuggestions,
+            title = { Text(stringResource(R.string.reminder_suggestions_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+                    Text(stringResource(R.string.reminder_suggestions_description))
+                    state.reminderSuggestions.forEach { suggestion ->
+                        Text("- ${suggestion.reminder.title}")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = onConfirmReminderSuggestions) {
+                    Text(stringResource(R.string.create_reminders_button))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDeclineReminderSuggestions) {
+                    Text(stringResource(R.string.save_without_reminders_button))
+                }
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OptionalDatePickerField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
+    var showDatePicker by remember { mutableStateOf(false) }
+    val pickerState = rememberDatePickerState(initialSelectedDateMillis = value.toUtcMillisOrNull())
+    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+        Text(label, style = MaterialTheme.typography.labelLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+            OutlinedButton(onClick = { showDatePicker = true }) {
+                Text(value.ifBlank { stringResource(R.string.select_date_button) })
+            }
+            if (value.isNotBlank()) {
+                TextButton(onClick = { onValueChange("") }) {
+                    Text(stringResource(R.string.clear_date_button))
+                }
+            }
+        }
+    }
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    pickerState.selectedDateMillis?.let { onValueChange(it.toIsoDate()) }
+                    showDatePicker = false
+                }) { Text(stringResource(android.R.string.ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+        ) { DatePicker(state = pickerState) }
+    }
 }
 
 @Composable
@@ -448,10 +559,16 @@ private fun VehicleForm(
     name: String,
     odometer: String,
     selectedType: VehicleType,
+    nextItvDate: String,
+    insuranceRenewalDate: String,
+    nextServiceOdometer: String,
     errorMessage: CarburaString?,
     onNameChange: (String) -> Unit,
     onOdometerChange: (String) -> Unit,
     onTypeSelected: (VehicleType) -> Unit,
+    onNextItvDateChange: (String) -> Unit,
+    onInsuranceRenewalDateChange: (String) -> Unit,
+    onNextServiceOdometerChange: (String) -> Unit,
     onCreateVehicle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -470,6 +587,24 @@ private fun VehicleForm(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.vehicle_name_label)) },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                singleLine = true,
+            )
+            OptionalDatePickerField(
+                label = stringResource(R.string.next_itv_date_label),
+                value = nextItvDate,
+                onValueChange = onNextItvDateChange,
+            )
+            OptionalDatePickerField(
+                label = stringResource(R.string.insurance_renewal_date_label),
+                value = insuranceRenewalDate,
+                onValueChange = onInsuranceRenewalDateChange,
+            )
+            OutlinedTextField(
+                value = nextServiceOdometer,
+                onValueChange = onNextServiceOdometerChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.next_service_odometer_label)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
             )
             VehicleTypeSelector(
@@ -646,3 +781,19 @@ private fun VehicleType.label(): String =
         VehicleType.Other,
         -> name
     }
+
+private fun String.toUtcMillisOrNull(): Long? =
+    runCatching {
+        LocalDate
+            .parse(this)
+            .atStartOfDay()
+            .toInstant(ZoneOffset.UTC)
+            .toEpochMilli()
+    }.getOrNull()
+
+private fun Long.toIsoDate(): String =
+    Instant
+        .ofEpochMilli(this)
+        .atZone(ZoneOffset.UTC)
+        .toLocalDate()
+        .toString()

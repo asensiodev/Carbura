@@ -17,6 +17,9 @@ class CreateVehicleUseCase(
         if (params.currentOdometerKm < 0) {
             return DomainResult.ValidationError(ValidationFailure.NegativeVehicleOdometer)
         }
+        if ((params.nextServiceOdometerKm ?: 0) < 0) {
+            return DomainResult.ValidationError(ValidationFailure.NegativeVehicleServiceOdometer)
+        }
 
         repository.saveVehicle(params)
         return DomainResult.Success(params)

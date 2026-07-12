@@ -25,6 +25,9 @@ internal fun Vehicles.toVehicle(): Vehicle =
         model = model,
         licensePlate = licensePlate,
         currentOdometerKm = currentOdometerKm.toInt(),
+        nextItvDate = nextItvDate?.let(::CalendarDate),
+        insuranceRenewalDate = insuranceRenewalDate?.let(::CalendarDate),
+        nextServiceOdometerKm = nextServiceOdometerKm?.toInt(),
     )
 
 internal fun MaintenanceRecords.toMaintenanceRecord(): MaintenanceRecord =
@@ -66,6 +69,9 @@ internal fun Vehicles.toSyncVehicle(): SyncVehicle =
         model = model,
         licensePlate = licensePlate,
         currentOdometerKm = currentOdometerKm.toInt(),
+        nextItvDate = nextItvDate,
+        insuranceRenewalDate = insuranceRenewalDate,
+        nextServiceOdometerKm = nextServiceOdometerKm?.toInt(),
         updatedAt = updatedAt,
         pendingSync = pendingSync == 1L,
         deletedAt = deletedAt,

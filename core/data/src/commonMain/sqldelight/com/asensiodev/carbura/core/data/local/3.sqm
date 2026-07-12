@@ -1,0 +1,3 @@
+ALTER TABLE vehicles ADD COLUMN nextItvDate TEXT;
+ALTER TABLE vehicles ADD COLUMN insuranceRenewalDate TEXT;
+ALTER TABLE vehicles ADD COLUMN nextServiceOdometerKm INTEGER;

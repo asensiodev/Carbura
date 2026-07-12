@@ -70,6 +70,40 @@ class LocalFirstSyncManagerTest {
         }
 
     @Test
+    fun syncPushesVehiclePlanningFieldsAndPullCanClearThem() =
+        runTest {
+            val localVehicle =
+                vehicle(
+                    id = "vehicle-1",
+                    nextItvDate = "2027-05-10",
+                    insuranceRenewalDate = "2027-01-20",
+                    nextServiceOdometerKm = 25000,
+                    updatedAt = 20,
+                    pendingSync = true,
+                )
+            val local = FakeLocalSyncDataSource(vehicles = mutableListOf(localVehicle))
+            val remote = FakeRemoteSyncDataSource()
+            val manager = syncManager(local, remote)
+
+            manager.syncNow()
+            assertEquals("2027-05-10", remote.vehicles.single().nextItvDate)
+            assertEquals(25000, remote.vehicles.single().nextServiceOdometerKm)
+
+            remote.vehicles[0] =
+                remote.vehicles.single().copy(
+                    nextItvDate = null,
+                    insuranceRenewalDate = null,
+                    nextServiceOdometerKm = null,
+                    updatedAt = 30,
+                )
+            manager.syncNow()
+
+            assertEquals(null, local.vehicles.single().nextItvDate)
+            assertEquals(null, local.vehicles.single().insuranceRenewalDate)
+            assertEquals(null, local.vehicles.single().nextServiceOdometerKm)
+        }
+
+    @Test
     fun syncKeepsNewerPendingLocalRecordOverOlderRemote() =
         runTest {
             val localVehicle = vehicle(id = "vehicle-1", updatedAt = 20, pendingSync = true)
@@ -198,6 +232,9 @@ class LocalFirstSyncManagerTest {
         id: String,
         name: String = "Vehicle",
         odometerKm: Int = 1,
+        nextItvDate: String? = null,
+        insuranceRenewalDate: String? = null,
+        nextServiceOdometerKm: Int? = null,
         updatedAt: Long,
         pendingSync: Boolean,
         deletedAt: Long? = null,
@@ -211,6 +248,9 @@ class LocalFirstSyncManagerTest {
             model = null,
             licensePlate = null,
             currentOdometerKm = odometerKm,
+            nextItvDate = nextItvDate,
+            insuranceRenewalDate = insuranceRenewalDate,
+            nextServiceOdometerKm = nextServiceOdometerKm,
             updatedAt = updatedAt,
             pendingSync = pendingSync,
             deletedAt = deletedAt,

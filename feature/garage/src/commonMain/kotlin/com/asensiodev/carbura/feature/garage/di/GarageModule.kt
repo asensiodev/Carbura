@@ -1,5 +1,7 @@
 package com.asensiodev.carbura.feature.garage.di
 
+import com.asensiodev.carbura.core.domain.reminder.usecase.DeriveVehicleReminderSuggestionsUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.SaveVehicleWithRemindersUseCase
 import com.asensiodev.carbura.core.domain.vehicle.usecase.CreateVehicleUseCase
 import com.asensiodev.carbura.core.domain.vehicle.usecase.DeleteVehicleUseCase
 import com.asensiodev.carbura.core.domain.vehicle.usecase.UpdateVehicleUseCase
@@ -12,6 +14,8 @@ val garageModule =
         factory { CreateVehicleUseCase(get()) }
         factory { DeleteVehicleUseCase(get(), get(), get()) }
         factory { UpdateVehicleUseCase(get()) }
+        factory { DeriveVehicleReminderSuggestionsUseCase() }
+        factory { SaveVehicleWithRemindersUseCase(get(), get(), get(), get()) }
         factory { parameters ->
             GarageViewModel(
                 familyId = parameters.get<FamilyId>(),
@@ -20,6 +24,8 @@ val garageModule =
                 createVehicleUseCase = get(),
                 deleteVehicleUseCase = get(),
                 updateVehicleUseCase = get(),
+                deriveVehicleReminderSuggestions = get(),
+                saveVehicleWithRemindersUseCase = get(),
                 syncManager = get(),
             )
         }

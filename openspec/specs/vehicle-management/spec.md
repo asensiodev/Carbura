@@ -1,5 +1,7 @@
-## ADDED Requirements
+## Purpose
 
+Define Android garage vehicle creation, selection, editing, odometer updates, and local-first behavior.
+## Requirements
 ### Requirement: Garage Vehicle List
 The system SHALL show the vehicles currently available in the active garage on Android.
 
@@ -87,3 +89,18 @@ The system SHALL make successful vehicle edits available from local storage imme
 #### Scenario: Edit vehicle while offline
 - **WHEN** a valid vehicle edit is saved without remote connectivity
 - **THEN** the updated vehicle remains available locally and pending for a later synchronization attempt
+
+### Requirement: Optional Vehicle Due Targets
+The system SHALL allow the Android user to provide optional next ITV date, insurance renewal date, and next service odometer values during vehicle creation and editing.
+
+#### Scenario: Save valid optional due targets
+- **WHEN** the user saves a valid vehicle with any supported optional due target
+- **THEN** the due target is persisted with that vehicle and remains available when editing it again
+
+#### Scenario: Reject negative next service odometer
+- **WHEN** the user enters a negative next service odometer
+- **THEN** the system shows a validation error and does not save the vehicle changes
+
+#### Scenario: Clear optional due target
+- **WHEN** the user removes an optional due target and saves the vehicle
+- **THEN** the vehicle stores that target as empty

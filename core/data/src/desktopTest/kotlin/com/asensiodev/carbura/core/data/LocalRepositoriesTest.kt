@@ -33,6 +33,9 @@ class LocalRepositoriesTest {
                     name = "Coche familiar",
                     type = VehicleType.Car,
                     currentOdometerKm = 12000,
+                    nextItvDate = CalendarDate("2027-05-10"),
+                    insuranceRenewalDate = CalendarDate("2027-01-20"),
+                    nextServiceOdometerKm = 25000,
                 ),
             )
 
@@ -42,6 +45,9 @@ class LocalRepositoriesTest {
             assertEquals(1, vehicles.size)
             assertEquals("Coche familiar", vehicles.single().name)
             assertEquals(12000, vehicles.single().currentOdometerKm)
+            assertEquals(CalendarDate("2027-05-10"), vehicles.single().nextItvDate)
+            assertEquals(CalendarDate("2027-01-20"), vehicles.single().insuranceRenewalDate)
+            assertEquals(25000, vehicles.single().nextServiceOdometerKm)
         }
 
     @Test

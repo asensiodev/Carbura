@@ -18,6 +18,18 @@ sealed interface GarageEvent {
         val value: VehicleType,
     ) : GarageEvent
 
+    data class NextItvDateChanged(
+        val value: String,
+    ) : GarageEvent
+
+    data class InsuranceRenewalDateChanged(
+        val value: String,
+    ) : GarageEvent
+
+    data class NextServiceOdometerChanged(
+        val value: String,
+    ) : GarageEvent
+
     data class VehicleSelected(
         val vehicleId: VehicleId,
     ) : GarageEvent
@@ -50,6 +62,18 @@ sealed interface GarageEvent {
         val value: VehicleType,
     ) : GarageEvent
 
+    data class EditNextItvDateChanged(
+        val value: String,
+    ) : GarageEvent
+
+    data class EditInsuranceRenewalDateChanged(
+        val value: String,
+    ) : GarageEvent
+
+    data class EditNextServiceOdometerChanged(
+        val value: String,
+    ) : GarageEvent
+
     data object SubmitVehicle : GarageEvent
 
     data object SubmitVehicleEdit : GarageEvent
@@ -59,4 +83,8 @@ sealed interface GarageEvent {
     data object CancelOdometerDecrease : GarageEvent
 
     data object DismissVehicleEdit : GarageEvent
+
+    data object ConfirmReminderSuggestions : GarageEvent
+
+    data object DeclineReminderSuggestions : GarageEvent
 }

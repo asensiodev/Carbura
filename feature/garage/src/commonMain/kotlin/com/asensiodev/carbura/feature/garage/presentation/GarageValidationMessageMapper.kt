@@ -7,6 +7,7 @@ internal fun ValidationFailure.toGarageMessage(): CarburaString =
     when (this) {
         ValidationFailure.BlankVehicleName -> CarburaString.ValidationBlankVehicleName
         ValidationFailure.NegativeVehicleOdometer -> CarburaString.ValidationNegativeVehicleOdometer
+        ValidationFailure.NegativeVehicleServiceOdometer -> CarburaString.ValidationNegativeVehicleOdometer
         ValidationFailure.BlankMaintenanceType,
         ValidationFailure.InvalidMaintenanceDate,
         ValidationFailure.InvalidMaintenanceCost,

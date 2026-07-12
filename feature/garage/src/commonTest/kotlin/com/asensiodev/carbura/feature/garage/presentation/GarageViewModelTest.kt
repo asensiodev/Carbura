@@ -5,6 +5,7 @@ import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotifica
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.domain.vehicle.usecase.DeleteVehicleUseCase
+import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.ReminderId
@@ -310,6 +311,54 @@ class GarageViewModelTest {
                 viewModel.uiState.value.vehicles
                     .single()
                     .currentOdometerKm,
+            )
+        }
+
+    @Test
+    fun vehicleEditPrefillsPlanningFields() =
+        runTest {
+            val vehicle =
+                vehicle().copy(
+                    nextItvDate = CalendarDate("2027-05-10"),
+                    insuranceRenewalDate = CalendarDate("2027-01-20"),
+                    nextServiceOdometerKm = 25000,
+                )
+            val viewModel = garageViewModel(initialVehicles = listOf(vehicle))
+            viewModel.onEvent(GarageEvent.Started)
+            advanceUntilIdle()
+
+            viewModel.onEvent(GarageEvent.EditVehicleRequested(vehicle.id))
+
+            assertEquals("2027-05-10", viewModel.uiState.value.editNextItvDate)
+            assertEquals("2027-01-20", viewModel.uiState.value.editInsuranceRenewalDate)
+            assertEquals("25000", viewModel.uiState.value.editNextServiceOdometerKm)
+        }
+
+    @Test
+    fun vehicleWithPlanningTargetsRequiresExplicitReminderConfirmation() =
+        runTest {
+            val viewModel = garageViewModel(nextVehicleId = { VehicleId("vehicle-planned") })
+            viewModel.onEvent(GarageEvent.NameChanged("Coche"))
+            viewModel.onEvent(GarageEvent.OdometerChanged("12000"))
+            viewModel.onEvent(GarageEvent.NextItvDateChanged("2027-05-10"))
+
+            viewModel.onEvent(GarageEvent.SubmitVehicle)
+            advanceUntilIdle()
+
+            assertEquals(VehicleSaveMode.Create, viewModel.uiState.value.reminderConfirmationMode)
+            assertEquals(1, viewModel.uiState.value.reminderSuggestions.size)
+            assertTrue(
+                viewModel.uiState.value.vehicles
+                    .isEmpty(),
+            )
+
+            viewModel.onEvent(GarageEvent.DeclineReminderSuggestions)
+            advanceUntilIdle()
+            assertEquals(
+                CalendarDate("2027-05-10"),
+                viewModel.uiState.value.vehicles
+                    .single()
+                    .nextItvDate,
             )
         }
 
