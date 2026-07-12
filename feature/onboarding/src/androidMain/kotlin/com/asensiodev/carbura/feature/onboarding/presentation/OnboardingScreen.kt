@@ -44,9 +44,10 @@ fun OnboardingRoute(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val credentialManager = remember { CredentialManager.create(context) }
-    val googleClientId = remember {
-        GlobalContext.get().get<SupabaseSettings>().googleClientId
-    }
+    val googleClientId =
+        remember {
+            GlobalContext.get().get<SupabaseSettings>().googleClientId
+        }
 
     OnboardingScreen(
         state = state,
@@ -61,16 +62,21 @@ fun OnboardingRoute(
                         )
                         return@launch
                     }
-                    val googleIdOption = GetSignInWithGoogleOption.Builder(googleClientId)
-                        .build()
-                    val request = GetCredentialRequest.Builder()
-                        .addCredentialOption(googleIdOption)
-                        .build()
+                    val googleIdOption =
+                        GetSignInWithGoogleOption
+                            .Builder(googleClientId)
+                            .build()
+                    val request =
+                        GetCredentialRequest
+                            .Builder()
+                            .addCredentialOption(googleIdOption)
+                            .build()
                     val result = credentialManager.getCredential(context, request)
                     val credential = result.credential
                     if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                        val googleIdTokenCredential = GoogleIdTokenCredential
-                            .createFrom(credential.data)
+                        val googleIdTokenCredential =
+                            GoogleIdTokenCredential
+                                .createFrom(credential.data)
                         viewModel.onEvent(
                             OnboardingEvent.GoogleIdTokenReceived(googleIdTokenCredential.idToken),
                         )
@@ -109,22 +115,25 @@ private fun OnboardingScreen(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier
-            .fillMaxSize(),
+        modifier =
+            modifier
+                .fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .safeDrawingPadding()
-                .padding(Spacings.spacing24),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .safeDrawingPadding()
+                    .padding(Spacings.spacing24),
             contentAlignment = Alignment.Center,
         ) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(Spacings.spacing24),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(Spacings.spacing24),
                     verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
                 ) {
                     Text(

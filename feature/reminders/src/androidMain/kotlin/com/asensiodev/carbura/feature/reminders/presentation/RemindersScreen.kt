@@ -27,8 +27,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,11 +62,11 @@ import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.featurereminders.R
+import org.koin.core.context.GlobalContext
+import org.koin.core.parameter.parametersOf
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import org.koin.core.context.GlobalContext
-import org.koin.core.parameter.parametersOf
 
 @Composable
 fun RemindersRoute(
@@ -114,14 +114,15 @@ fun RemindersRoute(
         }
     }
 
-    val resolvedEffectMessage = effectMessage?.let { message ->
-        val arg = effectMessageArg
-        if (arg == null) {
-            stringResource(message.remindersStringRes())
-        } else {
-            stringResource(message.remindersStringRes(), arg)
+    val resolvedEffectMessage =
+        effectMessage?.let { message ->
+            val arg = effectMessageArg
+            if (arg == null) {
+                stringResource(message.remindersStringRes())
+            } else {
+                stringResource(message.remindersStringRes(), arg)
+            }
         }
-    }
 
     RemindersScreen(
         state = uiState,
@@ -140,9 +141,10 @@ fun RemindersRoute(
 }
 
 @Composable
-private fun rememberRemindersViewModel(familyId: String): RemindersViewModel = remember(familyId) {
-    GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
-}
+private fun rememberRemindersViewModel(familyId: String): RemindersViewModel =
+    remember(familyId) {
+        GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -168,14 +170,15 @@ private fun RemindersScreen(
     var hasNotificationPermission by remember {
         mutableStateOf(
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED,
         )
     }
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        hasNotificationPermission = granted
-    }
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            hasNotificationPermission = granted
+        }
 
     LaunchedEffect(reminderCreatedSignal) {
         if (reminderCreatedSignal > 0) {
@@ -195,9 +198,10 @@ private fun RemindersScreen(
             containerColor = MaterialTheme.colorScheme.background,
         ) { _ ->
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding(),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding(),
                 contentPadding = PaddingValues(Spacings.spacing24),
                 verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
             ) {
@@ -246,10 +250,11 @@ private fun RemindersScreen(
         }
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .safeDrawingPadding()
-                .padding(horizontal = Spacings.spacing16),
+            modifier =
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .safeDrawingPadding()
+                    .padding(horizontal = Spacings.spacing16),
         )
     }
 
@@ -265,11 +270,12 @@ private fun RemindersScreen(
                 onDueDateChange = onDueDateChange,
                 onDueOdometerChange = onDueOdometerChange,
                 onSubmitReminder = onSubmitReminder,
-                modifier = Modifier.padding(
-                    start = Spacings.spacing24,
-                    end = Spacings.spacing24,
-                    bottom = Spacings.spacing24,
-                ),
+                modifier =
+                    Modifier.padding(
+                        start = Spacings.spacing24,
+                        end = Spacings.spacing24,
+                        bottom = Spacings.spacing24,
+                    ),
             )
         }
     }
@@ -487,14 +493,13 @@ private fun VehicleSelector(
 }
 
 @Composable
-private fun NotificationPermissionCard(
-    onEnableNotifications: () -> Unit,
-) {
+private fun NotificationPermissionCard(onEnableNotifications: () -> Unit) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-        ),
+        colors =
+            CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+            ),
     ) {
         Column(
             modifier = Modifier.padding(Spacings.spacing16),
@@ -518,14 +523,13 @@ private fun NotificationPermissionCard(
 }
 
 @Composable
-private fun EmptyRemindersCard(
-    onAddReminder: () -> Unit,
-) {
+private fun EmptyRemindersCard(onAddReminder: () -> Unit) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        ),
+        colors =
+            CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            ),
     ) {
         Column(
             modifier = Modifier.padding(Spacings.spacing24),
@@ -594,12 +598,18 @@ private fun ReminderCard(
     }
 }
 
-private fun String.toUtcMillisOrNull(): Long? = runCatching {
-    LocalDate.parse(this).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
-}.getOrNull()
+private fun String.toUtcMillisOrNull(): Long? =
+    runCatching {
+        LocalDate
+            .parse(this)
+            .atStartOfDay()
+            .toInstant(ZoneOffset.UTC)
+            .toEpochMilli()
+    }.getOrNull()
 
-private fun Long.toIsoDate(): String = Instant
-    .ofEpochMilli(this)
-    .atZone(ZoneOffset.UTC)
-    .toLocalDate()
-    .toString()
+private fun Long.toIsoDate(): String =
+    Instant
+        .ofEpochMilli(this)
+        .atZone(ZoneOffset.UTC)
+        .toLocalDate()
+        .toString()

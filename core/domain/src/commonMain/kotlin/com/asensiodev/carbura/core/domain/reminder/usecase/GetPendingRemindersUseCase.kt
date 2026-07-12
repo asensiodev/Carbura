@@ -12,6 +12,6 @@ class GetPendingRemindersUseCase(
         repository.getPendingReminders(params).sortedWith(
             compareBy<Reminder> { it.dueDate?.iso8601 ?: "9999-12-31" }
                 .thenBy { it.dueOdometerKm ?: Int.MAX_VALUE }
-                .thenBy { it.title }
+                .thenBy { it.title },
         )
 }

@@ -15,14 +15,14 @@ class SupabaseUserProfileGateway(
     private val client: SupabaseClient,
 ) : RemoteUserProfileGateway {
     override suspend fun getProfileForUser(userId: UserId): RemoteUserProfile? =
-        client.from("user_profiles")
+        client
+            .from("user_profiles")
             .select {
                 filter {
                     eq("user_id", userId.value)
                 }
                 limit(1)
-            }
-            .decodeList<UserProfileDto>()
+            }.decodeList<UserProfileDto>()
             .firstOrNull()
             ?.toRemoteUserProfile()
             ?.withFamilyName()
@@ -31,32 +31,36 @@ class SupabaseUserProfileGateway(
         displayName: String,
         email: String?,
     ): RemoteUserProfile =
-        client.postgrest.rpc(
-            function = "ensure_user_profile",
-            parameters = EnsureUserProfileDto(
-                profileDisplayName = displayName,
-                profileEmail = email,
-            )
-        ).decodeSingle<UserProfileDto>()
+        client.postgrest
+            .rpc(
+                function = "ensure_user_profile",
+                parameters =
+                    EnsureUserProfileDto(
+                        profileDisplayName = displayName,
+                        profileEmail = email,
+                    ),
+            ).decodeSingle<UserProfileDto>()
             .toRemoteUserProfile()
             .withFamilyName()
 
-    private suspend fun RemoteUserProfile.withFamilyName(): RemoteUserProfile = copy(
-        familyName = resolveFamilyName(familyId),
-    )
+    private suspend fun RemoteUserProfile.withFamilyName(): RemoteUserProfile =
+        copy(
+            familyName = resolveFamilyName(familyId),
+        )
 
-    private suspend fun resolveFamilyName(familyId: FamilyId): String? = runCatching {
-        client.from("families")
-            .select {
-                filter {
-                    eq("id", familyId.value)
-                }
-                limit(1)
-            }
-            .decodeList<FamilyDto>()
-            .firstOrNull()
-            ?.name
-    }.getOrNull()
+    private suspend fun resolveFamilyName(familyId: FamilyId): String? =
+        runCatching {
+            client
+                .from("families")
+                .select {
+                    filter {
+                        eq("id", familyId.value)
+                    }
+                    limit(1)
+                }.decodeList<FamilyDto>()
+                .firstOrNull()
+                ?.name
+        }.getOrNull()
 }
 
 @Serializable
@@ -79,10 +83,11 @@ internal data class FamilyDto(
     val name: String,
 )
 
-internal fun UserProfileDto.toRemoteUserProfile(): RemoteUserProfile = RemoteUserProfile(
-    userId = UserId(userId),
-    familyId = FamilyId(familyId),
-    familyName = null,
-    displayName = displayName,
-    email = email,
-)
+internal fun UserProfileDto.toRemoteUserProfile(): RemoteUserProfile =
+    RemoteUserProfile(
+        userId = UserId(userId),
+        familyId = FamilyId(familyId),
+        familyName = null,
+        displayName = displayName,
+        email = email,
+    )

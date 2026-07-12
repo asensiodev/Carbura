@@ -14,20 +14,21 @@ import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
-actual val dataModule: Module = module {
-    single<DispatcherProvider> { DefaultDispatcherProvider() }
-    single<SqlDriver> {
-        JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also { driver ->
-            CarburaDatabase.Schema.create(driver)
+actual val dataModule: Module =
+    module {
+        single<DispatcherProvider> { DefaultDispatcherProvider() }
+        single<SqlDriver> {
+            JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also { driver ->
+                CarburaDatabase.Schema.create(driver)
+            }
         }
+        single { CarburaDatabase(get()) }
+        single<ReminderNotificationScheduler> { NoOpReminderNotificationScheduler }
+        single<VehicleRepository> { LocalVehicleRepository(get()) }
+        single<MaintenanceRecordRepository> { LocalMaintenanceRecordRepository(get()) }
+        single<ReminderRepository> { LocalReminderRepository(get()) }
+        single<RemoteUserProfileGateway> { SupabaseUserProfileGateway(get()) }
+        single<LocalSyncDataSource> { SqlDelightLocalSyncDataSource(get()) }
+        single<RemoteSyncDataSource> { SupabaseSyncDataSource(get()) }
+        single<SyncManager> { LocalFirstSyncManager(get(), get(), get(), get()) }
     }
-    single { CarburaDatabase(get()) }
-    single<ReminderNotificationScheduler> { NoOpReminderNotificationScheduler }
-    single<VehicleRepository> { LocalVehicleRepository(get()) }
-    single<MaintenanceRecordRepository> { LocalMaintenanceRecordRepository(get()) }
-    single<ReminderRepository> { LocalReminderRepository(get()) }
-    single<RemoteUserProfileGateway> { SupabaseUserProfileGateway(get()) }
-    single<LocalSyncDataSource> { SqlDelightLocalSyncDataSource(get()) }
-    single<RemoteSyncDataSource> { SupabaseSyncDataSource(get()) }
-    single<SyncManager> { LocalFirstSyncManager(get(), get(), get(), get()) }
-}

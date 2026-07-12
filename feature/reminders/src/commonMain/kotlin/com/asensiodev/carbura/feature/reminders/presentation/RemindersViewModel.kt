@@ -87,23 +87,29 @@ class RemindersViewModel(
             return
         }
 
-        val dueDate = state.dueDate.trim().ifBlank { null }?.let { value ->
-            runCatching { CalendarDate(value) }.getOrNull() ?: run {
-                emitValidation(CarburaString.ValidationInvalidReminderDate)
-                return
+        val dueDate =
+            state.dueDate.trim().ifBlank { null }?.let { value ->
+                runCatching { CalendarDate(value) }.getOrNull() ?: run {
+                    emitValidation(CarburaString.ValidationInvalidReminderDate)
+                    return
+                }
             }
-        }
-        val dueOdometer = state.dueOdometerKm.trim().ifBlank { null }?.toIntOrNull()
+        val dueOdometer =
+            state.dueOdometerKm
+                .trim()
+                .ifBlank { null }
+                ?.toIntOrNull()
 
-        val reminder = Reminder(
-            id = nextReminderId(),
-            familyId = familyId,
-            vehicleId = vehicleId,
-            maintenanceTypeId = null,
-            title = state.title.trim(),
-            dueDate = dueDate,
-            dueOdometerKm = dueOdometer,
-        )
+        val reminder =
+            Reminder(
+                id = nextReminderId(),
+                familyId = familyId,
+                vehicleId = vehicleId,
+                maintenanceTypeId = null,
+                title = state.title.trim(),
+                dueDate = dueDate,
+                dueOdometerKm = dueOdometer,
+            )
 
         when (val result = withContext(dispatchers.io) { createReminderUseCase(reminder) }) {
             is DomainResult.Success -> {
@@ -132,7 +138,11 @@ class RemindersViewModel(
     }
 
     private suspend fun completeReminder(reminderId: ReminderId) {
-        val title = _uiState.value.reminders.firstOrNull { it.id == reminderId }?.title.orEmpty()
+        val title =
+            _uiState.value.reminders
+                .firstOrNull { it.id == reminderId }
+                ?.title
+                .orEmpty()
         withContext(dispatchers.io) { completeReminderUseCase(reminderId) }
         val reminders = withContext(dispatchers.io) { getPendingRemindersUseCase(familyId) }
         _uiState.update { it.copy(reminders = reminders, errorMessage = null) }
@@ -141,7 +151,11 @@ class RemindersViewModel(
     }
 
     private suspend fun deleteReminder(reminderId: ReminderId) {
-        val title = _uiState.value.reminders.firstOrNull { it.id == reminderId }?.title.orEmpty()
+        val title =
+            _uiState.value.reminders
+                .firstOrNull { it.id == reminderId }
+                ?.title
+                .orEmpty()
         withContext(dispatchers.io) { deleteReminderUseCase(reminderId) }
         val reminders = withContext(dispatchers.io) { getPendingRemindersUseCase(familyId) }
         _uiState.update { it.copy(reminders = reminders, errorMessage = null) }

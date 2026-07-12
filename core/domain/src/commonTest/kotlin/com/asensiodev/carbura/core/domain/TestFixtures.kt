@@ -17,13 +17,14 @@ internal val testMaintenanceTypeId = MaintenanceTypeId("maintenance-type-1")
 internal fun testVehicle(
     name: String = "Coche familiar",
     odometerKm: Int = 12000,
-): Vehicle = Vehicle(
-    id = testVehicleId,
-    familyId = testFamilyId,
-    name = name,
-    type = VehicleType.Car,
-    currentOdometerKm = odometerKm,
-)
+): Vehicle =
+    Vehicle(
+        id = testVehicleId,
+        familyId = testFamilyId,
+        name = name,
+        type = VehicleType.Car,
+        currentOdometerKm = odometerKm,
+    )
 
 internal fun testMaintenanceRecord(
     id: String = "record-1",
@@ -32,14 +33,15 @@ internal fun testMaintenanceRecord(
     odometerKm: Int? = 12000,
     costCents: Int? = 5500,
     nextDueDate: String? = null,
-): MaintenanceRecord = MaintenanceRecord(
-    id = MaintenanceRecordId(id),
-    familyId = testFamilyId,
-    vehicleId = testVehicleId,
-    maintenanceTypeId = testMaintenanceTypeId,
-    maintenanceTypeCode = code,
-    performedOn = CalendarDate(performedOn),
-    odometerKm = odometerKm,
-    costCents = costCents,
-    nextDueDate = nextDueDate?.let(::CalendarDate),
-)
+): MaintenanceRecord =
+    MaintenanceRecord(
+        id = MaintenanceRecordId(id),
+        familyId = testFamilyId,
+        vehicleId = testVehicleId,
+        maintenanceTypeId = testMaintenanceTypeId,
+        maintenanceTypeCode = code,
+        performedOn = CalendarDate(performedOn),
+        odometerKm = odometerKm,
+        costCents = costCents,
+        nextDueDate = nextDueDate?.let(::CalendarDate),
+    )

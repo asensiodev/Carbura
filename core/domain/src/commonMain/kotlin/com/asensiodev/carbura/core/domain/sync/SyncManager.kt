@@ -9,11 +9,17 @@ data class SyncStatus(
 )
 
 sealed interface SyncResult {
-    data class Success(val syncedAtMillis: Long) : SyncResult
-    data class Failure(val message: String) : SyncResult
+    data class Success(
+        val syncedAtMillis: Long,
+    ) : SyncResult
+
+    data class Failure(
+        val message: String,
+    ) : SyncResult
 }
 
 interface SyncManager {
     val status: StateFlow<SyncStatus>
+
     suspend fun syncNow(): SyncResult
 }

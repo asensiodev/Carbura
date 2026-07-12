@@ -4,12 +4,13 @@ plugins {
     alias(libs.plugins.convention.android.application.compose)
 }
 
-val localProperties = Properties().apply {
-    val localPropertiesFile = rootProject.file("local.properties")
-    if (localPropertiesFile.exists()) {
-        localPropertiesFile.inputStream().use(::load)
+val localProperties =
+    Properties().apply {
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use(::load)
+        }
     }
-}
 
 fun localProperty(name: String): String = localProperties.getProperty(name).orEmpty()
 
@@ -46,4 +47,8 @@ dependencies {
     implementation(libs.androidx.navigation3.ui)
 
     debugImplementation(libs.bundles.compose.debug)
+}
+
+tasks.named("preBuild") {
+    dependsOn(":copyGitHooks")
 }

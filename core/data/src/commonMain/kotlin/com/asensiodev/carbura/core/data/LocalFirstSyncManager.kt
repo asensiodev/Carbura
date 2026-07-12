@@ -24,27 +24,28 @@ internal class LocalFirstSyncManager(
 
     override val status: StateFlow<SyncStatus> = _status
 
-    override suspend fun syncNow(): SyncResult = mutex.withLock {
-        _status.update { it.copy(isSyncing = true, lastErrorMessage = null) }
-        runCatching { syncActiveFamily() }
-            .fold(
-                onSuccess = { syncedAt ->
-                    _status.update {
-                        it.copy(
-                            isSyncing = false,
-                            lastSyncedAtMillis = syncedAt,
-                            lastErrorMessage = null,
-                        )
-                    }
-                    SyncResult.Success(syncedAt)
-                },
-                onFailure = { error ->
-                    val message = error.message ?: error::class.simpleName ?: "Sync failed"
-                    _status.update { it.copy(isSyncing = false, lastErrorMessage = message) }
-                    SyncResult.Failure(message)
-                }
-            )
-    }
+    override suspend fun syncNow(): SyncResult =
+        mutex.withLock {
+            _status.update { it.copy(isSyncing = true, lastErrorMessage = null) }
+            runCatching { syncActiveFamily() }
+                .fold(
+                    onSuccess = { syncedAt ->
+                        _status.update {
+                            it.copy(
+                                isSyncing = false,
+                                lastSyncedAtMillis = syncedAt,
+                                lastErrorMessage = null,
+                            )
+                        }
+                        SyncResult.Success(syncedAt)
+                    },
+                    onFailure = { error ->
+                        val message = error.message ?: error::class.simpleName ?: "Sync failed"
+                        _status.update { it.copy(isSyncing = false, lastErrorMessage = message) }
+                        SyncResult.Failure(message)
+                    },
+                )
+        }
 
     private suspend fun syncActiveFamily(): Long {
         val familyId = resolveFamilyId()
@@ -63,28 +64,31 @@ internal class LocalFirstSyncManager(
     private suspend fun pushPendingChanges(familyId: FamilyId) {
         val remoteVehicles = remote.getVehicles(familyId).associateBy { it.id }
         val pendingVehicles = local.getPendingVehicles().filter { it.familyId == familyId.value }
-        val vehiclesToPush = pendingVehicles.filter { localVehicle ->
-            val remoteVehicle = remoteVehicles[localVehicle.id]
-            remoteVehicle == null || localVehicle.updatedAt >= remoteVehicle.updatedAt
-        }
+        val vehiclesToPush =
+            pendingVehicles.filter { localVehicle ->
+                val remoteVehicle = remoteVehicles[localVehicle.id]
+                remoteVehicle == null || localVehicle.updatedAt >= remoteVehicle.updatedAt
+            }
         remote.upsertVehicles(vehiclesToPush)
         vehiclesToPush.forEach { local.markVehicleSynced(it.id) }
 
         val remoteMaintenance = remote.getMaintenanceRecords(familyId).associateBy { it.id }
         val pendingMaintenance = local.getPendingMaintenanceRecords().filter { it.familyId == familyId.value }
-        val maintenanceToPush = pendingMaintenance.filter { localRecord ->
-            val remoteRecord = remoteMaintenance[localRecord.id]
-            remoteRecord == null || localRecord.updatedAt >= remoteRecord.updatedAt
-        }
+        val maintenanceToPush =
+            pendingMaintenance.filter { localRecord ->
+                val remoteRecord = remoteMaintenance[localRecord.id]
+                remoteRecord == null || localRecord.updatedAt >= remoteRecord.updatedAt
+            }
         remote.upsertMaintenanceRecords(maintenanceToPush)
         maintenanceToPush.forEach { local.markMaintenanceRecordSynced(it.id) }
 
         val remoteReminders = remote.getReminders(familyId).associateBy { it.id }
         val pendingReminders = local.getPendingReminders().filter { it.familyId == familyId.value }
-        val remindersToPush = pendingReminders.filter { localReminder ->
-            val remoteReminder = remoteReminders[localReminder.id]
-            remoteReminder == null || localReminder.updatedAt >= remoteReminder.updatedAt
-        }
+        val remindersToPush =
+            pendingReminders.filter { localReminder ->
+                val remoteReminder = remoteReminders[localReminder.id]
+                remoteReminder == null || localReminder.updatedAt >= remoteReminder.updatedAt
+            }
         remote.upsertReminders(remindersToPush)
         remindersToPush.forEach { local.markReminderSynced(it.id) }
     }
@@ -95,7 +99,10 @@ internal class LocalFirstSyncManager(
         mergeReminders(familyId, remote.getReminders(familyId))
     }
 
-    private suspend fun mergeVehicles(familyId: FamilyId, remoteVehicles: List<SyncVehicle>) {
+    private suspend fun mergeVehicles(
+        familyId: FamilyId,
+        remoteVehicles: List<SyncVehicle>,
+    ) {
         val localVehicles = local.getVehicles(familyId).associateBy { it.id }
         remoteVehicles.forEach { remoteVehicle ->
             val localVehicle = localVehicles[remoteVehicle.id]
@@ -118,7 +125,10 @@ internal class LocalFirstSyncManager(
         }
     }
 
-    private suspend fun mergeReminders(familyId: FamilyId, remoteReminders: List<SyncReminder>) {
+    private suspend fun mergeReminders(
+        familyId: FamilyId,
+        remoteReminders: List<SyncReminder>,
+    ) {
         val localReminders = local.getReminders(familyId).associateBy { it.id }
         remoteReminders.forEach { remoteReminder ->
             val localReminder = localReminders[remoteReminder.id]

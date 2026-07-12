@@ -6,12 +6,13 @@ import kotlin.test.assertEquals
 class SupabaseUserProfileGatewayTest {
     @Test
     fun mapsUserProfileDtoToRemoteProfile() {
-        val profile = UserProfileDto(
-            userId = "user-1",
-            familyId = "family-1",
-            displayName = "Angela",
-            email = "angela@example.com",
-        ).toRemoteUserProfile()
+        val profile =
+            UserProfileDto(
+                userId = "user-1",
+                familyId = "family-1",
+                displayName = "Angela",
+                email = "angela@example.com",
+            ).toRemoteUserProfile()
 
         assertEquals("user-1", profile.userId.value)
         assertEquals("family-1", profile.familyId.value)

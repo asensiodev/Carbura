@@ -12,9 +12,10 @@ class DeleteVehicleUseCase(
     private val notificationScheduler: ReminderNotificationScheduler,
 ) : SuspendUseCase<VehicleId, Unit> {
     override suspend fun invoke(params: VehicleId) {
-        val reminderIds = reminderRepository
-            .getRemindersByVehicle(params)
-            .map { it.id }
+        val reminderIds =
+            reminderRepository
+                .getRemindersByVehicle(params)
+                .map { it.id }
         repository.deleteVehicle(params)
         reminderIds.forEach { notificationScheduler.cancel(it) }
     }

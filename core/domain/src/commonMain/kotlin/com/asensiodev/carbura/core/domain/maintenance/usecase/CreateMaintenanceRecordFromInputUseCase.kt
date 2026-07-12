@@ -17,25 +17,28 @@ class CreateMaintenanceRecordFromInputUseCase(
             return DomainResult.ValidationError(ValidationFailure.BlankMaintenanceType)
         }
 
-        val performedOn = runCatching { CalendarDate(params.performedOn.trim()) }.getOrNull()
-            ?: return DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceDate)
+        val performedOn =
+            runCatching { CalendarDate(params.performedOn.trim()) }.getOrNull()
+                ?: return DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceDate)
         val odometerKm = params.odometerKm.toIntOrNull() ?: -1
-        val costCents = params.cost.toCostCentsOrNull()
-            ?: if (params.cost.isBlank()) null else return DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceCost)
+        val costCents =
+            params.cost.toCostCentsOrNull()
+                ?: if (params.cost.isBlank()) null else return DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceCost)
         val maintenanceTypeId = MaintenanceTypeId("type-${type.lowercase().replace(' ', '-')}")
 
-        val record = MaintenanceRecord(
-            id = params.id,
-            familyId = params.familyId,
-            vehicleId = params.vehicleId,
-            maintenanceTypeId = maintenanceTypeId,
-            maintenanceTypeCode = MaintenanceTypeCode.Custom,
-            performedOn = performedOn,
-            odometerKm = odometerKm,
-            costCents = costCents,
-            workshop = params.workshop.trim().ifBlank { null },
-            notes = params.notes.trim().ifBlank { null },
-        )
+        val record =
+            MaintenanceRecord(
+                id = params.id,
+                familyId = params.familyId,
+                vehicleId = params.vehicleId,
+                maintenanceTypeId = maintenanceTypeId,
+                maintenanceTypeCode = MaintenanceTypeCode.Custom,
+                performedOn = performedOn,
+                odometerKm = odometerKm,
+                costCents = costCents,
+                workshop = params.workshop.trim().ifBlank { null },
+                notes = params.notes.trim().ifBlank { null },
+            )
         return createMaintenanceRecordUseCase(record)
     }
 }

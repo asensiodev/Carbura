@@ -14,22 +14,23 @@ import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
-actual val dataModule: Module = module {
-    single<DispatcherProvider> { DefaultDispatcherProvider() }
-    single<SqlDriver> {
-        AndroidSqliteDriver(
-            schema = CarburaDatabase.Schema,
-            context = get<Context>(),
-            name = "carbura.db",
-        )
+actual val dataModule: Module =
+    module {
+        single<DispatcherProvider> { DefaultDispatcherProvider() }
+        single<SqlDriver> {
+            AndroidSqliteDriver(
+                schema = CarburaDatabase.Schema,
+                context = get<Context>(),
+                name = "carbura.db",
+            )
+        }
+        single { CarburaDatabase(get()) }
+        single<ReminderNotificationScheduler> { AndroidReminderNotificationScheduler(get()) }
+        single<VehicleRepository> { LocalVehicleRepository(get()) }
+        single<MaintenanceRecordRepository> { LocalMaintenanceRecordRepository(get()) }
+        single<ReminderRepository> { LocalReminderRepository(get()) }
+        single<RemoteUserProfileGateway> { SupabaseUserProfileGateway(get()) }
+        single<LocalSyncDataSource> { SqlDelightLocalSyncDataSource(get()) }
+        single<RemoteSyncDataSource> { SupabaseSyncDataSource(get()) }
+        single<SyncManager> { LocalFirstSyncManager(get(), get(), get(), get()) }
     }
-    single { CarburaDatabase(get()) }
-    single<ReminderNotificationScheduler> { AndroidReminderNotificationScheduler(get()) }
-    single<VehicleRepository> { LocalVehicleRepository(get()) }
-    single<MaintenanceRecordRepository> { LocalMaintenanceRecordRepository(get()) }
-    single<ReminderRepository> { LocalReminderRepository(get()) }
-    single<RemoteUserProfileGateway> { SupabaseUserProfileGateway(get()) }
-    single<LocalSyncDataSource> { SqlDelightLocalSyncDataSource(get()) }
-    single<RemoteSyncDataSource> { SupabaseSyncDataSource(get()) }
-    single<SyncManager> { LocalFirstSyncManager(get(), get(), get(), get()) }
-}

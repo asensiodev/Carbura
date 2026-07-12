@@ -9,14 +9,18 @@ sealed interface CarburaRoute : NavKey {
     data object Garage : CarburaRoute
 
     @Serializable
-    data class VehicleDetail(val vehicleId: String) : CarburaRoute {
+    data class VehicleDetail(
+        val vehicleId: String,
+    ) : CarburaRoute {
         companion object {
             fun from(vehicleId: VehicleId): VehicleDetail = VehicleDetail(vehicleId.value)
         }
     }
 
     @Serializable
-    data class CreateMaintenance(val vehicleId: String) : CarburaRoute {
+    data class CreateMaintenance(
+        val vehicleId: String,
+    ) : CarburaRoute {
         companion object {
             fun from(vehicleId: VehicleId): CreateMaintenance = CreateMaintenance(vehicleId.value)
         }

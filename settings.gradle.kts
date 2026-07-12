@@ -34,3 +34,5 @@ include(":feature:onboarding")
 include(":feature:garage")
 include(":feature:maintenance")
 include(":feature:reminders")
+
+include(":quality:architecture")

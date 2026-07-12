@@ -5,17 +5,29 @@ import com.asensiodev.carbura.core.model.FamilyId
 
 internal interface LocalSyncDataSource {
     suspend fun getPendingVehicles(): List<SyncVehicle>
+
     suspend fun getPendingMaintenanceRecords(): List<SyncMaintenanceRecord>
+
     suspend fun getPendingReminders(): List<SyncReminder>
+
     suspend fun getVehicles(familyId: FamilyId): List<SyncVehicle>
+
     suspend fun getMaintenanceRecords(familyId: FamilyId): List<SyncMaintenanceRecord>
+
     suspend fun getReminders(familyId: FamilyId): List<SyncReminder>
+
     suspend fun upsertSyncedVehicle(vehicle: SyncVehicle)
+
     suspend fun upsertSyncedMaintenanceRecord(record: SyncMaintenanceRecord)
+
     suspend fun upsertSyncedReminder(reminder: SyncReminder)
+
     suspend fun markVehicleSynced(id: String)
+
     suspend fun markMaintenanceRecordSynced(id: String)
+
     suspend fun markReminderSynced(id: String)
+
     suspend fun adoptLegacyLocalFamily(familyId: FamilyId)
 }
 
@@ -23,22 +35,41 @@ internal class SqlDelightLocalSyncDataSource(
     private val database: CarburaDatabase,
 ) : LocalSyncDataSource {
     override suspend fun getPendingVehicles(): List<SyncVehicle> =
-        database.carburaDatabaseQueries.selectPendingSyncVehicles().executeAsList().map { it.toSyncVehicle() }
+        database.carburaDatabaseQueries
+            .selectPendingSyncVehicles()
+            .executeAsList()
+            .map { it.toSyncVehicle() }
 
     override suspend fun getPendingMaintenanceRecords(): List<SyncMaintenanceRecord> =
-        database.carburaDatabaseQueries.selectPendingSyncMaintenanceRecords().executeAsList().map { it.toSyncMaintenanceRecord() }
+        database.carburaDatabaseQueries
+            .selectPendingSyncMaintenanceRecords()
+            .executeAsList()
+            .map { it.toSyncMaintenanceRecord() }
 
     override suspend fun getPendingReminders(): List<SyncReminder> =
-        database.carburaDatabaseQueries.selectPendingSyncReminders().executeAsList().map { it.toSyncReminder() }
+        database.carburaDatabaseQueries
+            .selectPendingSyncReminders()
+            .executeAsList()
+            .map { it.toSyncReminder() }
 
     override suspend fun getVehicles(familyId: FamilyId): List<SyncVehicle> =
-        database.carburaDatabaseQueries.selectSyncVehiclesByFamily(familyId.value).executeAsList().map { it.toSyncVehicle() }
+        database.carburaDatabaseQueries
+            .selectSyncVehiclesByFamily(familyId.value)
+            .executeAsList()
+            .map { it.toSyncVehicle() }
 
     override suspend fun getMaintenanceRecords(familyId: FamilyId): List<SyncMaintenanceRecord> =
-        database.carburaDatabaseQueries.selectSyncMaintenanceRecordsByFamily(familyId.value).executeAsList().map { it.toSyncMaintenanceRecord() }
+        database.carburaDatabaseQueries
+            .selectSyncMaintenanceRecordsByFamily(
+                familyId.value,
+            ).executeAsList()
+            .map { it.toSyncMaintenanceRecord() }
 
     override suspend fun getReminders(familyId: FamilyId): List<SyncReminder> =
-        database.carburaDatabaseQueries.selectSyncRemindersByFamily(familyId.value).executeAsList().map { it.toSyncReminder() }
+        database.carburaDatabaseQueries
+            .selectSyncRemindersByFamily(familyId.value)
+            .executeAsList()
+            .map { it.toSyncReminder() }
 
     override suspend fun upsertSyncedVehicle(vehicle: SyncVehicle) {
         database.carburaDatabaseQueries.upsertVehicle(

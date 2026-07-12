@@ -7,11 +7,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
@@ -196,15 +196,16 @@ private fun CarburaApp(
     }
 
     DisposableEffect(lifecycleOwner, onboardingState.isAuthenticated) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_START && onboardingState.isAuthenticated) {
-                val now = System.currentTimeMillis()
-                if (now - lastForegroundSyncAttempt.longValue >= FOREGROUND_SYNC_THROTTLE_MILLIS) {
-                    lastForegroundSyncAttempt.longValue = now
-                    syncScope.launch { syncManager.syncNow() }
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_START && onboardingState.isAuthenticated) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastForegroundSyncAttempt.longValue >= FOREGROUND_SYNC_THROTTLE_MILLIS) {
+                        lastForegroundSyncAttempt.longValue = now
+                        syncScope.launch { syncManager.syncNow() }
+                    }
                 }
             }
-        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
@@ -234,12 +235,13 @@ private fun CarburaApp(
         },
     ) { contentPadding ->
         val layoutDirection = LocalLayoutDirection.current
-        val navPadding = PaddingValues(
-            start = contentPadding.calculateStartPadding(layoutDirection),
-            top = Spacings.spacing0,
-            end = contentPadding.calculateEndPadding(layoutDirection),
-            bottom = contentPadding.calculateBottomPadding(),
-        )
+        val navPadding =
+            PaddingValues(
+                start = contentPadding.calculateStartPadding(layoutDirection),
+                top = Spacings.spacing0,
+                end = contentPadding.calculateEndPadding(layoutDirection),
+                bottom = contentPadding.calculateBottomPadding(),
+            )
         NavDisplay(
             modifier = Modifier.padding(navPadding),
             backStack = backStack,
@@ -250,47 +252,52 @@ private fun CarburaApp(
             },
             entryProvider = { route ->
                 when (val carburaRoute = route as CarburaRoute) {
-                    CarburaRoute.Garage -> NavEntry(route) {
-                        GarageRoute(
-                            familyId = familyId,
-                            onVehicleSelected = { vehicleId ->
-                                backStack.add(CarburaRoute.VehicleDetail(vehicleId))
-                            },
-                        )
-                    }
+                    CarburaRoute.Garage ->
+                        NavEntry(route) {
+                            GarageRoute(
+                                familyId = familyId,
+                                onVehicleSelected = { vehicleId ->
+                                    backStack.add(CarburaRoute.VehicleDetail(vehicleId))
+                                },
+                            )
+                        }
 
-                    is CarburaRoute.VehicleDetail -> NavEntry(route) {
-                        MaintenanceHistoryRoute(
-                            vehicleId = carburaRoute.vehicleId,
-                            familyId = familyId,
-                            onBack = {
-                                if (backStack.size > 1) {
-                                    backStack.removeLastOrNull()
-                                }
-                            },
-                        )
-                    }
+                    is CarburaRoute.VehicleDetail ->
+                        NavEntry(route) {
+                            MaintenanceHistoryRoute(
+                                vehicleId = carburaRoute.vehicleId,
+                                familyId = familyId,
+                                onBack = {
+                                    if (backStack.size > 1) {
+                                        backStack.removeLastOrNull()
+                                    }
+                                },
+                            )
+                        }
 
-                    CarburaRoute.Reminders -> NavEntry(route) {
-                        RemindersRoute(familyId = familyId)
-                    }
+                    CarburaRoute.Reminders ->
+                        NavEntry(route) {
+                            RemindersRoute(familyId = familyId)
+                        }
 
-                    CarburaRoute.User -> NavEntry(route) {
-                        UserRoute(
-                            displayName = onboardingState.displayName,
-                            email = onboardingState.email,
-                            familyName = onboardingState.familyName,
-                            syncStatus = syncStatus,
-                            onSyncNow = { syncScope.launch { syncManager.syncNow() } },
-                            onSignOut = {
-                                onboardingViewModel.onEvent(OnboardingEvent.SignOutClicked)
-                            },
-                        )
-                    }
+                    CarburaRoute.User ->
+                        NavEntry(route) {
+                            UserRoute(
+                                displayName = onboardingState.displayName,
+                                email = onboardingState.email,
+                                familyName = onboardingState.familyName,
+                                syncStatus = syncStatus,
+                                onSyncNow = { syncScope.launch { syncManager.syncNow() } },
+                                onSignOut = {
+                                    onboardingViewModel.onEvent(OnboardingEvent.SignOutClicked)
+                                },
+                            )
+                        }
 
-                    is CarburaRoute.CreateMaintenance -> NavEntry(route) {
-                        GarageRoute(familyId = familyId)
-                    }
+                    is CarburaRoute.CreateMaintenance ->
+                        NavEntry(route) {
+                            GarageRoute(familyId = familyId)
+                        }
                 }
             },
         )
@@ -305,9 +312,10 @@ private fun CarburaMainScaffold(
     onUserSelected: () -> Unit,
     content: @Composable (PaddingValues) -> Unit,
 ) {
-    val showBottomBar = currentRoute == CarburaRoute.Garage ||
-        currentRoute == CarburaRoute.Reminders ||
-        currentRoute == CarburaRoute.User
+    val showBottomBar =
+        currentRoute == CarburaRoute.Garage ||
+            currentRoute == CarburaRoute.Reminders ||
+            currentRoute == CarburaRoute.User
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
@@ -376,11 +384,12 @@ private fun UserRoute(
         color = MaterialTheme.colorScheme.background,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(Spacings.spacing24),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(Spacings.spacing24),
             verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
         ) {
             Text(
@@ -432,12 +441,13 @@ private fun UserRoute(
                             onClick = {},
                             label = {
                                 Text(
-                                    text = when {
-                                        syncStatus.isSyncing -> stringResource(R.string.user_syncing_status)
-                                        syncStatus.lastErrorMessage != null -> stringResource(R.string.user_sync_pending)
-                                        syncStatus.lastSyncedAtMillis != null -> stringResource(R.string.user_sync_ready)
-                                        else -> stringResource(R.string.user_sync_pending)
-                                    },
+                                    text =
+                                        when {
+                                            syncStatus.isSyncing -> stringResource(R.string.user_syncing_status)
+                                            syncStatus.lastErrorMessage != null -> stringResource(R.string.user_sync_pending)
+                                            syncStatus.lastSyncedAtMillis != null -> stringResource(R.string.user_sync_ready)
+                                            else -> stringResource(R.string.user_sync_pending)
+                                        },
                                 )
                             },
                         )
@@ -455,17 +465,19 @@ private fun UserRoute(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = syncStatus.lastSyncedAtMillis?.let {
-                            stringResource(R.string.user_sync_last, it.formatSyncTime())
-                        } ?: stringResource(R.string.user_sync_never),
+                        text =
+                            syncStatus.lastSyncedAtMillis?.let {
+                                stringResource(R.string.user_sync_last, it.formatSyncTime())
+                            } ?: stringResource(R.string.user_sync_never),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     syncStatus.lastErrorMessage?.let { error ->
                         Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = Spacings.spacing4),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = Spacings.spacing4),
                             verticalArrangement = Arrangement.spacedBy(Spacings.spacing4),
                         ) {
                             Text(
@@ -491,11 +503,12 @@ private fun UserRoute(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
-                            text = if (syncStatus.isSyncing) {
-                                stringResource(R.string.user_syncing_button)
-                            } else {
-                                stringResource(R.string.user_sync_now_button)
-                            },
+                            text =
+                                if (syncStatus.isSyncing) {
+                                    stringResource(R.string.user_syncing_button)
+                                } else {
+                                    stringResource(R.string.user_sync_now_button)
+                                },
                         )
                     }
                 }
@@ -546,21 +559,24 @@ private fun UserRoute(
     }
 }
 
-private fun String?.cleanUserText(): String? = this
-    ?.trim()
-    ?.trim('"')
-    ?.replace("\"", "")
-    ?.takeIf { it.isNotBlank() }
+private fun String?.cleanUserText(): String? =
+    this
+        ?.trim()
+        ?.trim('"')
+        ?.replace("\"", "")
+        ?.takeIf { it.isNotBlank() }
 
 @Composable
-private fun rememberOnboardingViewModel(): OnboardingViewModel = remember {
-    GlobalContext.get().get()
-}
+private fun rememberOnboardingViewModel(): OnboardingViewModel =
+    remember {
+        GlobalContext.get().get()
+    }
 
 @Composable
-private fun rememberSyncManager(): SyncManager = remember {
-    GlobalContext.get().get()
-}
+private fun rememberSyncManager(): SyncManager =
+    remember {
+        GlobalContext.get().get()
+    }
 
 @Composable
 private fun CarburaLoadingScreen(message: String? = null) {
@@ -569,10 +585,11 @@ private fun CarburaLoadingScreen(message: String? = null) {
         color = MaterialTheme.colorScheme.background,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .safeDrawingPadding()
-                .padding(Spacings.spacing24),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .safeDrawingPadding()
+                    .padding(Spacings.spacing24),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -589,10 +606,11 @@ private fun CarburaLoadingScreen(message: String? = null) {
     }
 }
 
-private fun Long.formatSyncTime(): String = DateTimeFormatter
-    .ofPattern("dd/MM HH:mm")
-    .withZone(ZoneId.systemDefault())
-    .format(Instant.ofEpochMilli(this))
+private fun Long.formatSyncTime(): String =
+    DateTimeFormatter
+        .ofPattern("dd/MM HH:mm")
+        .withZone(ZoneId.systemDefault())
+        .format(Instant.ofEpochMilli(this))
 
 private const val FOREGROUND_SYNC_THROTTLE_MILLIS = 60_000L
 private const val IN_APP_SYNC_INTERVAL_MILLIS = 5 * 60_000L

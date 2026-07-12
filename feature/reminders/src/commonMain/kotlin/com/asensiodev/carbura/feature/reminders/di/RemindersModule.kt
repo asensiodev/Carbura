@@ -8,21 +8,22 @@ import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.feature.reminders.presentation.RemindersViewModel
 import org.koin.dsl.module
 
-val remindersModule = module {
-    factory { CreateReminderUseCase(get(), get()) }
-    factory { GetPendingRemindersUseCase(get()) }
-    factory { CompleteReminderUseCase(get(), get()) }
-    factory { DeleteReminderUseCase(get(), get()) }
-    factory { parameters ->
-        RemindersViewModel(
-            familyId = parameters.get<FamilyId>(),
-            vehicleRepository = get(),
-            dispatchers = get(),
-            createReminderUseCase = get(),
-            getPendingRemindersUseCase = get(),
-            completeReminderUseCase = get(),
-            deleteReminderUseCase = get(),
-            syncManager = get(),
-        )
+val remindersModule =
+    module {
+        factory { CreateReminderUseCase(get(), get()) }
+        factory { GetPendingRemindersUseCase(get()) }
+        factory { CompleteReminderUseCase(get(), get()) }
+        factory { DeleteReminderUseCase(get(), get()) }
+        factory { parameters ->
+            RemindersViewModel(
+                familyId = parameters.get<FamilyId>(),
+                vehicleRepository = get(),
+                dispatchers = get(),
+                createReminderUseCase = get(),
+                getPendingRemindersUseCase = get(),
+                completeReminderUseCase = get(),
+                deleteReminderUseCase = get(),
+                syncManager = get(),
+            )
+        }
     }
-}

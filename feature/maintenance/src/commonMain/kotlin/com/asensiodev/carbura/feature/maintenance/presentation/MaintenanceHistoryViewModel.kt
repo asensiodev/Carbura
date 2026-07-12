@@ -72,17 +72,18 @@ class MaintenanceHistoryViewModel(
 
     private suspend fun createMaintenance() {
         val state = _uiState.value
-        val input = CreateMaintenanceRecordInput(
-            id = nextRecordId(),
-            familyId = familyId,
-            vehicleId = vehicleId,
-            type = state.type,
-            performedOn = state.performedOn,
-            odometerKm = state.odometerKm,
-            cost = state.cost,
-            workshop = state.workshop,
-            notes = state.notes,
-        )
+        val input =
+            CreateMaintenanceRecordInput(
+                id = nextRecordId(),
+                familyId = familyId,
+                vehicleId = vehicleId,
+                type = state.type,
+                performedOn = state.performedOn,
+                odometerKm = state.odometerKm,
+                cost = state.cost,
+                workshop = state.workshop,
+                notes = state.notes,
+            )
 
         when (val result = withContext(dispatchers.io) { createMaintenanceRecordFromInputUseCase(input) }) {
             is DomainResult.Success -> {
@@ -114,7 +115,11 @@ class MaintenanceHistoryViewModel(
     }
 
     private suspend fun deleteMaintenance(recordId: MaintenanceRecordId) {
-        val type = _uiState.value.records.firstOrNull { it.id == recordId }?.displayType().orEmpty()
+        val type =
+            _uiState.value.records
+                .firstOrNull { it.id == recordId }
+                ?.displayType()
+                .orEmpty()
         withContext(dispatchers.io) { deleteMaintenanceRecordUseCase(recordId) }
         val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
         _uiState.update { it.copy(records = records, errorMessage = null) }
@@ -129,5 +134,4 @@ class MaintenanceHistoryViewModel(
 
 internal fun MaintenanceRecord.displayType(): String = maintenanceTypeId.value.removePrefix("type-").replace('-', ' ')
 
-private fun randomMaintenanceRecordId(): MaintenanceRecordId =
-    MaintenanceRecordId("maintenance-${Random.nextInt(1, Int.MAX_VALUE)}")
+private fun randomMaintenanceRecordId(): MaintenanceRecordId = MaintenanceRecordId("maintenance-${Random.nextInt(1, Int.MAX_VALUE)}")

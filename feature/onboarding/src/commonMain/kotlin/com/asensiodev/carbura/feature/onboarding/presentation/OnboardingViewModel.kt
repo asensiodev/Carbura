@@ -2,12 +2,11 @@ package com.asensiodev.carbura.feature.onboarding.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.auth.AuthGateway
 import com.asensiodev.carbura.core.domain.auth.AuthSession
-import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfile
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
-import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
@@ -40,9 +39,10 @@ class OnboardingViewModel(
             OnboardingEvent.Started -> scope.launch { loadCurrentSession() }
             OnboardingEvent.GoogleSignInClicked -> scope.launch { signInWithGoogle() }
             is OnboardingEvent.GoogleIdTokenReceived -> scope.launch { signInWithGoogle(event.idToken) }
-            is OnboardingEvent.GoogleSignInError -> _uiState.update {
-                it.copy(isLoading = false, errorMessage = event.message)
-            }
+            is OnboardingEvent.GoogleSignInError ->
+                _uiState.update {
+                    it.copy(isLoading = false, errorMessage = event.message)
+                }
             OnboardingEvent.SignOutClicked -> scope.launch { signOut() }
             OnboardingEvent.ErrorDismissed -> _uiState.update { it.copy(errorMessage = null) }
         }
@@ -50,18 +50,19 @@ class OnboardingViewModel(
 
     private suspend fun loadCurrentSession() {
         _uiState.update { it.copy(isInitializing = true, errorMessage = null) }
-        val session = runCatching {
-            withContext(dispatchers.io) { authGateway.currentSession() }
-        }.getOrElse { error ->
-            _uiState.update {
-                it.copy(
-                    isInitializing = false,
-                    isAuthenticated = false,
-                    errorMessage = error.message ?: "Unable to check current session.",
-                )
+        val session =
+            runCatching {
+                withContext(dispatchers.io) { authGateway.currentSession() }
+            }.getOrElse { error ->
+                _uiState.update {
+                    it.copy(
+                        isInitializing = false,
+                        isAuthenticated = false,
+                        errorMessage = error.message ?: "Unable to check current session.",
+                    )
+                }
+                return
             }
-            return
-        }
 
         if (session == null) {
             _uiState.update {
@@ -76,35 +77,37 @@ class OnboardingViewModel(
                 )
             }
         } else {
-            val profileResult = runCatching {
-                withContext(dispatchers.io) {
-                    remoteUserProfileGateway.getProfileForUser(UserId(session.user.id))
+            val profileResult =
+                runCatching {
+                    withContext(dispatchers.io) {
+                        remoteUserProfileGateway.getProfileForUser(UserId(session.user.id))
+                    }
                 }
-            }
-            profileResult.onSuccess { profile ->
-                if (profile == null) {
-                    ensureProfileAndNavigate(session, isInitializing = true)
-                } else {
-                    applyAuthenticatedProfile(
-                        profile = profile,
-                        isInitializing = false,
-                        isLoading = false,
-                    )
+            profileResult
+                .onSuccess { profile ->
+                    if (profile == null) {
+                        ensureProfileAndNavigate(session, isInitializing = true)
+                    } else {
+                        applyAuthenticatedProfile(
+                            profile = profile,
+                            isInitializing = false,
+                            isLoading = false,
+                        )
+                    }
+                }.onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isInitializing = false,
+                            isLoading = false,
+                            isAuthenticated = false,
+                            displayName = session.displayName,
+                            email = session.user.email,
+                            familyId = null,
+                            familyName = null,
+                            errorMessage = error.message ?: "Unable to load profile.",
+                        )
+                    }
                 }
-            }.onFailure { error ->
-                _uiState.update {
-                    it.copy(
-                        isInitializing = false,
-                        isLoading = false,
-                        isAuthenticated = false,
-                        displayName = session.displayName,
-                        email = session.user.email,
-                        familyId = null,
-                        familyName = null,
-                        errorMessage = error.message ?: "Unable to load profile.",
-                    )
-                }
-            }
         }
     }
 
@@ -112,60 +115,66 @@ class OnboardingViewModel(
         if (_uiState.value.isLoading) return
 
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        val result = runCatching {
-            val session = withContext(dispatchers.io) { authGateway.signInWithGoogle() }
-            val profile = withContext(dispatchers.io) {
-                remoteUserProfileGateway.getProfileForUser(UserId(session.user.id))
+        val result =
+            runCatching {
+                val session = withContext(dispatchers.io) { authGateway.signInWithGoogle() }
+                val profile =
+                    withContext(dispatchers.io) {
+                        remoteUserProfileGateway.getProfileForUser(UserId(session.user.id))
+                    }
+                session to profile
             }
-            session to profile
-        }
 
-        result.onSuccess { (session, profile) ->
-            if (profile == null) {
-                ensureProfileAndNavigate(session)
-            } else {
-                applyAuthenticatedProfile(profile = profile)
-                _effects.send(OnboardingEffect.NavigateToGarage)
+        result
+            .onSuccess { (session, profile) ->
+                if (profile == null) {
+                    ensureProfileAndNavigate(session)
+                } else {
+                    applyAuthenticatedProfile(profile = profile)
+                    _effects.send(OnboardingEffect.NavigateToGarage)
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isAuthenticated = false,
+                        errorMessage = error.message ?: "Unable to sign in.",
+                    )
+                }
             }
-        }.onFailure { error ->
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    isAuthenticated = false,
-                    errorMessage = error.message ?: "Unable to sign in.",
-                )
-            }
-        }
     }
 
     private suspend fun signInWithGoogle(idToken: String) {
         if (_uiState.value.isLoading) return
 
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        val result = runCatching {
-            val session = withContext(dispatchers.io) { authGateway.signInWithGoogle(idToken) }
-            val profile = withContext(dispatchers.io) {
-                remoteUserProfileGateway.getProfileForUser(UserId(session.user.id))
+        val result =
+            runCatching {
+                val session = withContext(dispatchers.io) { authGateway.signInWithGoogle(idToken) }
+                val profile =
+                    withContext(dispatchers.io) {
+                        remoteUserProfileGateway.getProfileForUser(UserId(session.user.id))
+                    }
+                session to profile
             }
-            session to profile
-        }
 
-        result.onSuccess { (session, profile) ->
-            if (profile == null) {
-                ensureProfileAndNavigate(session)
-            } else {
-                applyAuthenticatedProfile(profile = profile)
-                _effects.send(OnboardingEffect.NavigateToGarage)
+        result
+            .onSuccess { (session, profile) ->
+                if (profile == null) {
+                    ensureProfileAndNavigate(session)
+                } else {
+                    applyAuthenticatedProfile(profile = profile)
+                    _effects.send(OnboardingEffect.NavigateToGarage)
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isAuthenticated = false,
+                        errorMessage = error.message ?: "Unable to sign in.",
+                    )
+                }
             }
-        }.onFailure { error ->
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    isAuthenticated = false,
-                    errorMessage = error.message ?: "Unable to sign in.",
-                )
-            }
-        }
     }
 
     private suspend fun ensureProfileAndNavigate(

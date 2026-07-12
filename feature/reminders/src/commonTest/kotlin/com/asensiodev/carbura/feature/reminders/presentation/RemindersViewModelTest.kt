@@ -17,130 +17,143 @@ import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.core.testing.TestDispatcherProvider
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertIs
-import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RemindersViewModelTest {
     private val familyId = FamilyId("family-test")
-    private val vehicle = Vehicle(
-        id = VehicleId("vehicle-1"),
-        familyId = familyId,
-        name = "Coche familiar",
-        type = VehicleType.Car,
-        currentOdometerKm = 12000,
-    )
-
-    @Test
-    fun startedLoadsVehiclesAndPendingReminders() = runTest {
-        val viewModel = remindersViewModel(
-            vehicleRepository = FakeVehicleRepository(listOf(vehicle)),
-            reminderRepository = FakeReminderRepository(listOf(reminder("itv"))),
+    private val vehicle =
+        Vehicle(
+            id = VehicleId("vehicle-1"),
+            familyId = familyId,
+            name = "Coche familiar",
+            type = VehicleType.Car,
+            currentOdometerKm = 12000,
         )
 
-        viewModel.onEvent(RemindersEvent.Started)
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertFalse(state.isLoading)
-        assertEquals(listOf(vehicle), state.vehicles)
-        assertEquals(listOf("itv"), state.reminders.map { it.id.value })
-        assertEquals(vehicle.id, state.selectedVehicleId)
-    }
-
     @Test
-    fun submitValidReminderSavesAndEmitsEffect() = runTest {
-        val repository = FakeReminderRepository()
-        val viewModel = remindersViewModel(
-            vehicleRepository = FakeVehicleRepository(listOf(vehicle)),
-            reminderRepository = repository,
-        )
-        viewModel.onEvent(RemindersEvent.Started)
-        advanceUntilIdle()
+    fun startedLoadsVehiclesAndPendingReminders() =
+        runTest {
+            val viewModel =
+                remindersViewModel(
+                    vehicleRepository = FakeVehicleRepository(listOf(vehicle)),
+                    reminderRepository = FakeReminderRepository(listOf(reminder("itv"))),
+                )
 
-        viewModel.effects.test {
-            viewModel.onEvent(RemindersEvent.TitleChanged("Pasar ITV"))
-            viewModel.onEvent(RemindersEvent.DueDateChanged("2026-07-10"))
-            viewModel.onEvent(RemindersEvent.SubmitReminder)
+            viewModel.onEvent(RemindersEvent.Started)
             advanceUntilIdle()
 
-            assertIs<RemindersEffect.ReminderCreated>(awaitItem())
-            cancelAndIgnoreRemainingEvents()
+            val state = viewModel.uiState.value
+            assertFalse(state.isLoading)
+            assertEquals(listOf(vehicle), state.vehicles)
+            assertEquals(listOf("itv"), state.reminders.map { it.id.value })
+            assertEquals(vehicle.id, state.selectedVehicleId)
         }
 
-        assertEquals(listOf("Pasar ITV"), repository.savedReminders.map { it.title })
-        assertTrue(viewModel.uiState.value.title.isBlank())
-        assertEquals(1, viewModel.uiState.value.reminders.size)
-    }
-
     @Test
-    fun submitWithoutDueTargetShowsValidation() = runTest {
-        val viewModel = remindersViewModel(vehicleRepository = FakeVehicleRepository(listOf(vehicle)))
-        viewModel.onEvent(RemindersEvent.Started)
-        advanceUntilIdle()
-
-        viewModel.effects.test {
-            viewModel.onEvent(RemindersEvent.TitleChanged("Pasar ITV"))
-            viewModel.onEvent(RemindersEvent.SubmitReminder)
+    fun submitValidReminderSavesAndEmitsEffect() =
+        runTest {
+            val repository = FakeReminderRepository()
+            val viewModel =
+                remindersViewModel(
+                    vehicleRepository = FakeVehicleRepository(listOf(vehicle)),
+                    reminderRepository = repository,
+                )
+            viewModel.onEvent(RemindersEvent.Started)
             advanceUntilIdle()
 
-            assertEquals(
-                CarburaString.ValidationMissingReminderDueTarget,
-                assertIs<RemindersEffect.ValidationFailed>(awaitItem()).message,
+            viewModel.effects.test {
+                viewModel.onEvent(RemindersEvent.TitleChanged("Pasar ITV"))
+                viewModel.onEvent(RemindersEvent.DueDateChanged("2026-07-10"))
+                viewModel.onEvent(RemindersEvent.SubmitReminder)
+                advanceUntilIdle()
+
+                assertIs<RemindersEffect.ReminderCreated>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(listOf("Pasar ITV"), repository.savedReminders.map { it.title })
+            assertTrue(
+                viewModel.uiState.value.title
+                    .isBlank(),
             )
-            cancelAndIgnoreRemainingEvents()
+            assertEquals(1, viewModel.uiState.value.reminders.size)
         }
-    }
 
     @Test
-    fun completeReminderRemovesItFromPendingList() = runTest {
-        val repository = FakeReminderRepository(listOf(reminder("itv")))
-        val viewModel = remindersViewModel(
-            vehicleRepository = FakeVehicleRepository(listOf(vehicle)),
-            reminderRepository = repository,
-        )
-        viewModel.onEvent(RemindersEvent.Started)
-        advanceUntilIdle()
-
-        viewModel.effects.test {
-            viewModel.onEvent(RemindersEvent.CompleteReminder(ReminderId("itv")))
+    fun submitWithoutDueTargetShowsValidation() =
+        runTest {
+            val viewModel = remindersViewModel(vehicleRepository = FakeVehicleRepository(listOf(vehicle)))
+            viewModel.onEvent(RemindersEvent.Started)
             advanceUntilIdle()
 
-            assertIs<RemindersEffect.ReminderCompleted>(awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
+            viewModel.effects.test {
+                viewModel.onEvent(RemindersEvent.TitleChanged("Pasar ITV"))
+                viewModel.onEvent(RemindersEvent.SubmitReminder)
+                advanceUntilIdle()
 
-        assertEquals(emptyList(), viewModel.uiState.value.reminders)
-    }
+                assertEquals(
+                    CarburaString.ValidationMissingReminderDueTarget,
+                    assertIs<RemindersEffect.ValidationFailed>(awaitItem()).message,
+                )
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
 
     @Test
-    fun deleteReminderRemovesItFromPendingList() = runTest {
-        val repository = FakeReminderRepository(listOf(reminder("itv")))
-        val viewModel = remindersViewModel(
-            vehicleRepository = FakeVehicleRepository(listOf(vehicle)),
-            reminderRepository = repository,
-        )
-        viewModel.onEvent(RemindersEvent.Started)
-        advanceUntilIdle()
-
-        viewModel.effects.test {
-            viewModel.onEvent(RemindersEvent.DeleteReminder(ReminderId("itv")))
+    fun completeReminderRemovesItFromPendingList() =
+        runTest {
+            val repository = FakeReminderRepository(listOf(reminder("itv")))
+            val viewModel =
+                remindersViewModel(
+                    vehicleRepository = FakeVehicleRepository(listOf(vehicle)),
+                    reminderRepository = repository,
+                )
+            viewModel.onEvent(RemindersEvent.Started)
             advanceUntilIdle()
 
-            assertIs<RemindersEffect.ReminderDeleted>(awaitItem())
-            cancelAndIgnoreRemainingEvents()
+            viewModel.effects.test {
+                viewModel.onEvent(RemindersEvent.CompleteReminder(ReminderId("itv")))
+                advanceUntilIdle()
+
+                assertIs<RemindersEffect.ReminderCompleted>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(emptyList(), viewModel.uiState.value.reminders)
         }
 
-        assertEquals(emptyList(), viewModel.uiState.value.reminders)
-    }
+    @Test
+    fun deleteReminderRemovesItFromPendingList() =
+        runTest {
+            val repository = FakeReminderRepository(listOf(reminder("itv")))
+            val viewModel =
+                remindersViewModel(
+                    vehicleRepository = FakeVehicleRepository(listOf(vehicle)),
+                    reminderRepository = repository,
+                )
+            viewModel.onEvent(RemindersEvent.Started)
+            advanceUntilIdle()
+
+            viewModel.effects.test {
+                viewModel.onEvent(RemindersEvent.DeleteReminder(ReminderId("itv")))
+                advanceUntilIdle()
+
+                assertIs<RemindersEffect.ReminderDeleted>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(emptyList(), viewModel.uiState.value.reminders)
+        }
 
     private fun TestScope.remindersViewModel(
         vehicleRepository: VehicleRepository = FakeVehicleRepository(),
@@ -151,11 +164,12 @@ class RemindersViewModelTest {
         return RemindersViewModel(
             familyId = familyId,
             vehicleRepository = vehicleRepository,
-            dispatchers = TestDispatcherProvider(
-                io = dispatcher,
-                default = dispatcher,
-                main = dispatcher,
-            ),
+            dispatchers =
+                TestDispatcherProvider(
+                    io = dispatcher,
+                    default = dispatcher,
+                    main = dispatcher,
+                ),
             createReminderUseCase = CreateReminderUseCase(reminderRepository, notificationScheduler),
             getPendingRemindersUseCase = GetPendingRemindersUseCase(reminderRepository),
             completeReminderUseCase = CompleteReminderUseCase(reminderRepository, notificationScheduler),
@@ -165,21 +179,21 @@ class RemindersViewModelTest {
         )
     }
 
-    private fun reminder(id: String): Reminder = Reminder(
-        id = ReminderId(id),
-        familyId = familyId,
-        vehicleId = vehicle.id,
-        maintenanceTypeId = null,
-        title = "Recordatorio $id",
-        dueDate = CalendarDate("2026-07-10"),
-    )
+    private fun reminder(id: String): Reminder =
+        Reminder(
+            id = ReminderId(id),
+            familyId = familyId,
+            vehicleId = vehicle.id,
+            maintenanceTypeId = null,
+            title = "Recordatorio $id",
+            dueDate = CalendarDate("2026-07-10"),
+        )
 }
 
 private class FakeVehicleRepository(
     private val vehicles: List<Vehicle> = emptyList(),
 ) : VehicleRepository {
-    override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> =
-        vehicles.filter { it.familyId == familyId }
+    override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> = vehicles.filter { it.familyId == familyId }
 
     override suspend fun saveVehicle(vehicle: Vehicle) = Unit
 
@@ -194,8 +208,7 @@ private class FakeReminderRepository(
     override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> =
         savedReminders.filter { it.familyId == familyId && !it.isCompleted }
 
-    override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> =
-        savedReminders.filter { it.vehicleId == vehicleId }
+    override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> = savedReminders.filter { it.vehicleId == vehicleId }
 
     override suspend fun saveReminder(reminder: Reminder) {
         savedReminders += reminder
@@ -215,5 +228,6 @@ private class FakeReminderRepository(
 
 private class FakeReminderNotificationScheduler : ReminderNotificationScheduler {
     override suspend fun schedule(reminder: Reminder) = Unit
+
     override suspend fun cancel(reminderId: ReminderId) = Unit
 }

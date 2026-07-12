@@ -18,11 +18,17 @@ class SupabaseAuthGateway(
         client.auth.currentSessionOrNull()?.let { session ->
             AuthSession(
                 accessToken = session.accessToken,
-                user = AuthUser(
-                    id = session.user?.id.orEmpty(),
-                    email = session.user?.email,
-                    displayName = session.user?.userMetadata?.get("full_name")?.jsonPrimitive?.contentOrNull,
-                ),
+                user =
+                    AuthUser(
+                        id = session.user?.id.orEmpty(),
+                        email = session.user?.email,
+                        displayName =
+                            session.user
+                                ?.userMetadata
+                                ?.get("full_name")
+                                ?.jsonPrimitive
+                                ?.contentOrNull,
+                    ),
             )
         }
 

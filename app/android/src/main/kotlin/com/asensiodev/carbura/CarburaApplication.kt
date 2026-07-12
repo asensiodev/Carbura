@@ -1,8 +1,8 @@
 package com.asensiodev.carbura
 
 import android.app.Application
-import com.asensiodev.carbura.core.auth.authModule
 import com.asensiodev.carbura.core.auth.SupabaseSettings
+import com.asensiodev.carbura.core.auth.authModule
 import com.asensiodev.carbura.core.data.dataModule
 import com.asensiodev.carbura.feature.garage.di.garageModule
 import com.asensiodev.carbura.feature.maintenance.di.maintenanceModule

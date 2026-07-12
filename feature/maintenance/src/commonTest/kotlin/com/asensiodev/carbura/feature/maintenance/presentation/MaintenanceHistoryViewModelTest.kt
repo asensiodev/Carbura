@@ -14,16 +14,16 @@ import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.MaintenanceTypeId
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.testing.TestDispatcherProvider
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MaintenanceHistoryViewModelTest {
@@ -31,128 +31,144 @@ class MaintenanceHistoryViewModelTest {
     private val vehicleId = VehicleId("vehicle-test")
 
     @Test
-    fun loadReturnsEmptyStateWhenVehicleHasNoRecords() = runTest {
-        val viewModel = maintenanceHistoryViewModel()
+    fun loadReturnsEmptyStateWhenVehicleHasNoRecords() =
+        runTest {
+            val viewModel = maintenanceHistoryViewModel()
 
-        viewModel.onEvent(MaintenanceHistoryEvent.Started)
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertTrue(state.isEmpty)
-        assertEquals(emptyList(), state.records)
-    }
-
-    @Test
-    fun validMaintenanceCreationAddsRecordToHistory() = runTest {
-        val viewModel = maintenanceHistoryViewModel(nextRecordId = { MaintenanceRecordId("record-1") })
-
-        viewModel.effects.test {
-            viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged("Aceite"))
-            viewModel.onEvent(MaintenanceHistoryEvent.PerformedOnChanged("2026-07-04"))
-            viewModel.onEvent(MaintenanceHistoryEvent.OdometerChanged("12300"))
-            viewModel.onEvent(MaintenanceHistoryEvent.CostChanged("89.50"))
-            viewModel.onEvent(MaintenanceHistoryEvent.WorkshopChanged("Taller Centro"))
-            viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
+            viewModel.onEvent(MaintenanceHistoryEvent.Started)
             advanceUntilIdle()
 
-            assertIs<MaintenanceHistoryEffect.MaintenanceCreated>(awaitItem())
-            cancelAndIgnoreRemainingEvents()
+            val state = viewModel.uiState.value
+            assertTrue(state.isEmpty)
+            assertEquals(emptyList(), state.records)
         }
 
-        val state = viewModel.uiState.value
-        assertEquals(1, state.records.size)
-        assertEquals(CalendarDate("2026-07-04"), state.records.single().performedOn)
-        assertEquals(12300, state.records.single().odometerKm)
-        assertEquals(8950, state.records.single().costCents)
-        assertEquals("", state.type)
-        assertEquals("0", state.odometerKm)
-    }
+    @Test
+    fun validMaintenanceCreationAddsRecordToHistory() =
+        runTest {
+            val viewModel = maintenanceHistoryViewModel(nextRecordId = { MaintenanceRecordId("record-1") })
+
+            viewModel.effects.test {
+                viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged("Aceite"))
+                viewModel.onEvent(MaintenanceHistoryEvent.PerformedOnChanged("2026-07-04"))
+                viewModel.onEvent(MaintenanceHistoryEvent.OdometerChanged("12300"))
+                viewModel.onEvent(MaintenanceHistoryEvent.CostChanged("89.50"))
+                viewModel.onEvent(MaintenanceHistoryEvent.WorkshopChanged("Taller Centro"))
+                viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
+                advanceUntilIdle()
+
+                assertIs<MaintenanceHistoryEffect.MaintenanceCreated>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            val state = viewModel.uiState.value
+            assertEquals(1, state.records.size)
+            assertEquals(CalendarDate("2026-07-04"), state.records.single().performedOn)
+            assertEquals(12300, state.records.single().odometerKm)
+            assertEquals(8950, state.records.single().costCents)
+            assertEquals("", state.type)
+            assertEquals("0", state.odometerKm)
+        }
 
     @Test
-    fun blankMaintenanceTypeReturnsValidationError() = runTest {
-        val viewModel = maintenanceHistoryViewModel()
+    fun blankMaintenanceTypeReturnsValidationError() =
+        runTest {
+            val viewModel = maintenanceHistoryViewModel()
 
-        viewModel.effects.test {
-            viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged(" "))
-            viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
+            viewModel.effects.test {
+                viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged(" "))
+                viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
+                advanceUntilIdle()
+
+                assertIs<MaintenanceHistoryEffect.ValidationFailed>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertTrue(
+                viewModel.uiState.value.records
+                    .isEmpty(),
+            )
+            assertNotNull(viewModel.uiState.value.errorMessage)
+        }
+
+    @Test
+    fun negativeOdometerReturnsValidationError() =
+        runTest {
+            val viewModel = maintenanceHistoryViewModel()
+
+            viewModel.effects.test {
+                viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged("Aceite"))
+                viewModel.onEvent(MaintenanceHistoryEvent.OdometerChanged("-1"))
+                viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
+                advanceUntilIdle()
+
+                assertIs<MaintenanceHistoryEffect.ValidationFailed>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertTrue(
+                viewModel.uiState.value.records
+                    .isEmpty(),
+            )
+            assertNotNull(viewModel.uiState.value.errorMessage)
+        }
+
+    @Test
+    fun invalidDateReturnsValidationError() =
+        runTest {
+            val viewModel = maintenanceHistoryViewModel()
+
+            viewModel.effects.test {
+                viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged("Aceite"))
+                viewModel.onEvent(MaintenanceHistoryEvent.PerformedOnChanged("04/07/2026"))
+                viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
+                advanceUntilIdle()
+
+                assertIs<MaintenanceHistoryEffect.ValidationFailed>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertTrue(
+                viewModel.uiState.value.records
+                    .isEmpty(),
+            )
+            assertNotNull(viewModel.uiState.value.errorMessage)
+        }
+
+    @Test
+    fun historyIsOrderedByDateDescending() =
+        runTest {
+            val repository = FakeMaintenanceRecordRepository()
+            repository.saveMaintenanceRecord(record("record-old", "2026-01-01"))
+            repository.saveMaintenanceRecord(record("record-new", "2026-07-04"))
+            val viewModel = maintenanceHistoryViewModel(repository = repository)
+
+            viewModel.onEvent(MaintenanceHistoryEvent.Started)
             advanceUntilIdle()
 
-            assertIs<MaintenanceHistoryEffect.ValidationFailed>(awaitItem())
-            cancelAndIgnoreRemainingEvents()
+            val records = viewModel.uiState.value.records
+            assertEquals(listOf("record-new", "record-old"), records.map { it.id.value })
         }
 
-        assertTrue(viewModel.uiState.value.records.isEmpty())
-        assertNotNull(viewModel.uiState.value.errorMessage)
-    }
-
     @Test
-    fun negativeOdometerReturnsValidationError() = runTest {
-        val viewModel = maintenanceHistoryViewModel()
-
-        viewModel.effects.test {
-            viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged("Aceite"))
-            viewModel.onEvent(MaintenanceHistoryEvent.OdometerChanged("-1"))
-            viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
+    fun deleteMaintenanceRemovesRecordFromHistory() =
+        runTest {
+            val repository = FakeMaintenanceRecordRepository()
+            repository.saveMaintenanceRecord(record("record-1", "2026-07-04"))
+            val viewModel = maintenanceHistoryViewModel(repository = repository)
+            viewModel.onEvent(MaintenanceHistoryEvent.Started)
             advanceUntilIdle()
 
-            assertIs<MaintenanceHistoryEffect.ValidationFailed>(awaitItem())
-            cancelAndIgnoreRemainingEvents()
+            viewModel.effects.test {
+                viewModel.onEvent(MaintenanceHistoryEvent.DeleteMaintenance(MaintenanceRecordId("record-1")))
+                advanceUntilIdle()
+
+                assertIs<MaintenanceHistoryEffect.MaintenanceDeleted>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(emptyList(), viewModel.uiState.value.records)
         }
-
-        assertTrue(viewModel.uiState.value.records.isEmpty())
-        assertNotNull(viewModel.uiState.value.errorMessage)
-    }
-
-    @Test
-    fun invalidDateReturnsValidationError() = runTest {
-        val viewModel = maintenanceHistoryViewModel()
-
-        viewModel.effects.test {
-            viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged("Aceite"))
-            viewModel.onEvent(MaintenanceHistoryEvent.PerformedOnChanged("04/07/2026"))
-            viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
-            advanceUntilIdle()
-
-            assertIs<MaintenanceHistoryEffect.ValidationFailed>(awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
-
-        assertTrue(viewModel.uiState.value.records.isEmpty())
-        assertNotNull(viewModel.uiState.value.errorMessage)
-    }
-
-    @Test
-    fun historyIsOrderedByDateDescending() = runTest {
-        val repository = FakeMaintenanceRecordRepository()
-        repository.saveMaintenanceRecord(record("record-old", "2026-01-01"))
-        repository.saveMaintenanceRecord(record("record-new", "2026-07-04"))
-        val viewModel = maintenanceHistoryViewModel(repository = repository)
-
-        viewModel.onEvent(MaintenanceHistoryEvent.Started)
-        advanceUntilIdle()
-
-        val records = viewModel.uiState.value.records
-        assertEquals(listOf("record-new", "record-old"), records.map { it.id.value })
-    }
-
-    @Test
-    fun deleteMaintenanceRemovesRecordFromHistory() = runTest {
-        val repository = FakeMaintenanceRecordRepository()
-        repository.saveMaintenanceRecord(record("record-1", "2026-07-04"))
-        val viewModel = maintenanceHistoryViewModel(repository = repository)
-        viewModel.onEvent(MaintenanceHistoryEvent.Started)
-        advanceUntilIdle()
-
-        viewModel.effects.test {
-            viewModel.onEvent(MaintenanceHistoryEvent.DeleteMaintenance(MaintenanceRecordId("record-1")))
-            advanceUntilIdle()
-
-            assertIs<MaintenanceHistoryEffect.MaintenanceDeleted>(awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
-
-        assertEquals(emptyList(), viewModel.uiState.value.records)
-    }
 
     private fun TestScope.maintenanceHistoryViewModel(
         repository: FakeMaintenanceRecordRepository = FakeMaintenanceRecordRepository(),
@@ -162,14 +178,16 @@ class MaintenanceHistoryViewModelTest {
         return MaintenanceHistoryViewModel(
             vehicleId = vehicleId,
             familyId = familyId,
-            dispatchers = TestDispatcherProvider(
-                io = dispatcher,
-                default = dispatcher,
-                main = dispatcher,
-            ),
-            createMaintenanceRecordFromInputUseCase = CreateMaintenanceRecordFromInputUseCase(
-                CreateMaintenanceRecordUseCase(repository),
-            ),
+            dispatchers =
+                TestDispatcherProvider(
+                    io = dispatcher,
+                    default = dispatcher,
+                    main = dispatcher,
+                ),
+            createMaintenanceRecordFromInputUseCase =
+                CreateMaintenanceRecordFromInputUseCase(
+                    CreateMaintenanceRecordUseCase(repository),
+                ),
             getVehicleHistoryUseCase = GetVehicleHistoryUseCase(repository),
             deleteMaintenanceRecordUseCase = DeleteMaintenanceRecordUseCase(repository),
             nextRecordId = nextRecordId,
@@ -177,15 +195,19 @@ class MaintenanceHistoryViewModelTest {
         )
     }
 
-    private fun record(id: String, date: String): MaintenanceRecord = MaintenanceRecord(
-        id = MaintenanceRecordId(id),
-        familyId = familyId,
-        vehicleId = vehicleId,
-        maintenanceTypeId = MaintenanceTypeId("type-test"),
-        maintenanceTypeCode = MaintenanceTypeCode.Custom,
-        performedOn = CalendarDate(date),
-        odometerKm = 1,
-    )
+    private fun record(
+        id: String,
+        date: String,
+    ): MaintenanceRecord =
+        MaintenanceRecord(
+            id = MaintenanceRecordId(id),
+            familyId = familyId,
+            vehicleId = vehicleId,
+            maintenanceTypeId = MaintenanceTypeId("type-test"),
+            maintenanceTypeCode = MaintenanceTypeCode.Custom,
+            performedOn = CalendarDate(date),
+            odometerKm = 1,
+        )
 }
 
 private class FakeMaintenanceRecordRepository : MaintenanceRecordRepository {
@@ -195,8 +217,7 @@ private class FakeMaintenanceRecordRepository : MaintenanceRecordRepository {
         records += record
     }
 
-    override suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord> =
-        records.filter { it.vehicleId == vehicleId }
+    override suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord> = records.filter { it.vehicleId == vehicleId }
 
     override suspend fun deleteMaintenanceRecord(recordId: MaintenanceRecordId) {
         records.removeAll { it.id == recordId }

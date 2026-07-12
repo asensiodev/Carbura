@@ -5,5 +5,6 @@ import com.asensiodev.carbura.core.model.ReminderId
 
 interface ReminderNotificationScheduler {
     suspend fun schedule(reminder: Reminder)
+
     suspend fun cancel(reminderId: ReminderId)
 }

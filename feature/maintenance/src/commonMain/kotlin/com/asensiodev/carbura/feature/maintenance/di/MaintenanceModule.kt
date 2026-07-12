@@ -9,20 +9,21 @@ import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.feature.maintenance.presentation.MaintenanceHistoryViewModel
 import org.koin.dsl.module
 
-val maintenanceModule = module {
-    factory { CreateMaintenanceRecordUseCase(get()) }
-    factory { CreateMaintenanceRecordFromInputUseCase(get()) }
-    factory { GetVehicleHistoryUseCase(get()) }
-    factory { DeleteMaintenanceRecordUseCase(get()) }
-    factory { parameters ->
-        MaintenanceHistoryViewModel(
-            vehicleId = parameters.get<VehicleId>(),
-            familyId = parameters.get<FamilyId>(),
-            dispatchers = get(),
-            createMaintenanceRecordFromInputUseCase = get(),
-            getVehicleHistoryUseCase = get(),
-            deleteMaintenanceRecordUseCase = get(),
-            syncManager = get(),
-        )
+val maintenanceModule =
+    module {
+        factory { CreateMaintenanceRecordUseCase(get()) }
+        factory { CreateMaintenanceRecordFromInputUseCase(get()) }
+        factory { GetVehicleHistoryUseCase(get()) }
+        factory { DeleteMaintenanceRecordUseCase(get()) }
+        factory { parameters ->
+            MaintenanceHistoryViewModel(
+                vehicleId = parameters.get<VehicleId>(),
+                familyId = parameters.get<FamilyId>(),
+                dispatchers = get(),
+                createMaintenanceRecordFromInputUseCase = get(),
+                getVehicleHistoryUseCase = get(),
+                deleteMaintenanceRecordUseCase = get(),
+                syncManager = get(),
+            )
+        }
     }
-}

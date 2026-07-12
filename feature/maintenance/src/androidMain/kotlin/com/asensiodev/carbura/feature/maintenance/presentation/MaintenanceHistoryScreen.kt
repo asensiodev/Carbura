@@ -24,8 +24,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,11 +59,11 @@ import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.featuremaintenance.R
+import org.koin.core.context.GlobalContext
+import org.koin.core.parameter.parametersOf
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import org.koin.core.context.GlobalContext
-import org.koin.core.parameter.parametersOf
 
 @Composable
 fun MaintenanceHistoryRoute(
@@ -107,14 +107,15 @@ fun MaintenanceHistoryRoute(
         }
     }
 
-    val resolvedEffectMessage = effectMessage?.let { message ->
-        val arg = effectMessageArg
-        if (arg == null) {
-            stringResource(message.maintenanceStringRes())
-        } else {
-            stringResource(message.maintenanceStringRes(), arg)
+    val resolvedEffectMessage =
+        effectMessage?.let { message ->
+            val arg = effectMessageArg
+            if (arg == null) {
+                stringResource(message.maintenanceStringRes())
+            } else {
+                stringResource(message.maintenanceStringRes(), arg)
+            }
         }
-    }
 
     MaintenanceHistoryScreen(
         state = uiState,
@@ -138,9 +139,10 @@ fun MaintenanceHistoryRoute(
 private fun rememberMaintenanceHistoryViewModel(
     vehicleId: String,
     familyId: String,
-): MaintenanceHistoryViewModel = remember(vehicleId, familyId) {
-    GlobalContext.get().get { parametersOf(VehicleId(vehicleId), FamilyId(familyId)) }
-}
+): MaintenanceHistoryViewModel =
+    remember(vehicleId, familyId) {
+        GlobalContext.get().get { parametersOf(VehicleId(vehicleId), FamilyId(familyId)) }
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -196,9 +198,10 @@ private fun MaintenanceHistoryScreen(
             },
         ) { innerPadding ->
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
                 contentPadding = PaddingValues(Spacings.spacing24),
                 verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
             ) {
@@ -234,10 +237,11 @@ private fun MaintenanceHistoryScreen(
 
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .safeDrawingPadding()
-                .padding(horizontal = Spacings.spacing16),
+            modifier =
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .safeDrawingPadding()
+                    .padding(horizontal = Spacings.spacing16),
         )
     }
 
@@ -255,11 +259,12 @@ private fun MaintenanceHistoryScreen(
                 onWorkshopChange = onWorkshopChange,
                 onNotesChange = onNotesChange,
                 onSubmitMaintenance = onSubmitMaintenance,
-                modifier = Modifier.padding(
-                    start = Spacings.spacing24,
-                    end = Spacings.spacing24,
-                    bottom = Spacings.spacing24,
-                ),
+                modifier =
+                    Modifier.padding(
+                        start = Spacings.spacing24,
+                        end = Spacings.spacing24,
+                        bottom = Spacings.spacing24,
+                    ),
             )
         }
     }
@@ -347,9 +352,10 @@ private fun MaintenanceForm(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState()),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
     ) {
         Text(
@@ -466,9 +472,10 @@ private fun MaintenanceDatePickerField(
 private fun EmptyHistoryCard(onAddMaintenance: () -> Unit) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        ),
+        colors =
+            CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            ),
     ) {
         Column(
             modifier = Modifier.padding(Spacings.spacing24),
@@ -548,12 +555,18 @@ private fun MaintenanceRecordCard(
     }
 }
 
-private fun String.toUtcMillisOrNull(): Long? = runCatching {
-    LocalDate.parse(this).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
-}.getOrNull()
+private fun String.toUtcMillisOrNull(): Long? =
+    runCatching {
+        LocalDate
+            .parse(this)
+            .atStartOfDay()
+            .toInstant(ZoneOffset.UTC)
+            .toEpochMilli()
+    }.getOrNull()
 
-private fun Long.toIsoDate(): String = Instant
-    .ofEpochMilli(this)
-    .atZone(ZoneOffset.UTC)
-    .toLocalDate()
-    .toString()
+private fun Long.toIsoDate(): String =
+    Instant
+        .ofEpochMilli(this)
+        .atZone(ZoneOffset.UTC)
+        .toLocalDate()
+        .toString()

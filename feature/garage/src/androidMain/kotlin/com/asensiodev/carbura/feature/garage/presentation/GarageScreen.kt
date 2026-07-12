@@ -29,8 +29,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -101,14 +101,15 @@ fun GarageRoute(
         }
     }
 
-    val resolvedEffectMessage = effectMessage?.let { message ->
-        val arg = effectMessageArg
-        if (arg == null) {
-            stringResource(message.garageStringRes())
-        } else {
-            stringResource(message.garageStringRes(), arg)
+    val resolvedEffectMessage =
+        effectMessage?.let { message ->
+            val arg = effectMessageArg
+            if (arg == null) {
+                stringResource(message.garageStringRes())
+            } else {
+                stringResource(message.garageStringRes(), arg)
+            }
         }
-    }
 
     GarageScreen(
         state = uiState,
@@ -126,9 +127,10 @@ fun GarageRoute(
 }
 
 @Composable
-private fun rememberGarageViewModel(familyId: String): GarageViewModel = remember(familyId) {
-    GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
-}
+private fun rememberGarageViewModel(familyId: String): GarageViewModel =
+    remember(familyId) {
+        GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -168,9 +170,10 @@ private fun GarageScreen(
             containerColor = MaterialTheme.colorScheme.background,
         ) { _ ->
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding(),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding(),
                 contentPadding = PaddingValues(Spacings.spacing24),
                 verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
             ) {
@@ -210,10 +213,11 @@ private fun GarageScreen(
         }
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .safeDrawingPadding()
-                .padding(horizontal = Spacings.spacing16),
+            modifier =
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .safeDrawingPadding()
+                    .padding(horizontal = Spacings.spacing16),
         )
     }
 
@@ -223,11 +227,12 @@ private fun GarageScreen(
             sheetState = sheetState,
         ) {
             VehicleForm(
-                title = if (state.isEmpty) {
-                    stringResource(R.string.vehicle_form_title_first)
-                } else {
-                    stringResource(R.string.vehicle_form_title_next)
-                },
+                title =
+                    if (state.isEmpty) {
+                        stringResource(R.string.vehicle_form_title_first)
+                    } else {
+                        stringResource(R.string.vehicle_form_title_next)
+                    },
                 name = state.name,
                 odometer = state.odometerKm,
                 selectedType = state.selectedType,
@@ -236,11 +241,12 @@ private fun GarageScreen(
                 onOdometerChange = onOdometerChange,
                 onTypeSelected = onTypeSelected,
                 onCreateVehicle = onCreateVehicle,
-                modifier = Modifier.padding(
-                    start = Spacings.spacing24,
-                    end = Spacings.spacing24,
-                    bottom = Spacings.spacing24,
-                ),
+                modifier =
+                    Modifier.padding(
+                        start = Spacings.spacing24,
+                        end = Spacings.spacing24,
+                        bottom = Spacings.spacing24,
+                    ),
             )
         }
     }
@@ -417,14 +423,13 @@ private fun VehicleTypeButton(
 }
 
 @Composable
-private fun EmptyGarageCard(
-    onAddVehicle: () -> Unit,
-) {
+private fun EmptyGarageCard(onAddVehicle: () -> Unit) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        ),
+        colors =
+            CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            ),
     ) {
         Column(
             modifier = Modifier.padding(Spacings.spacing24),
@@ -460,9 +465,10 @@ private fun VehicleCard(
 ) {
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacings.spacing16),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(Spacings.spacing16),
             verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
         ) {
             Row(
@@ -502,10 +508,11 @@ private fun VehicleCard(
 }
 
 @Composable
-private fun VehicleType.label(): String = when (this) {
-    VehicleType.Car -> stringResource(R.string.vehicle_type_car)
-    VehicleType.Motorcycle -> stringResource(R.string.vehicle_type_motorcycle)
-    VehicleType.Van,
-    VehicleType.Other,
-    -> name
-}
+private fun VehicleType.label(): String =
+    when (this) {
+        VehicleType.Car -> stringResource(R.string.vehicle_type_car)
+        VehicleType.Motorcycle -> stringResource(R.string.vehicle_type_motorcycle)
+        VehicleType.Van,
+        VehicleType.Other,
+        -> name
+    }

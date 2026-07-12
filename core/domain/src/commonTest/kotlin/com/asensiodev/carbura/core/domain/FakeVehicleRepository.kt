@@ -8,8 +8,7 @@ import com.asensiodev.carbura.core.model.VehicleId
 internal class FakeVehicleRepository : VehicleRepository {
     val savedVehicles = mutableListOf<Vehicle>()
 
-    override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> =
-        savedVehicles.filter { it.familyId == familyId }
+    override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> = savedVehicles.filter { it.familyId == familyId }
 
     override suspend fun saveVehicle(vehicle: Vehicle) {
         savedVehicles += vehicle

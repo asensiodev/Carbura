@@ -6,6 +6,8 @@ import com.asensiodev.carbura.core.model.VehicleId
 
 interface MaintenanceRecordRepository {
     suspend fun saveMaintenanceRecord(record: MaintenanceRecord)
+
     suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord>
+
     suspend fun deleteMaintenanceRecord(recordId: MaintenanceRecordId)
 }
