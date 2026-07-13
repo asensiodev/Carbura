@@ -55,7 +55,7 @@ El proyecto combina metodologías complementarias en capas, manteniendo el alcan
 - OpenCode usa las specs como contexto para generar código y tests coherentes.
 
 ### TDD (Test-Driven Development)
-- Dentro de cada tarea del `/openspec-apply`, se sigue el ciclo **Red → Green → Refactor**:
+- Dentro de cada tarea de `/opsx-apply`, se sigue el ciclo **Red → Green → Refactor**:
   1. **Red**: escribir el test que falla (a partir de los criterios de aceptación de la spec).
   2. **Green**: escribir el código mínimo para que el test pase.
   3. **Refactor**: mejorar el código sin romper los tests.
@@ -126,7 +126,7 @@ BDD queda fuera del alcance metodológico del MVP para evitar duplicar documenta
 ┌─────────────────────────────────────────────────────────┐
 │                     OPENSPEC                            │
 │  Specs versionadas · Fuente de verdad del proyecto     │
-│  /openspec-proposal · /openspec-apply · /openspec-archive│
+│ /opsx-explore · /opsx-propose · /opsx-apply · /opsx-archive│
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -151,7 +151,7 @@ BDD queda fuera del alcance metodológico del MVP para evitar duplicar documenta
      prd.md          ← PRD completo del producto
      specs/          ← specs activas (fuente de verdad)
      changes/        ← propuestas en curso
-     archive/        ← historial de cambios completados
+       archive/      ← historial de cambios completados
      agents.md       ← instrucciones para el agente (no editar a mano)
    ```
 2. Escribir el **PRD** en `openspec/prd.md` y mantener `openspec/project.md` como contexto breve del proyecto:
@@ -177,7 +177,7 @@ Para cada feature o caso de uso:
 #### Paso 1 — Proposal (planificación SDD)
 Desde Warp, lanzar OpenCode y ejecutar:
 ```text
-/openspec-proposal
+/opsx-propose
 ```
 El agente:
 - Lee el `project.md`, el `prd.md` y las specs relevantes.
@@ -193,7 +193,7 @@ El agente:
 
 #### Paso 3 — Apply: TDD Red (tests primero)
 ```text
-/openspec-apply
+/opsx-apply
 ```
 El agente implementa **primero los tests**:
 - Genera los tests unitarios a partir de los criterios de aceptación de la spec.
@@ -231,11 +231,11 @@ El agente implementa el código mínimo necesario para que los tests pasen:
 
 #### Paso 7 — Archive (cierre del cambio SDD)
 ```text
-/openspec-archive
+/opsx-archive
 ```
 El agente:
 - Actualiza la spec fuente de verdad en `openspec/specs/`.
-- Mueve el cambio completado a `openspec/archive/`.
+- Mueve el cambio completado a `openspec/changes/archive/`.
 - Limpia `openspec/changes/`.
 
 #### Paso 8 — Commit local
@@ -268,6 +268,8 @@ Ramas y PRs oficiales:
    - `202607070001_ensure_user_profile_rpc.sql`
    - `202607080001_sync_v0_schema.sql`
    - `202607080002_sync_v0_text_entity_ids.sql`
+   - `202607120001_vehicle_planning_fields.sql`
+   La migracion `202607070001_ensure_user_profile_rpc.sql` incluye la RPC y los grants para `authenticated`; no hay un fichero de grants separado.
 3. Configurar **Row Level Security (RLS)** por `family_id` para cada tabla.
 4. Configurar **Google OAuth** en Supabase Auth.
 5. Añadir las variables de entorno a `local.properties`:
@@ -286,7 +288,7 @@ Ramas y PRs oficiales:
 **Herramientas:** todas
 
 1. Revisar UX en emulador o dispositivo Android.
-2. Revisar cobertura de tests (`./gradlew koverReport`).
+2. Ejecutar la verificacion reproducible `./gradlew qualityCheck test assembleDebug`; no hay una tarea Kover configurada actualmente.
 3. Añadir tests de integración para flujos críticos (auth, sync, reminders).
 4. Pulir animaciones, estados vacíos, estados de error, estados de carga.
 5. Revisar el flujo de sincronización (offline → online → sync).
@@ -304,7 +306,7 @@ Ramas y PRs oficiales:
    - Sección "AI-assisted development": cómo se usó IA en cada fase.
    - Instrucciones de setup con `local.properties.example`.
 2. Documentar el proceso AI + SDD + TDD en la **memoria del TFM**:
-   - Usar el historial de `openspec/archive/` como evidencia de SDD.
+   - Usar el historial de `openspec/changes/archive/` como evidencia de SDD.
    - Mostrar trazabilidad: spec → criterios de aceptación → tests (Red) → código (Green) → refactor.
    - Incluir métricas de cobertura de tests como indicador de calidad.
 3. Preparar el guion de la **demo final**.
@@ -315,7 +317,7 @@ Ramas y PRs oficiales:
 - `openspec/changes/`: proposals y tareas durante la implementación.
 - `openspec/changes/archive/`: historial de cambios aplicados y cerrados.
 - Commits y PRs: trazabilidad entre documentación, specs, código y entregas.
-- Comandos de verificación: `./gradlew test`, `./gradlew assembleDebug` y revisiones manuales en Android Studio/emulador.
+- Comandos de verificacion local y CI: `./gradlew qualityCheck test assembleDebug --stacktrace` y revisiones manuales en Android Studio/emulador.
 
 ---
 
@@ -353,8 +355,8 @@ carbura/
 │   │   ├── reminders-mvp/
 │   │   ├── sync-v0/
 │   │   └── supabase-backend/
-│   ├── changes/                ← propuestas en curso
-│   └── archive/                ← historial de cambios completados
+│   └── changes/                ← propuestas en curso
+│       └── archive/            ← historial de cambios completados
 ├── build-logic/                ← convention plugins Gradle
 ├── app/
 │   ├── android/                ← UI Android, navegación y adapters Android
@@ -386,11 +388,11 @@ carbura/
 2. Abrir Warp en el directorio del proyecto
 3. (Opcional) Abrir VS Code en el mismo directorio
 4. En Warp: lanzar `opencode`
-5. /openspec-proposal → revisar propuesta + tests TDD → aprobar
-6. /openspec-apply (tests primero: Red) → verificar que fallan
-7. /openspec-apply (código: Green) → verificar que pasan
+5. /opsx-explore o /opsx-propose → revisar propuesta + tests TDD → aprobar
+6. /opsx-apply (tests primero: Red) → verificar que fallan
+7. /opsx-apply (código: Green) → verificar que pasan
 8. Refactor → re-ejecutar tests → compilar en Android Studio → testear
-9. /openspec-archive → commit local
+9. /opsx-archive → commit local
 10. Agrupar cambios en la PR oficial correspondiente a la entrega
 ```
 

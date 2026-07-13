@@ -28,13 +28,6 @@ The system SHALL allow the Android user to create a vehicle with the minimum MVP
 - **WHEN** the user submits a negative odometer value
 - **THEN** the screen shows a validation error and the vehicle is not added to the list
 
-### Requirement: Temporary In-Memory Garage Storage
-The system SHALL keep garage vehicles in memory for the initial Android MVP slice until persistent storage is introduced.
-
-#### Scenario: Vehicles remain available during the current process
-- **WHEN** a vehicle is created successfully during the current app process
-- **THEN** subsequent reads from the garage repository return that vehicle
-
 ### Requirement: Garage Vehicle Selection
 The system SHALL allow the Android user to select a vehicle from the garage list to open its maintenance history.
 

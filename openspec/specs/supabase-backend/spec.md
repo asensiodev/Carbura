@@ -1,3 +1,6 @@
+## Purpose
+Define the versioned Supabase schema, relational integrity, synchronization metadata, and family-scoped security.
+
 ## Requirements
 
 ### Requirement: Versioned Supabase Schema
@@ -31,7 +34,7 @@ The Supabase schema SHALL enforce relational integrity between family, user prof
 
 #### Scenario: Maintenance belongs to a vehicle
 - **WHEN** a maintenance record row is inserted
-- **THEN** it must reference an existing vehicle and maintenance type
+- **THEN** it must reference an existing vehicle; its maintenance type may use `maintenance_type_id` or the optional maintenance type keys supported by sync v0
 
 ### Requirement: Sync Metadata
 The Supabase schema SHALL include sync metadata for synchronizable tables using creation time, update time and optional deletion time.

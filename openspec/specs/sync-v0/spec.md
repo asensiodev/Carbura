@@ -43,7 +43,7 @@ The Android app SHALL trigger sync v0 while the app is actively used.
 
 #### Scenario: Sync after session ready
 - **WHEN** an authenticated session becomes available after login or restore
-- **THEN** the app triggers a non-blocking sync
+- **THEN** the app shows a loading screen and blocks authenticated content until the first sync attempt finishes
 
 #### Scenario: Sync on foreground
 - **WHEN** the app enters foreground and the sync throttle interval has elapsed
@@ -65,7 +65,7 @@ The Android app SHALL expose minimal sync status to the user.
 - **THEN** the `Usuario` tab can show the last successful sync time
 
 #### Scenario: Sync fails
-- **WHEN** sync fails
+- **WHEN** a sync after the initial attempt fails
 - **THEN** the app shows a non-blocking status or error without losing local data
 
 ### Requirement: Offline Retry Safety

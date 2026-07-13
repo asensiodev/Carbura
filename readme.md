@@ -27,7 +27,7 @@ Carbura
 
 ### **0.3. Descripción breve del proyecto:**
 
-Carbura es una aplicación Android-first, preparada con arquitectura Kotlin Multiplatform, orientada a familias que necesitan gestionar el mantenimiento de sus vehículos. Permite registrar vehículos, mantenimientos, averías, costes, kilometraje y recordatorios de vencimientos como ITV o seguro, con persistencia local y sincronización eventual mediante Supabase.
+Carbura es una aplicación Android local-first, construida sobre una arquitectura Kotlin Multiplatform, para gestionar los vehículos de un garaje familiar. Permite registrar vehículos, mantenimientos, costes, kilometraje y recordatorios; persiste la información con SQLDelight y sincroniza vehículos, mantenimientos y recordatorios con Supabase. Android es el entregable funcional actual, mientras que Desktop e iOS se conservan como visión futura multiplataforma.
 
 ### **0.4. URL del proyecto:**
 
@@ -43,70 +43,69 @@ https://github.com/asensiodev/Carbura
 
 ### **1.1. Objetivo:**
 
-El objetivo de Carbura es centralizar el mantenimiento de los vehículos de una familia en una única aplicación sencilla, accesible y offline-first. El producto resuelve un problema cotidiano: recordar cuándo caduca la ITV, cuándo se hizo el último cambio de aceite, cuánto costó una reparación o qué mantenimiento tiene pendiente cada vehículo.
+El objetivo de Carbura es centralizar el mantenimiento de los vehículos de una familia en una aplicación sencilla y utilizable sin conexión. Resuelve problemas cotidianos como recordar la próxima ITV, la renovación del seguro o una revisión por kilometraje, consultar cuándo se realizó un mantenimiento y conservar su coste, taller y notas.
 
-El valor principal está en reducir olvidos y pérdida de información, creando un historial ordenado por vehículo y generando recordatorios automáticos antes de fechas críticas. El usuario objetivo no es una flota profesional, sino una persona o familia con varios vehículos que necesita control sin complejidad.
+El valor principal consiste en reducir olvidos y pérdida de información mediante un historial ordenado por vehículo, recordatorios configurables y sugerencias proactivas. El usuario objetivo no es una flota profesional, sino una persona o familia que necesita control sin complejidad operativa.
 
 ### **1.2. Características y funcionalidades principales:**
 
-Funcionalidades del MVP core:
+Funcionalidades disponibles en el entregable Android:
 
-- Gestión de un garaje familiar.
-- Alta y consulta de vehículos.
-- Registro de mantenimientos, averías, ITV, seguro, aceite, neumáticos y revisiones.
-- Historial por vehículo con fecha, kilómetros y coste.
-- Recordatorios por fecha y/o kilometraje, creados manualmente o desde mantenimientos con vencimiento.
-- Autenticación con Google mediante Supabase Auth.
-- En Android, Credential Manager con Google ID es la vía principal de login; existe fallback controlado a Google Sign-In/OAuth si el dispositivo o los servicios disponibles no lo soportan.
-- Persistencia local offline-first.
-- Sincronización v0 con Supabase para vehículos, mantenimientos y recordatorios usando `last-write-wins`.
-- Notificaciones locales Android para recordatorios.
+- Autenticación con Google ID mediante Credential Manager y sesión de Supabase Auth.
+- Creación o recuperación de una familia personal y su perfil con la RPC `ensure_user_profile`.
+- Alta, consulta, edición y borrado lógico de vehículos.
+- Actualización rápida del odómetro, con confirmación cuando disminuye.
+- Registro, consulta y borrado lógico de mantenimientos, incluidos coste opcional, taller y notas.
+- Creación manual, finalización y borrado de recordatorios por fecha, kilometraje o ambos.
+- Sugerencias proactivas de recordatorios al crear o editar un vehículo con próxima ITV, renovación del seguro o próxima revisión por kilometraje. El usuario confirma su creación y la reconciliación utiliza identificadores estables para evitar duplicados.
+- Notificaciones locales Android para recordatorios con fecha.
+- Persistencia local con SQLDelight y sincronización v0 con Supabase para vehículos, mantenimientos y recordatorios.
 
-Funcionalidades post-MVP o de Entrega final:
+Trabajo pendiente o evolución dentro del alcance descrito por las historias:
 
-- App Desktop desde la misma base KMP.
-- Recordatorios proactivos desde el alta/edición de vehículo.
-- Actualización rápida de odómetro.
-- Invitación de familiares mediante código.
-- Exportación de historial a PDF o CSV.
+- Integrar el recordatorio desde el formulario de mantenimiento. El dominio ya contiene `CreateAutomaticReminderUseCase` y `MaintenanceRecord.nextDueDate`, pero el formulario y su ViewModel todavía no capturan ni conectan ese vencimiento.
+- Calcular y presentar el coste acumulado por vehículo.
+- Completar el test E2E Android, la publicación de la entrega y sus evidencias.
+- Incorporar invitaciones familiares y exportación PDF/CSV en evoluciones posteriores.
+- Mantener Desktop e iOS como visión futura sobre la base compartida KMP. Android es el único cliente funcional y el entregable actual.
+- Evaluar un fallback OAuth mediante navegador como evolución futura. Actualmente Android solo usa Credential Manager + Google ID y permite reintentar ese mismo flujo ante un error.
 
-El detalle de priorización vive en `openspec/prd.md` (sección 5) y `docs/user-stories.md`.
+La priorización se documenta en [`openspec/prd.md`](openspec/prd.md) y [`docs/user-stories.md`](docs/user-stories.md).
 
 ### **1.3. Diseño y experiencia de usuario:**
 
-La experiencia se plantea alrededor de tres pantallas principales:
+La experiencia se organiza alrededor de estas áreas:
 
-- **Garaje:** vista inicial con todos los vehículos de la familia, estado resumido y próximos avisos.
-- **Detalle de vehículo:** información del vehículo, odómetro, historial y acciones rápidas.
-- **Recordatorios:** lista de vencimientos próximos, vencidos o asociados a kilometraje.
+- **Garaje:** listado de vehículos, alta, edición, borrado y actualización rápida del odómetro.
+- **Detalle de vehículo:** acceso al historial y registro de mantenimientos.
+- **Recordatorios:** creación manual, consulta de próximos avisos, finalización y borrado.
+- **Usuario:** sesión, estado de sincronización y acción de sincronización manual.
 
-El flujo principal del MVP será:
+El flujo principal disponible es:
 
 ```text
-Inicio de sesión
-  -> Cargar o crear garaje familiar personal
-  -> Añadir vehículo
+Inicio de sesión con Google ID
+  -> Crear o recuperar familia personal
+  -> Añadir o editar vehículo
+  -> Confirmar recordatorios proactivos del vehículo, si procede
   -> Registrar mantenimiento
   -> Consultar historial
-  -> Crear o ver recordatorio
+  -> Crear o consultar recordatorios
   -> Sincronizar con Supabase
 ```
 
-La interfaz de Entrega 2 está implementada en Compose for Android. La arquitectura conserva dominio, datos y estado reutilizables para Desktop/iOS futuro, pero esos targets no forman parte del entregable funcional actual.
+La interfaz está implementada con Compose para Android. La arquitectura comparte modelo, dominio, datos y parte de la presentación para facilitar una evolución futura a Desktop e iOS, sin presentar esas plataformas como parte del entregable funcional actual.
 
 ### **1.4. Instrucciones de instalación:**
 
-El proyecto ya cuenta con una base Kotlin Multiplatform modular. Android es la plataforma principal para Entrega 2; Desktop queda diferido como objetivo posterior.
-
 Requisitos:
 
-- Android Studio con soporte Kotlin Multiplatform.
-- JDK compatible con la versión de Gradle del proyecto.
-- Cuenta y proyecto Supabase.
-- Google OAuth configurado en Supabase Auth.
-- Variables locales en `local.properties`, nunca versionadas. La plantilla segura vive en [`local.properties.example`](local.properties.example) y la guia de setup en [`docs/supabase-setup.md`](docs/supabase-setup.md).
+- JDK 17.
+- Android Studio y un SDK Android compatible.
+- Proyecto Supabase configurado según [`docs/supabase-setup.md`](docs/supabase-setup.md).
+- Cliente OAuth web y cliente OAuth Android configurados según [`docs/supabase-login-runtime.md`](docs/supabase-login-runtime.md).
 
-Configuración local:
+Crear `local.properties` a partir de [`local.properties.example`](local.properties.example) y completar:
 
 ```properties
 SUPABASE_URL=https://xxxx.supabase.co
@@ -114,15 +113,15 @@ SUPABASE_ANON_KEY=xxxx
 GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
 ```
 
-Comandos de verificación:
+`GOOGLE_CLIENT_ID` corresponde al cliente OAuth de tipo Web application. El cliente Android se registra en Google Cloud con el paquete `com.asensiodev.carbura` y las huellas SHA de firma, pero su identificador no se copia en `local.properties`.
+
+Verificación local equivalente a CI:
 
 ```bash
-./gradlew tasks
-./gradlew test
-./gradlew assembleDebug
+./gradlew qualityCheck test assembleDebug --stacktrace
 ```
 
-La APK debug se genera desde el módulo `app:android`. La configuración real de Supabase se lee desde `local.properties` y no debe commitearse.
+La APK debug se genera desde `app:android`. `local.properties` y cualquier secreto deben permanecer fuera de Git.
 
 ---
 
@@ -135,201 +134,161 @@ flowchart TD
     User[Usuario]
 
     subgraph Clients[Clientes]
-        Android[Android App\nCompose for Android]
-        Desktop[Desktop App futura\nCompose for Desktop]
+        Android[Android actual\nCompose]
+        Desktop[Desktop futuro]
+        IOS[iOS futuro]
     end
 
-    subgraph Shared[Kotlin Multiplatform - commonMain]
-        VM[ViewModels + UiState]
-        UseCases[Use Cases]
-        Domain[Domain Models]
-        Repo[Repositories]
-        Sync[SyncManager\nlast-write-wins]
-        Local[LocalDataSource\nSQLDelight]
-        Remote[RemoteDataSource\nKtor Client]
+    subgraph Shared[Kotlin Multiplatform]
+        Presentation[ViewModels + UiState]
+        Domain[Casos de uso + modelos]
+        Repositories[Repositorios local-first]
+        Sync[LocalFirstSyncManager\nfull pull + last-write-wins]
+        Local[(SQLDelight)]
+        Remote[Supabase Kotlin\nPostgREST]
     end
 
-    subgraph Supabase[Supabase]
-        Auth[Supabase Auth\nGoogle OAuth]
-        DB[(PostgreSQL\nRLS por family_id)]
-        Storage[Storage\nadjuntos futuros]
+    subgraph Backend[Supabase]
+        Auth[Supabase Auth]
+        DB[(PostgreSQL\nRLS por familia)]
     end
 
     User --> Android
-    User -. futuro .-> Desktop
-    Android --> VM
-    Desktop -. futuro .-> VM
-    VM --> UseCases
-    UseCases --> Domain
-    UseCases --> Repo
-    Repo --> Local
-    Repo --> Remote
-    Repo --> Sync
+    User -. visión futura .-> Desktop
+    User -. visión futura .-> IOS
+    Android --> Presentation
+    Desktop -. reutilización futura .-> Presentation
+    IOS -. reutilización futura .-> Presentation
+    Presentation --> Domain
+    Domain --> Repositories
+    Repositories --> Local
+    Repositories --> Sync
     Sync --> Local
     Sync --> Remote
-    Remote --> Auth
+    Android --> Auth
     Remote --> DB
-    Remote --> Storage
 ```
 
-La arquitectura sigue Clean Architecture, modularizacion Gradle y una estrategia offline-first. La aplicación lee y escribe primero en local mediante SQLDelight. La sincronización con Supabase se realiza de forma eventual cuando hay conexión.
+La arquitectura sigue Clean Architecture, modularización Gradle y una estrategia local-first. La UI observa SQLDelight y las mutaciones se guardan primero en local. Cuando existe una sesión válida, `LocalFirstSyncManager` hace converger los cambios con Supabase.
 
-Las dependencias nativas se aislan con un patron comun: contrato en KMP y adapter por plataforma. Esto aplica a autenticacion, permisos, notificaciones, storage seguro, deep links y APIs del sistema. Android implementa auth con Credential Manager + Google ID; Desktop, si entra, usara OAuth mediante navegador; iOS futuro tendra su adapter propio sin contaminar dominio ni casos de uso.
+Las dependencias nativas se aíslan mediante contratos cuando existe una implementación real. Android integra Credential Manager, Google ID, ciclo de vida y notificaciones locales. Desktop e iOS permanecen como dirección futura: no existe actualmente una aplicación Desktop ejecutable, target iOS ni fallback OAuth por navegador conectado.
 
 Beneficios principales:
 
-- La lógica de negocio vive en `commonMain` y se comparte entre Android, Desktop e iOS futuro.
-- Las integraciones nativas se aíslan con contratos comunes y adapters por plataforma.
-- El design system vive en un módulo compartido para reutilizar tema, tokens y componentes base.
-- La app sigue siendo usable sin conexión.
-- Los tests unitarios pueden concentrarse en dominio, casos de uso, repositorios y sincronización.
-- Supabase resuelve autenticación, base de datos remota, Row Level Security y almacenamiento.
+- Dominio, modelos, repositorios y parte de la presentación reutilizables.
+- Uso de la aplicación y mutaciones sin conexión.
+- Aislamiento entre familias mediante sesión y Row Level Security.
+- Tests unitarios sobre dominio, repositorios y sincronización.
+- Posibilidad de evolucionar a Desktop e iOS sin declarar soporte funcional prematuro.
 
 Sacrificios o riesgos:
 
-- La sincronización offline-first añade complejidad al MVP.
-- La estrategia `last-write-wins` es simple, pero puede sobrescribir cambios concurrentes.
-- Desktop y Android comparten lógica y parte del design system, pero capacidades como auth, permisos, notificaciones, storage seguro y APIs de sistema requieren adapters específicos por plataforma.
+- La sincronización local-first añade complejidad y lecturas remotas completas.
+- `last-write-wins` puede ocultar cambios concurrentes.
+- No hay sincronización con la aplicación cerrada, Realtime, `WorkManager` ni `Service`.
+- Las capacidades nativas requerirán adaptadores específicos para cada plataforma futura.
 
 ### **2.2. Descripción de componentes principales:**
 
 | Componente | Tecnología | Responsabilidad |
 |---|---|---|
-| Android App | Compose for Android | UI móvil, permisos Android y notificaciones locales. |
-| Desktop App | Compose for Desktop | UI de escritorio futura para macOS y Windows. Diferida en Entrega 2. |
-| Platform Adapters | Android/Desktop/iOS futuro | Implementan contratos comunes para auth, permisos, notificaciones, secure storage y APIs nativas. |
-| Design System | Compose Multiplatform | Tema, tokens visuales y componentes base reutilizables. |
-| ViewModels + UiState | Kotlin Multiplatform | Estado de pantalla, eventos de usuario y exposición de datos a UI. |
-| Use Cases | Kotlin común | Reglas de negocio: crear vehículo, registrar mantenimiento, generar recordatorio. |
-| Domain Models | Kotlin común | Entidades del dominio independientes de infraestructura. |
-| Repositories | Kotlin común | Coordinan fuentes locales, remotas y sincronización. |
-| LocalDataSource | SQLDelight | Persistencia local offline-first. |
-| RemoteDataSource | Ktor Client + Supabase | Acceso remoto a Auth, PostgreSQL y Storage. |
-| SyncManager | Kotlin común | Sincronización eventual, reintentos y resolución `last-write-wins`. |
-| Supabase | Auth, PostgreSQL, Storage | Backend gestionado, autenticación Google y RLS por `family_id`. |
+| Android App | Compose para Android | UI funcional, navegación, ciclo de vida, autenticación y notificaciones locales. |
+| Clientes futuros | Desktop e iOS | Visión multiplataforma; no forman parte del entregable funcional actual. |
+| ViewModels + UiState | Kotlin Multiplatform | Estado de pantalla, eventos y coordinación con casos de uso. |
+| Use Cases | Kotlin común | Reglas de negocio para vehículos, mantenimientos, recordatorios y sesión. |
+| Domain Models | Kotlin común | Entidades e identificadores independientes de infraestructura. |
+| Repositories | Kotlin común | Coordinación de persistencia local y cambios pendientes. |
+| LocalDataSource | SQLDelight | Fuente inmediata de la UI y persistencia local-first. |
+| RemoteDataSource | Supabase Kotlin/PostgREST | Lectura y upsert de datos remotos protegidos por RLS. |
+| SyncManager | Kotlin común | Full pull, push de pendientes, tombstones y `last-write-wins`. |
+| Supabase | Auth y PostgreSQL | Sesión, RPC de perfil/familia, datos remotos y RLS. |
 
 ### **2.3. Descripción de alto nivel del proyecto y estructura de ficheros**
 
-Estructura objetivo del repositorio:
-
 ```text
 Carbura/
-├── build-logic/                # Convention plugins Gradle del proyecto
+├── .github/workflows/ci.yml   # Pipeline real de verificación
+├── build-logic/               # Convention plugins Gradle
 ├── app/
-│   ├── android/                # App Android, navegación, adapters Android
-│   └── shared/                 # Rutas y contratos compartidos de app
+│   ├── android/               # Cliente funcional Android
+│   └── shared/                # Rutas y contratos compartidos
 ├── core/
-│   ├── model/                  # Modelos compartidos
-│   ├── domain/                 # Entidades, use cases y contratos
-│   ├── data/                   # Repositorios e implementación coordinadora
-│   ├── auth/                   # Adapter Supabase/Auth Android y configuración
-│   ├── designsystem/           # Tema, tokens y componentes Compose base
-│   ├── string-resources/       # Recursos de texto compartidos/type-safe
-│   └── testing/                # Utilidades base de test
-├── feature/
-│   ├── onboarding/
-│   ├── garage/
-│   ├── maintenance/
-│   └── reminders/
-├── docs/                       # Documentación funcional, técnica, herramientas IA y evidencias
-│   ├── user-stories.md
-│   └── toolchain/
-├── openspec/                   # SDD: PRD, contexto, specs y cambios
-│   ├── project.md
-│   ├── prd.md
-│   ├── specs/
-│   ├── changes/
-│   └── archive/
-├── readme.md                   # Documentación principal de entrega
-├── local.properties.example    # Ejemplo de configuración local sin secretos
-└── .gitignore
+│   ├── model/                 # Modelos e identificadores
+│   ├── domain/                # Casos de uso y contratos
+│   ├── data/                  # SQLDelight, repositorios, DTO y sync
+│   ├── auth/                  # Supabase Auth y adaptadores
+│   ├── designsystem/          # Tema y componentes Android
+│   ├── string-resources/      # Claves y resolución de textos
+│   └── testing/               # Utilidades de test
+├── feature/                   # Onboarding, garaje, mantenimiento y recordatorios
+├── quality/architecture/      # Reglas de dependencias modulares
+├── supabase/migrations/       # Cinco migraciones SQL vigentes
+├── docs/                      # Documentación técnica y funcional
+├── openspec/
+│   ├── specs/                 # Especificaciones vigentes
+│   └── changes/
+│       └── archive/           # Cambios OpenSpec cerrados
+└── readme.md                  # Plantilla académica principal
 ```
 
 ### **2.4. Infraestructura y despliegue**
 
-Infraestructura prevista para el MVP:
-
 ```mermaid
 flowchart LR
-    Android[Android App]
-    Desktop[Desktop App futura]
-    LocalDB[(SQLDelight local)]
-    SupabaseAuth[Supabase Auth\nGoogle OAuth]
-    SupabaseDB[(Supabase PostgreSQL)]
-    SupabaseStorage[Supabase Storage]
-
-    Android <--> LocalDB
-    Desktop -. futuro .-> LocalDB
-    Android <--> SupabaseAuth
-    Desktop -. futuro .-> SupabaseAuth
-    Android <--> SupabaseDB
-    Desktop -. futuro .-> SupabaseDB
-    Android -. adjuntos futuros .-> SupabaseStorage
-    Desktop -. adjuntos futuros .-> SupabaseStorage
+    Android[Android actual] <--> LocalDB[(SQLDelight)]
+    Android --> GoogleID[Google ID]
+    GoogleID --> SupabaseAuth[Supabase Auth]
+    Android <--> SupabaseDB[(Supabase PostgreSQL\nRLS)]
+    Desktop[Desktop futuro] -. arquitectura compartida .-> SupabaseDB
+    IOS[iOS futuro] -. arquitectura compartida .-> SupabaseDB
 ```
 
-El despliegue del backend se apoya en Supabase. No se prevé servidor propio para el MVP. La Entrega 2 se verifica como build Android; Desktop queda preparado en arquitectura pero no como artefacto funcional de esta entrega.
+No existe servidor propio. Supabase proporciona Auth, PostgreSQL, PostgREST y RLS. Android es el artefacto instalable actual; Desktop e iOS se mantienen como evolución futura multiplataforma.
 
 **CI/CD y evidencia de despliegue (ticket T-11):**
 
-Al ser Carbura una aplicación KMP nativa (Android + Desktop), no existe una URL pública de frontend. La evidencia de despliegue y el pipeline se plantean así:
-
-- **CI con GitHub Actions:** compilación y ejecución de `./gradlew test` en cada push y pull request.
-- **Gestión de secretos:** credenciales de Supabase y Google OAuth fuera del repositorio (`local.properties` en local, GitHub Secrets en CI).
-- **Release final:** artefactos instalables, como mínimo APK Android, publicados en GitHub Releases con tag `v1.0-final-AAC`. El paquete Desktop se añadirá solo si entra en alcance final.
-- **Sistema "en vivo":** el backend Supabase (Auth + PostgreSQL con RLS) es el entorno desplegado y accesible; el flujo principal se documentará además con un vídeo demo de 2-3 minutos y capturas.
+- `.github/workflows/ci.yml` se ejecuta en `push` y `pull_request` sobre Ubuntu con JDK 17.
+- El job real ejecuta `./gradlew qualityCheck test assembleDebug --stacktrace`.
+- `qualityCheck` agrega ktlint, detekt y `:quality:architecture:test`.
+- La publicación de una release instalable y las capturas o vídeo de evidencia siguen pendientes para el cierre final.
+- Las credenciales permanecen fuera del repositorio; CI no necesita secretos de producción para las comprobaciones actuales.
 
 ### **2.5. Seguridad**
 
-- Autenticación con Google mediante Supabase Auth.
-- Aislamiento de datos por `family_id`.
-- Row Level Security en Supabase para evitar acceso cruzado entre familias.
-- Variables sensibles fuera del repositorio mediante `local.properties` o entorno local.
-- `.gitignore` preparado para excluir `.env`, `local.properties`, claves, keystores y credenciales.
-- Invitaciones familiares completas quedan fuera de Entrega 2; cada usuario crea/carga una familia personal inicial.
+- Inicio de sesión con Google ID y Supabase Auth.
+- RPC `ensure_user_profile` ejecutable solo por el rol `authenticated` para crear o recuperar la familia personal.
+- RLS habilitado en las tablas públicas y políticas basadas en `can_access_family`.
+- `family_id` limita las operaciones remotas al garaje accesible por el JWT.
+- Variables sensibles excluidas del repositorio mediante `local.properties` y `.gitignore`.
+- `invite_code` existe como campo opcional, pero todavía no constituye un flujo ni una API de invitación.
 
 ### **2.6. Tests**
 
-La estrategia de calidad combina SDD con OpenSpec, TDD durante la implementación y DDD ligero para el diseño del dominio:
+La estrategia combina SDD con OpenSpec, TDD durante la implementación y DDD ligero:
 
 ```text
 Spec OpenSpec
   -> criterios de aceptación
-  -> modelo de dominio mínimo
   -> tests que fallan
   -> código mínimo
   -> refactor
-  -> verificación
+  -> verificación y archivo del cambio
 ```
 
-Tests previstos y en evolución:
+La suite actual incluye tests comunes y JVM/desktop de dominio, repositorios y sincronización, además de reglas de arquitectura, ktlint y detekt. El pipeline ejecuta `qualityCheck`, `test` y `assembleDebug` en cada push y pull request.
 
-- Tests unitarios de casos de uso: alta de vehículo, registro de mantenimiento, generación de recordatorio.
-- Tests de repositorio con dobles de LocalDataSource y RemoteDataSource.
-- Tests de integración de la capa de datos: SQLDelight local y, cuando aplique, acceso a Supabase con datos de prueba.
-- Tests de sincronización para cambios offline y resolución `last-write-wins`.
-- Tests de validación de formularios y estados vacíos.
-- **Test E2E del flujo principal** (ticket T-12): test instrumentado de Compose UI que recorre el flujo completo `sesión -> alta de vehículo -> registro de ITV -> historial -> recordatorio automático visible`, con login de test y base de datos limpia por ejecución.
-- Tests instrumentados o manuales para notificaciones locales según plataforma.
-
-La suite (unitarios, integración y E2E) se ejecutará en el pipeline de CI (ticket T-11). El TDD se aplicará durante la implementación de cada spec OpenSpec: primero se escribirán tests que fallen, después el código mínimo para pasarlos y finalmente refactor seguro. El test E2E se escribe al final, cuando el flujo core está implementado, como verificación de extremo a extremo.
+Como cierre de calidad permanece pendiente el test E2E Android del recorrido principal. Debe evitar depender del selector real de Google en CI y cubrir una sesión de prueba, alta o edición de vehículo, mantenimiento, historial y recordatorio.
 
 ### **2.7. Diseño de dominio y principios de código**
 
-Carbura aplicará DDD ligero para mantener un modelo de dominio claro sin sobrediseñar el MVP:
+Carbura aplica DDD ligero para conservar un modelo claro sin sobrediseñar el producto:
 
 - Entidades principales: `Family`, `UserProfile`, `Vehicle`, `MaintenanceType`, `MaintenanceRecord` y `Reminder`.
-- Use cases explícitos para operaciones del dominio: alta de vehículo, registro de mantenimiento, generación de recordatorio y sincronización.
-- Repositorios como contratos entre dominio y fuentes de datos locales/remotas.
-- Value objects solo cuando aporten claridad o validación real, por ejemplo identificadores, kilometraje o importes.
+- Casos de uso explícitos para vehículos, mantenimientos, recordatorios, autenticación y sincronización.
+- Repositorios como frontera entre dominio, SQLDelight y Supabase.
+- Identificadores de texto estables generados por el cliente para las entidades sincronizables.
 
-El código del MVP seguirá SOLID y CUPID como criterios de diseño pragmáticos:
-
-- **SOLID**: responsabilidades acotadas, dependencias hacia contratos, entidades de dominio protegidas y casos de uso fáciles de probar.
-- **CUPID**: componentes composables, comportamiento predecible, código idiomático Kotlin, lenguaje de dominio claro y soluciones simples.
-- Estos principios se aplicarán especialmente en use cases, repositorios, view models, modelos de dominio y fuentes de datos.
-- No se introducirán capas o abstracciones innecesarias si no aportan testabilidad, claridad o desacoplamiento real para el MVP.
-- BDD queda fuera del alcance metodológico del MVP para evitar duplicar criterios de aceptación y mantener el proceso simple.
+SOLID y CUPID se aplican como criterios pragmáticos: responsabilidades acotadas, dependencias hacia contratos, comportamiento predecible, Kotlin idiomático y lenguaje de dominio claro. No se añaden capas si no aportan claridad, desacoplamiento o capacidad de prueba.
 
 ---
 
@@ -337,21 +296,23 @@ El código del MVP seguirá SOLID y CUPID como criterios de diseño pragmáticos
 
 ### **3.1. Diagrama del modelo de datos:**
 
+El esquema remoto vigente resulta de aplicar, en orden, las cinco migraciones de `supabase/migrations/`. La última añade los campos de planificación del vehículo. Vehículos, mantenimientos y recordatorios usan IDs de texto estables; familias, perfiles y tipos de mantenimiento mantienen UUID.
+
 ```mermaid
 erDiagram
-    FAMILY ||--o{ USER_PROFILE : has
-    FAMILY ||--o{ VEHICLE : owns
-    FAMILY ||--o{ MAINTENANCE_TYPE : defines
-    VEHICLE ||--o{ MAINTENANCE_RECORD : has
-    VEHICLE ||--o{ REMINDER : has
-    MAINTENANCE_TYPE ||--o{ MAINTENANCE_RECORD : categorizes
-    MAINTENANCE_TYPE ||--o{ REMINDER : categorizes
-    MAINTENANCE_RECORD ||--o| REMINDER : creates
+    FAMILY ||--o{ USER_PROFILE : agrupa
+    FAMILY ||--o{ VEHICLE : posee
+    FAMILY ||--o{ MAINTENANCE_TYPE : define
+    VEHICLE ||--o{ MAINTENANCE_RECORD : registra
+    VEHICLE ||--o{ REMINDER : programa
+    MAINTENANCE_TYPE ||--o{ MAINTENANCE_RECORD : clasifica
+    MAINTENANCE_TYPE ||--o{ REMINDER : clasifica
 
     FAMILY {
         uuid id PK
         string name
         string invite_code UK
+        uuid created_by FK
         datetime created_at
         datetime updated_at
         datetime deleted_at
@@ -359,8 +320,8 @@ erDiagram
 
     USER_PROFILE {
         uuid id PK
+        uuid user_id UK
         uuid family_id FK
-        uuid auth_user_id UK
         string display_name
         string email
         datetime created_at
@@ -369,12 +330,17 @@ erDiagram
     }
 
     VEHICLE {
-        uuid id PK
+        string id PK
         uuid family_id FK
         string name
-        string type
-        string plate
+        string vehicle_type
+        string brand
+        string model
+        string license_plate
         integer current_odometer_km
+        date next_itv_date
+        date insurance_renewal_date
+        integer next_service_odometer_km
         datetime created_at
         datetime updated_at
         datetime deleted_at
@@ -383,36 +349,44 @@ erDiagram
     MAINTENANCE_TYPE {
         uuid id PK
         uuid family_id FK
+        string code
         string name
-        boolean is_default
+        boolean is_global
         datetime created_at
         datetime updated_at
         datetime deleted_at
     }
 
     MAINTENANCE_RECORD {
-        uuid id PK
-        uuid vehicle_id FK
+        string id PK
+        uuid family_id FK
+        string vehicle_id FK
         uuid maintenance_type_id FK
-        date performed_at
+        string maintenance_type_key
+        string maintenance_type_code
+        date performed_on
         integer odometer_km
-        decimal cost_amount
+        integer cost_cents
+        string currency
         string workshop
         string notes
+        date next_due_date
         datetime created_at
         datetime updated_at
         datetime deleted_at
     }
 
     REMINDER {
-        uuid id PK
-        uuid vehicle_id FK
+        string id PK
+        uuid family_id FK
+        string vehicle_id FK
         uuid maintenance_type_id FK
-        uuid source_record_id FK
+        string maintenance_type_key
+        string title
         date due_date
         integer due_odometer_km
         integer notify_days_before
-        string status
+        datetime completed_at
         datetime created_at
         datetime updated_at
         datetime deleted_at
@@ -423,128 +397,91 @@ erDiagram
 
 | Entidad | Descripción | Campos principales | Restricciones |
 |---|---|---|---|
-| `Family` | Garaje familiar o workspace compartido. | `id`, `name`, `invite_code`, timestamps. | `invite_code` único. |
-| `UserProfile` | Perfil interno vinculado al usuario autenticado en Supabase. | `id`, `family_id`, `auth_user_id`, `display_name`, `email`. | `auth_user_id` único, `family_id` obligatorio. |
-| `Vehicle` | Vehículo registrado en el garaje. | `id`, `family_id`, `name`, `type`, `plate`, `current_odometer_km`. | Pertenece a una `Family`; `name` y `type` obligatorios. |
-| `MaintenanceType` | Catálogo de tipos de mantenimiento. | `id`, `family_id`, `name`, `is_default`. | Puede ser global por familia o personalizado. |
-| `MaintenanceRecord` | Evento histórico realizado sobre un vehículo. | `id`, `vehicle_id`, `maintenance_type_id`, `performed_at`, `odometer_km`, `cost_amount`, `workshop`, `notes`. | Requiere vehículo, tipo, fecha y kilómetros. |
-| `Reminder` | Aviso futuro por fecha o kilometraje. | `id`, `vehicle_id`, `maintenance_type_id`, `source_record_id`, `due_date`, `due_odometer_km`, `notify_days_before`, `status`. | Debe tener `due_date`, `due_odometer_km` o ambos. |
+| `Family` | Garaje familiar. | UUID, nombre, `invite_code`, `created_by`, timestamps. | `invite_code` opcional y único; creador autenticado. |
+| `UserProfile` | Perfil vinculado a Supabase Auth. | UUID, `user_id`, `family_id`, nombre y correo. | `user_id` único y `family_id` obligatorio. |
+| `Vehicle` | Vehículo del garaje. | ID texto, familia, nombre, tipo, marca, modelo, matrícula, odómetro y objetivos de ITV, seguro y revisión. | Nombre y tipo obligatorios; kilómetros no negativos. |
+| `MaintenanceType` | Catálogo global o específico de familia. | UUID, familia opcional, código, nombre e `is_global`. | Global sin familia o personalizado con familia. |
+| `MaintenanceRecord` | Evento del historial. | ID texto, familia, vehículo, tipo/key/code, fecha, odómetro, coste en céntimos, moneda, taller, notas y `next_due_date`. | Vehículo y familia relacionados; tipo remoto opcional desde sync v0. |
+| `Reminder` | Aviso por fecha o kilometraje. | ID texto, familia, vehículo, título, tipo/key, vencimientos, antelación y `completed_at`. | Debe tener fecha, kilometraje o ambos. |
 
-Campos de sincronización:
+Las migraciones vigentes son:
 
-- `created_at`: fecha de creación.
-- `updated_at`: fecha de última modificación, usada para `last-write-wins`.
-- `deleted_at`: borrado lógico para poder sincronizar eliminaciones.
+1. `202607010001_initial_schema.sql`: tablas, índices, triggers, funciones auxiliares y RLS.
+2. `202607070001_ensure_user_profile_rpc.sql`: grants y RPC de creación o recuperación de perfil/familia.
+3. `202607080001_sync_v0_schema.sql`: tipo de mantenimiento opcional, claves de tipo y `next_due_date`.
+4. `202607080002_sync_v0_text_entity_ids.sql`: IDs de texto para vehículos, mantenimientos y recordatorios.
+5. `202607120001_vehicle_planning_fields.sql`: próxima ITV, renovación del seguro y próxima revisión por kilometraje.
+
+SQLDelight mantiene `updatedAt`, `pendingSync` y `deletedAt` en las tres familias sincronizables. `deleted_at` representa tombstones y `updated_at` resuelve conflictos mediante `last-write-wins`.
 
 ---
 
 ## 4. Especificación de la API
 
-El MVP no plantea un backend propio con endpoints REST custom. La comunicación remota se realizará con Supabase Auth (GoTrue) y Supabase PostgreSQL (PostgREST), consumidos desde Ktor Client. Aunque el backend es gestionado, Supabase expone endpoints HTTP reales, por lo que la documentación se presenta en dos niveles:
-
-- **Contratos lógicos** (4.1 a 4.3): operaciones de negocio tal y como las consume la capa `RemoteDataSource`.
-- **Especificación OpenAPI** (4.4): los 3 endpoints HTTP principales de Supabase que implementan esos contratos.
+Carbura no mantiene un backend REST propio ni un contrato agregado de sincronización. El cliente usa Supabase Auth, una RPC PostgREST y operaciones `select`/`upsert` de Supabase Kotlin. Se documentan tres endpoints representativos, máximo exigido por la plantilla; Supabase genera la especificación OpenAPI completa del esquema desplegado.
 
 ### **4.1. Autenticación y perfil familiar**
 
 ```yaml
-operation: signInWithGoogleAndLoadProfile
-provider: Supabase Auth
-input:
-  google_id_token: string
-output:
-  session:
-    access_token: string
-    refresh_token: string
-  user_profile:
-    id: uuid
-    family_id: uuid | null
-    display_name: string
-    email: string
-errors:
-  - invalid_google_token
-  - profile_not_found
-  - network_error
+operaciones:
+  - nombre: iniciarSesionConGoogleId
+    endpoint: POST /auth/v1/token?grant_type=id_token
+    entrada:
+      provider: google
+      id_token: string
+    salida: sesión Supabase
+  - nombre: asegurarPerfilYFamilia
+    endpoint: POST /rest/v1/rpc/ensure_user_profile
+    entrada:
+      profile_display_name: string
+      profile_email: string | null
+    salida:
+      user_id: uuid
+      family_id: uuid
+      display_name: string
+      email: string | null
+seguridad: JWT de usuario y rol authenticated
 ```
+
+No existe actualmente fallback OAuth mediante navegador conectado. Puede mantenerse como evolución futura para plataformas o dispositivos que lo requieran.
 
 ### **4.2. Sincronización de garaje**
 
-```yaml
-operation: syncGarageData
-provider: Supabase PostgreSQL
-input:
-  family_id: uuid
-  last_sync_at: datetime | null
-  local_changes:
-    vehicles: Vehicle[]
-    maintenance_records: MaintenanceRecord[]
-    reminders: Reminder[]
-output:
-  remote_changes:
-    vehicles: Vehicle[]
-    maintenance_records: MaintenanceRecord[]
-    reminders: Reminder[]
-  server_timestamp: datetime
-conflict_strategy: last-write-wins using updated_at
-errors:
-  - unauthorized_family_access
-  - sync_conflict_unresolvable
-  - network_error
-```
+La sincronización no utiliza un cursor incremental ni un endpoint agregado. `LocalFirstSyncManager` serializa ciclos con un `Mutex` y, para `vehicles`, `maintenance_records` y `reminders`, realiza:
+
+1. Resolución de sesión, perfil y familia activa.
+2. Adopción de filas locales heredadas de `local-family`.
+3. Descarga completa por `family_id` de cada familia de entidades.
+4. Comparación con filas locales `pendingSync`; solo se suben por upsert las que no tienen una versión remota más reciente.
+5. Marcado local de las filas subidas como sincronizadas.
+6. Nueva descarga completa y fusión local mediante `last-write-wins` por `updated_at`.
+
+Los borrados convergen como tombstones mediante `deleted_at`. El ciclo se activa al iniciar la sesión, al volver la app a primer plano con limitación temporal, mediante temporizador mientras la composición autenticada está activa, después de mutaciones y por acción manual. No se ejecuta con la aplicación cerrada.
 
 ### **4.3. Invitación a garaje familiar**
 
-```yaml
-operation: joinFamilyByInviteCode
-provider: Supabase PostgreSQL
-input:
-  invite_code: string
-  auth_user_id: uuid
-output:
-  family_id: uuid
-  membership_status: joined
-errors:
-  - invalid_invite_code
-  - expired_invite_code
-  - user_already_in_family
-  - network_error
-```
+La invitación familiar no dispone de endpoint, RPC, caso de uso ni interfaz. El campo opcional `families.invite_code` forma parte del esquema inicial, pero no representa por sí mismo un contrato funcional. Su diseño se mantiene fuera del entregable Android actual y deberá especificar membresía, caducidad, permisos y aceptación antes de implementarse.
 
 ### **4.4. Especificación OpenAPI de los endpoints Supabase**
 
-Los 3 endpoints HTTP principales que consume la app, en formato OpenAPI 3.0. Todas las peticiones a PostgREST incluyen la cabecera `apikey` y el token JWT del usuario, de forma que Row Level Security filtra automáticamente por `family_id`.
-
-> **Nota de alcance:** se documentan únicamente estos 3 endpoints como simplificación intencional para la entrega (la plantilla pide un máximo de 3). PostgREST expone el mismo patrón `GET`/`POST` para el resto de tablas del modelo (`maintenance_records` en lectura, `reminders`, `maintenance_types`, `families`, `user_profiles`), que siguen exactamente la misma semántica de seguridad, filtro incremental por `updated_at` y upsert. El ciclo completo de sincronización está descrito en el contrato lógico `syncGarageData` (sección 4.2).
->
-> **Documentación completa:** Supabase genera automáticamente la especificación OpenAPI de todas las tablas expuestas en `GET /rest/v1/` (con la cabecera `apikey` del proyecto). El contrato detallado para implementación —tablas, RLS, cabeceras de upsert y filtros de sync— vive en `openspec/specs/supabase-backend/spec.md` y `openspec/specs/sync-v0/spec.md`.
+La siguiente especificación académica limita la muestra a tres endpoints reales. Las operaciones equivalentes sobre `maintenance_records` y `reminders` se realizan con el SDK de Supabase siguiendo el esquema y las políticas RLS desplegadas, sin introducir un contrato ficticio de sincronización.
 
 ```yaml
 openapi: 3.0.3
 info:
-  title: Carbura - API remota (Supabase)
-  description: >
-    Endpoints gestionados por Supabase que consume el cliente KMP.
-    GoTrue para autenticación y PostgREST para datos con RLS por family_id.
+  title: Carbura - API remota Supabase
   version: 1.0.0
 servers:
   - url: https://{project_ref}.supabase.co
-    variables:
-      project_ref:
-        default: xxxx
 paths:
   /auth/v1/token:
     post:
-      summary: Iniciar sesión con Google (intercambio de id_token)
-      description: >
-        Intercambia el id_token de Google Sign-In por una sesión Supabase.
-        Implementa el contrato signInWithGoogleAndLoadProfile (4.1).
+      summary: Intercambiar Google ID token por una sesión Supabase
       parameters:
         - name: grant_type
           in: query
           required: true
-          schema:
-            type: string
-            enum: [id_token]
+          schema: { type: string, enum: [id_token] }
       requestBody:
         required: true
         content:
@@ -553,106 +490,62 @@ paths:
               type: object
               required: [provider, id_token]
               properties:
-                provider:
-                  type: string
-                  enum: [google]
-                id_token:
-                  type: string
+                provider: { type: string, enum: [google] }
+                id_token: { type: string }
       responses:
-        "200":
-          description: Sesión creada.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  access_token: { type: string }
-                  refresh_token: { type: string }
-                  expires_in: { type: integer }
-                  user:
-                    type: object
-                    properties:
-                      id: { type: string, format: uuid }
-                      email: { type: string }
-        "400":
-          description: id_token de Google inválido o caducado.
+        "200": { description: Sesión creada }
+        "400": { description: Token inválido o caducado }
+  /rest/v1/rpc/ensure_user_profile:
+    post:
+      summary: Crear o recuperar el perfil y la familia personal
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [profile_display_name]
+              properties:
+                profile_display_name: { type: string }
+                profile_email: { type: string, nullable: true }
+      responses:
+        "200": { description: Perfil y familia resueltos }
+        "401": { description: Sesión ausente o inválida }
   /rest/v1/vehicles:
     get:
-      summary: Listar vehículos del garaje familiar
-      description: >
-        Lectura de vehículos para sincronización (contrato syncGarageData, 4.2).
-        RLS limita el resultado a la family_id del usuario autenticado.
-      security:
-        - bearerAuth: []
+      summary: Descargar los vehículos accesibles de una familia
+      security: [{ bearerAuth: [] }]
       parameters:
-        - name: updated_at
+        - name: family_id
           in: query
-          required: false
-          description: Filtro incremental de sync, p. ej. gte.2026-06-01T00:00:00Z
-          schema:
-            type: string
+          required: true
+          description: Filtro PostgREST con formato eq.UUID
+          schema: { type: string }
         - name: select
           in: query
-          required: false
-          schema:
-            type: string
-            default: "*"
+          schema: { type: string, default: "*" }
       responses:
         "200":
-          description: Vehículos de la familia del usuario.
+          description: Conjunto remoto completo filtrado por familia
           content:
             application/json:
               schema:
                 type: array
-                items:
-                  $ref: "#/components/schemas/Vehicle"
-        "401":
-          description: Token ausente o inválido.
+                items: { $ref: "#/components/schemas/Vehicle" }
     post:
-      summary: Crear o actualizar vehículos (upsert de sync)
-      description: >
-        Subida de cambios locales pendientes. Con la cabecera
-        Prefer: resolution=merge-duplicates actúa como upsert por id.
-      security:
-        - bearerAuth: []
+      summary: Subir vehículos pendientes mediante upsert
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: array
-              items:
-                $ref: "#/components/schemas/Vehicle"
+              items: { $ref: "#/components/schemas/Vehicle" }
       responses:
-        "201":
-          description: Vehículos creados o actualizados.
-        "401":
-          description: Token ausente o inválido.
-        "403":
-          description: RLS rechaza escritura fuera de la family_id del usuario.
-  /rest/v1/maintenance_records:
-    post:
-      summary: Registrar mantenimientos (upsert de sync)
-      description: >
-        Persistencia remota de los registros de mantenimiento creados
-        offline-first en el cliente (contrato syncGarageData, 4.2).
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: "#/components/schemas/MaintenanceRecord"
-      responses:
-        "201":
-          description: Registros creados o actualizados.
-        "401":
-          description: Token ausente o inválido.
-        "403":
-          description: RLS rechaza escritura fuera de la family_id del usuario.
+        "201": { description: Filas creadas o actualizadas }
+        "403": { description: RLS rechaza el acceso a la familia }
 components:
   securitySchemes:
     bearerAuth:
@@ -662,215 +555,134 @@ components:
   schemas:
     Vehicle:
       type: object
-      required: [id, family_id, name, type, current_odometer_km]
+      required: [id, family_id, name, vehicle_type, current_odometer_km]
       properties:
-        id: { type: string, format: uuid }
+        id: { type: string }
         family_id: { type: string, format: uuid }
         name: { type: string }
-        type: { type: string }
-        plate: { type: string, nullable: true }
+        vehicle_type: { type: string }
+        brand: { type: string, nullable: true }
+        model: { type: string, nullable: true }
+        license_plate: { type: string, nullable: true }
         current_odometer_km: { type: integer, minimum: 0 }
-        created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time }
-        deleted_at: { type: string, format: date-time, nullable: true }
-    MaintenanceRecord:
-      type: object
-      required: [id, vehicle_id, maintenance_type_id, performed_at, odometer_km]
-      properties:
-        id: { type: string, format: uuid }
-        vehicle_id: { type: string, format: uuid }
-        maintenance_type_id: { type: string, format: uuid }
-        performed_at: { type: string, format: date }
-        odometer_km: { type: integer, minimum: 0 }
-        cost_amount: { type: number, nullable: true }
-        workshop: { type: string, nullable: true }
-        notes: { type: string, nullable: true }
+        next_itv_date: { type: string, format: date, nullable: true }
+        insurance_renewal_date: { type: string, format: date, nullable: true }
+        next_service_odometer_km: { type: integer, minimum: 0, nullable: true }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         deleted_at: { type: string, format: date-time, nullable: true }
 ```
 
+Las especificaciones vigentes de backend y sesión están en [`openspec/specs/supabase-backend/spec.md`](openspec/specs/supabase-backend/spec.md) y [`openspec/specs/auth-session/spec.md`](openspec/specs/auth-session/spec.md). La especificación archivada del endurecimiento de sync v0 está en [`openspec/changes/archive/2026-07-09-harden-sync-offline/specs/sync-v0/spec.md`](openspec/changes/archive/2026-07-09-harden-sync-offline/specs/sync-v0/spec.md); el resto de cambios históricos sigue el patrón `openspec/changes/archive/<fecha>-<change-id>/`.
+
 ---
 
 ## 5. Historias de Usuario
 
-Las historias de usuario completas del MVP están documentadas en [`docs/user-stories.md`](docs/user-stories.md).
+Las historias completas y sus criterios de aceptación están en [`docs/user-stories.md`](docs/user-stories.md). Todas las historias completadas se refieren al cliente Android actual; Desktop e iOS representan la visión futura multiplataforma.
 
-Historias principales seleccionadas para la entrega:
+Historias principales de la entrega:
 
-- **US-02 - Añadir vehículo al garaje**: representa el core de gestión del dominio.
-- **US-04 - Registrar mantenimiento o avería**: demuestra el valor principal del producto.
-- **US-06 - Generar recordatorio automático tras registrar ITV o seguro**: conecta historial con prevención.
+- **US-01 - Iniciar sesión y disponer de un garaje personal:** completada en Android con Google ID, Supabase Auth y `ensure_user_profile`; sin fallback OAuth conectado actualmente.
+- **US-02 - Gestionar vehículos:** completada para alta, consulta, edición, borrado lógico, objetivos de planificación y odómetro rápido.
+- **US-04 - Registrar mantenimiento o avería:** completada para alta, listado y borrado, incluidos kilometraje, coste opcional, taller y notas.
+- **US-07 - Gestionar recordatorios:** completada para creación manual, listado, finalización y borrado.
+- **US-08 - Recibir una notificación local:** completada en Android para recordatorios con fecha.
+- **US-10 - Sincronizar entre sesiones o dispositivos:** completada con los límites de sync v0, full pull y ejecución solo dentro del proceso de la app.
+- **US-13 - Obtener sugerencias proactivas desde el vehículo:** completada. Crear o editar un vehículo puede sugerir ITV, seguro y revisión por kilometraje; la confirmación reconcilia IDs estables sin duplicados.
+- **US-06 - Generar un recordatorio desde un mantenimiento:** pendiente de integración. El caso de uso y `nextDueDate` existen, pero el formulario y el ViewModel de mantenimiento todavía no los conectan. Esta historia es distinta de US-13.
 
 ---
 
 ## 6. Tickets de Trabajo
 
-Los tickets de trabajo se derivan de las historias Must-Have y Should-Have del flujo E2E. En Entrega 2 ya se implementó el bloque Android-first principal usando OpenSpec y TDD; T-11/T-12 quedan orientados a entrega final.
-
-El backlog completo y detallado está en [`docs/backlog.md`](docs/backlog.md). El orden recomendado prioriza datos, dominio/backend y después frontend/plataforma para reducir dependencias bloqueantes.
+El backlog completo está en [`docs/backlog.md`](docs/backlog.md). Los tickets reflejan tanto el trabajo cerrado como las tareas pendientes de integración y calidad, sin confundir piezas de dominio aisladas con flujos de usuario completos.
 
 ### **6.1. Backlog inicial derivado de user stories**
 
-| Ticket | Área | Historia relacionada | Prioridad | Estimación | Resultado esperado |
-|---|---|---|---|---|---|
-| T-01 | Datos | US-01, US-02, US-04, US-06 | Must | 8 SP | Esquema local/remoto con familias, vehículos, mantenimientos y recordatorios. |
-| T-02 | Auth / onboarding | US-01 | Must | 5 SP | Usuario autenticado con Google y garaje familiar creado. |
-| T-03 | Dominio / datos | US-02 | Must | 5 SP | Caso de uso y repositorio para crear vehículo offline-first. |
-| T-04 | Dominio / datos | US-04, US-05 | Must | 8 SP | Registro persistido e historial ordenado por vehículo. |
-| T-05 | Dominio / recordatorios | US-06 | Must | 5 SP | Creación automática de recordatorio tras ITV o seguro. |
-| T-06 | Sincronización | US-02, US-04 | Must | 8 SP | Cambios locales marcados como pendientes y preparados para sync. |
-| T-07 | Frontend / presentación | US-02 | Must | 5 SP | Formulario de alta de vehículo con validaciones y estados. |
-| T-08 | Frontend / presentación | US-04, US-05 | Must | 8 SP | Formulario de mantenimiento e historial por vehículo. |
-| T-09 | Frontend / recordatorios | US-07 | Should | 5 SP | Pantalla de próximos recordatorios con estados vacío/vencido. |
-| T-10 | Plataforma / notificaciones | US-08 | Should | 5 SP | Notificación local previa a vencimientos configurados. |
-| T-11 | Infraestructura / CI-CD | Transversal | Must (final) | 5 SP | Pipeline CI con tests, gestión de secretos, release con artefactos y evidencia de despliegue. |
-| T-12 | Calidad / tests | US-01 a US-06 | Must (final) | 5 SP | Test E2E automatizado del flujo principal completo. |
+| Ticket | Área | Historia relacionada | Prioridad | Estado / resultado |
+|---|---|---|---|---|
+| T-01 | Datos | US-01, US-02, US-04, US-06 | Cerrado | SQLDelight, Supabase, RLS y RPC de perfil implementados. |
+| T-02 | Auth / onboarding | US-01 | Cerrado | Google ID y Supabase Auth implementados; fallback OAuth no conectado. |
+| T-03 | Vehículos | US-02 | Cerrado | Alta, listado y borrado local-first implementados. |
+| T-04 | Mantenimiento | US-04, US-05 | Cerrado parcial | Historial y costes individuales disponibles; total pendiente. |
+| T-05 | Recordatorios | US-06 | Alta | Caso de uso aislado; integración desde mantenimiento pendiente. |
+| T-06 | Sincronización | US-02, US-04, US-07 | Cerrado | Sync v0 con full pull, pendientes, tombstones y LWW. |
+| T-07 | Presentación | US-02 | Cerrado | Formulario Android de vehículo implementado. |
+| T-08 | Presentación | US-04, US-05 | Cerrado | Formulario de mantenimiento e historial implementados. |
+| T-09 | Recordatorios | US-07 | Cerrado | Lista y gestión manual implementadas. |
+| T-10 | Plataforma | US-08 | Cerrado Android | Alarmas y notificaciones locales para fechas. |
+| T-11 | CI/CD | Transversal | Alta | CI implementada; release y evidencias pendientes. |
+| T-12 | Calidad | Flujo principal | Alta | E2E Android pendiente. |
+| T-13 | Vehículos | US-02, US-09 | Cerrado | Edición y actualización rápida del odómetro. |
+| T-14 | Recordatorios | US-13 | Cerrado | Sugerencias proactivas desde vehículo implementadas. |
+| T-15 | Costes | US-14 | Alta | Coste acumulado pendiente. |
+| T-18 | Multiplataforma | Visión futura | Diferido | Desktop e iOS no son entregables funcionales actuales. |
 
 ### **6.2. Tickets principales detallados para la entrega**
 
 #### **Ticket 1 - Frontend: alta de vehículo en el garaje**
 
-**Tipo:** frontend / shared presentation
+**Tipo:** frontend / presentación compartida con UI Android
 
-**Historia relacionada:** US-02 - Añadir vehículo al garaje
+**Historia relacionada:** US-02 - Gestionar vehículos
 
-**Objetivo:** permitir que un usuario autenticado cree un vehículo desde la interfaz y vea el resultado en la lista del garaje.
+**Objetivo:** permitir que el usuario autenticado cree y edite vehículos, actualice el odómetro y confirme sugerencias proactivas.
 
-**Alcance:**
+**Resultado:** implementado en Android con validaciones, estados de carga/error, borrado lógico y persistencia local-first. Los campos opcionales `next_itv_date`, `insurance_renewal_date` y `next_service_odometer_km` generan sugerencias confirmables y reconciliadas mediante IDs estables.
 
-- Pantalla o diálogo de alta de vehículo.
-- Campos mínimos: nombre, tipo, matrícula opcional y kilómetros actuales.
-- Validaciones de campos obligatorios.
-- Estado de carga, éxito y error.
-- Actualización de la lista tras guardar.
+**Criterios de aceptación verificados:**
 
-**Fuera de alcance:**
-
-- Edición avanzada de vehículo.
-- Subida de imágenes.
-- Gestión de múltiples garajes.
-
-**Tareas técnicas:**
-
-1. Crear `VehicleFormUiState` con campos, errores y estado de guardado.
-2. Crear ViewModel o intent/event para alta de vehículo.
-3. Conectar el formulario con el caso de uso `CreateVehicleUseCase`.
-4. Mostrar validaciones si falta nombre, tipo o kilómetros válidos.
-5. Refrescar la lista del garaje después de guardar.
-
-**Criterios de aceptación:**
-
-- Dado un garaje activo, cuando el usuario introduce datos válidos, entonces el vehículo se guarda.
-- Dado un formulario incompleto, cuando el usuario intenta guardar, entonces se muestran errores de validación.
-- Dado un vehículo guardado, cuando vuelve al garaje, entonces aparece en la lista.
-
-**Tests TDD previstos:**
-
-- Test de validación de formulario sin nombre.
-- Test de validación de kilómetros negativos.
-- Test de envío correcto que invoca el caso de uso.
-- Test de estado de éxito tras alta completada.
+- Los datos válidos crean o actualizan el vehículo y este aparece en el garaje.
+- Los campos obligatorios y kilómetros no negativos se validan.
+- Un descenso de odómetro exige confirmación.
+- Rechazar una sugerencia guarda el vehículo sin crear esos avisos; aceptarla evita duplicados.
 
 #### **Ticket 2 - Backend/datos: registro de mantenimiento e historial**
 
-**Tipo:** backend/datos / dominio / repositorio
+**Tipo:** datos / dominio / repositorio / presentación Android
 
 **Historia relacionada:** US-04 - Registrar mantenimiento o avería
 
-**Objetivo:** implementar el flujo de registro de mantenimiento y persistirlo en el historial del vehículo, preparado para offline-first.
+**Objetivo:** registrar mantenimientos local-first y consultar el historial del vehículo.
 
-**Alcance:**
+**Resultado:** implementado para fecha, kilometraje, coste opcional en céntimos, moneda, taller, notas, listado y borrado lógico. Los registros se marcan como pendientes y participan en sync v0.
 
-- Caso de uso `CreateMaintenanceRecordUseCase`.
-- Validación de vehículo, tipo, fecha y kilometraje.
-- Persistencia local mediante repositorio.
-- Marcado del registro como pendiente de sincronización.
-- Consulta de historial ordenado por fecha descendente.
+**Pendiente asociado:** el formulario no captura todavía `nextDueDate` ni invoca `CreateAutomaticReminderUseCase`. Por ello, registrar una ITV o un seguro desde mantenimiento no crea aún su recordatorio asociado. La integración requiere ID estable o política de duplicados, notificación y tests de extremo a extremo.
 
-**Fuera de alcance:**
+**Criterios de aceptación verificados:**
 
-- Adjuntos de facturas.
-- OCR.
-- Recomendaciones automáticas.
-
-**Tareas técnicas:**
-
-1. Definir modelo de dominio `MaintenanceRecord`.
-2. Crear validaciones del caso de uso.
-3. Añadir métodos de repositorio para crear y listar registros.
-4. Persistir `created_at`, `updated_at` y estado pendiente de sync.
-5. Exponer consulta de historial por vehículo.
-
-**Criterios de aceptación:**
-
-- Dado un vehículo existente, cuando se registra un mantenimiento válido, entonces queda guardado.
-- Dado un mantenimiento con coste, cuando se consulta el historial, entonces el coste aparece asociado.
-- Dado que el usuario está offline, cuando registra el mantenimiento, entonces queda local y pendiente de sincronización.
-
-**Tests TDD previstos:**
-
-- Test de creación válida de mantenimiento.
-- Test de error si falta tipo de mantenimiento.
-- Test de error si los kilómetros son inválidos.
-- Test de historial ordenado por fecha descendente.
-- Test de registro creado con estado pendiente de sincronización.
+- Un mantenimiento válido queda persistido y visible en el historial.
+- El coste individual se conserva y se muestra.
+- Sin red, el registro permanece local y pendiente de sincronización.
 
 #### **Ticket 3 - Base de datos: esquema local y remoto del MVP**
 
 **Tipo:** base de datos / infraestructura
 
-**Historias relacionadas:** US-02, US-04, US-06
+**Historias relacionadas:** US-01, US-02, US-04, US-06, US-07 y US-13
 
-**Objetivo:** crear el esquema inicial de datos para soportar familias, usuarios, vehículos, tipos de mantenimiento, registros y recordatorios.
+**Objetivo:** soportar familias, perfiles, vehículos, catálogo de mantenimiento, historial, recordatorios y sincronización local-first.
 
-**Alcance:**
+**Resultado:** implementado mediante cinco migraciones Supabase, esquemas SQLDelight, índices, constraints, triggers, grants, RPC de perfil/familia y políticas RLS. Las entidades sincronizables utilizan IDs de texto estables y campos `updated_at`/`deleted_at`; el cliente mantiene además `pendingSync`.
 
-- Tablas locales SQLDelight.
-- Tablas remotas Supabase PostgreSQL.
-- Claves primarias y foráneas.
-- Campos de sincronización.
-- Índices mínimos.
-- RLS por `family_id` en Supabase.
+**Criterios de aceptación verificados:**
 
-**Fuera de alcance:**
-
-- Migraciones históricas complejas.
-- Multi-familia por usuario.
-- Auditoría avanzada.
-
-**Tareas técnicas:**
-
-1. Crear tablas `families`, `user_profiles`, `vehicles`, `maintenance_types`, `maintenance_records` y `reminders`.
-2. Añadir `created_at`, `updated_at` y `deleted_at` a las entidades sincronizables.
-3. Crear índices por `family_id`, `vehicle_id` y `updated_at`.
-4. Definir constraints de integridad para relaciones principales.
-5. Configurar políticas RLS para que cada usuario solo acceda a su familia.
-
-**Criterios de aceptación:**
-
-- Dado el esquema creado, cuando se inserta un vehículo, entonces queda asociado a una familia.
-- Dado un mantenimiento, cuando se inserta, entonces debe pertenecer a un vehículo existente.
-- Dado un usuario autenticado, cuando consulta datos, entonces solo accede a su `family_id`.
-- Dado un cambio local, cuando se sincroniza, entonces `updated_at` permite resolver conflictos simples.
-
-**Tests TDD previstos:**
-
-- Test de inserción y lectura de vehículo local.
-- Test de relación vehículo-mantenimiento.
-- Test de consulta de recordatorios por vehículo.
-- Test SQL/RLS manual en Supabase para aislamiento por familia.
+- Vehículos, mantenimientos y recordatorios conservan la relación con su familia y vehículo.
+- RLS restringe las operaciones a familias accesibles por el usuario autenticado.
+- Los tombstones sincronizan borrados lógicos.
+- Los campos de planificación del vehículo soportan recordatorios proactivos ya disponibles.
 
 ---
 
 ## 7. Pull Requests
 
-Esta sección se completará con exactamente 3 Pull Requests, alineadas con las entregas oficiales del proyecto.
+Esta sección conserva las tres Pull Requests exigidas por la plantilla y las alinea con las entregas académicas del proyecto.
 
-Para la Entrega 1 se crea una rama `dev` como base de comparación porque la documentación inicial ya fue sincronizada previamente en `main`. Para la Entrega 2 se mantiene la PR académica desde `feature-entrega2-AAC` hacia `dev` para mostrar el diff de la entrega, y además se sincroniza `main` con los cambios aprobados para mantener la rama principal actualizada.
+Para la Entrega 1 se utiliza una rama `dev` como base de comparación porque la documentación inicial ya se había sincronizado con `main`. La Entrega 2 mantiene la PR académica desde `feature-entrega2-AAC` hacia `dev`; la entrega final se integra desde `finalproject-AAC` hacia `main`.
 
 PRs previstas:
 
-- **PR 1 - Entrega 1 / Documentación técnica:** PR desde `feature-entrega1-AAC` hacia `dev` con PRD, user stories, arquitectura, modelo de datos, API y tickets iniciales.
-- **PR 2 - Entrega 2 / MVP funcional:** PR desde `feature-entrega2-AAC` hacia `dev` con backend, frontend, base de datos, sync v0, notificaciones locales y flujo principal Android-first.
-- **PR 3 - Entrega final:** PR desde `finalproject-AAC` hacia `main` con flujo E2E completo, tests, despliegue/evidencia y documentación cerrada.
+- **PR 1 - Entrega 1 / Documentación técnica:** `feature-entrega1-AAC` hacia `dev`, con PRD, historias, arquitectura, modelo, API y tickets iniciales.
+- **PR 2 - Entrega 2 / MVP funcional:** `feature-entrega2-AAC` hacia `dev`, con autenticación, datos, UI Android, sync v0, recordatorios y notificaciones locales.
+- **PR 3 - Entrega final:** `finalproject-AAC` hacia `main`, con cierre del flujo Android, integración pendiente priorizada, E2E, release/evidencias y documentación académica final.

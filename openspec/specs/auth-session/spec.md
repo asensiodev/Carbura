@@ -1,3 +1,6 @@
+## Purpose
+Define shared authentication session access and session-aware Android app startup.
+
 ## Requirements
 
 ### Requirement: Auth Session Gateway

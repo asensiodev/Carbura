@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Define local persistence for MVP vehicles and maintenance records while preserving domain and feature boundaries.
+
+## Requirements
 
 ### Requirement: Local Vehicle Persistence
 The system SHALL persist Android MVP garage vehicles in local storage through the domain vehicle repository contract.

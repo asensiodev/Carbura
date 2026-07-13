@@ -1,5 +1,7 @@
 # Carbura - Plan Entrega 2
 
+> **Nota histórica:** este documento conserva íntegramente la planificación utilizada para la Entrega 2; no describe por sí solo el estado actual del producto.
+
 Este documento define como empezar y ejecutar la Entrega 2 de Carbura. La meta es llegar al 10 de julio con un primer MVP ejecutable: backend, frontend y base de datos conectados, con el flujo principal casi completo.
 
 > Estado actual: plan historico de ejecucion. La Entrega 2 se cerro como MVP Android-first con auth Google/Supabase, vehiculos, mantenimientos, recordatorios, notificaciones locales y sync v0. Desktop, invitaciones completas, exportacion, CI/release final y test E2E quedan para Entrega final o post-MVP.

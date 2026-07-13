@@ -1,4 +1,4 @@
-# Carbura - User Stories MVP
+# Carbura - Historias de usuario del MVP
 
 Este documento deriva las historias de usuario principales desde el PRD (`openspec/prd.md`). El objetivo es mantener el MVP acotado y trazable antes de convertir estas historias en specs OpenSpec, tickets tecnicos y tests TDD.
 
@@ -34,10 +34,10 @@ Usuario inicia sesion
   -> anade un vehiculo
   -> registra una ITV o mantenimiento
   -> consulta el historial del vehiculo
-  -> ve un recordatorio automatico del proximo vencimiento
+  -> crea un recordatorio o acepta una sugerencia proactiva del vehiculo
 ```
 
-Para Entrega 2, este flujo queda implementado en Android-first con persistencia local, sincronizacion v0 y notificaciones locales. Desktop, invitaciones y exportacion quedan para iteraciones posteriores.
+Para Entrega 2, este flujo queda implementado en Android-first con persistencia local, sincronizacion v0 y notificaciones locales. La aplicacion Desktop forma parte de la evolucion multiplataforma e iOS se mantiene como posibilidad posterior; invitaciones y exportacion quedan para iteraciones futuras.
 
 ## Must-Have - Entrega E2E
 
@@ -107,6 +107,8 @@ Para Entrega 2, este flujo queda implementado en Android-first con persistencia 
 
 ### US-06 - Generar recordatorio automatico tras registrar ITV o seguro
 
+**Estado actual:** pendiente de integracion. El dominio dispone de `CreateAutomaticReminderUseCase` y `MaintenanceRecord.nextDueDate`, pero el formulario de mantenimiento aun no captura esa fecha ni invoca el caso de uso. Las sugerencias proactivas desde el vehiculo son una capacidad distinta.
+
 **Como** propietario del vehiculo,
 **quiero** que la app cree recordatorios automaticamente tras registrar una ITV o seguro,
 **para** no olvidar el siguiente vencimiento.
@@ -162,6 +164,8 @@ Para Entrega 2, este flujo queda implementado en Android-first con persistencia 
 
 > **Nota de alcance:** la version minima de esta historia (lista basica del garaje y acceso al detalle) queda absorbida por el flujo E2E Must-Have y se implementa dentro de los tickets T-07 y T-08, ya que sin lista de vehiculos no se puede completar el flujo principal. Lo que permanece como Could-Have es el refinamiento: estado resumido por vehiculo, proximos avisos en la tarjeta y detalle enriquecido.
 
+**Estado actual:** la lista, el detalle, la edicion y el borrado logico estan integrados en Android; permanecen como evolucion los refinamientos visuales adicionales.
+
 **Como** miembro de la familia,
 **quiero** ver los vehiculos del garaje y abrir el detalle de cada uno,
 **para** consultar rapidamente su informacion y estado de mantenimiento.
@@ -177,6 +181,8 @@ Para Entrega 2, este flujo queda implementado en Android-first con persistencia 
 
 ### US-09 - Actualizar odometro rapidamente
 
+**Estado actual:** implementada en Android, incluida la confirmacion cuando el valor desciende y su persistencia local-first.
+
 **Como** miembro de la familia,
 **quiero** actualizar rapidamente los kilometros actuales de un vehiculo,
 **para** mantener los recordatorios por kilometraje y el historial al dia.
@@ -190,6 +196,8 @@ Para Entrega 2, este flujo queda implementado en Android-first con persistencia 
 - Dado que el usuario esta offline, cuando actualiza el odometro, entonces el cambio queda disponible localmente y pendiente de sincronizacion.
 
 ### US-10 - Sincronizar datos entre dispositivos
+
+**Estado actual:** sync v0 implementada para instalaciones Android autenticadas y reutilizable por una futura aplicacion Desktop. Usa full pull, push de pendientes, tombstones y `last-write-wins` mientras la app esta activa.
 
 **Como** miembro de una familia,
 **quiero** que los datos del garaje se sincronicen entre mis dispositivos,
@@ -269,4 +277,4 @@ Los tickets se derivan de las historias Must-Have y Should-Have. Cada ticket deb
 
 ## Siguiente paso
 
-Las historias Must-Have y los Should-Have principales ya fueron convertidos en specs OpenSpec, implementados y archivados. El siguiente paso natural es preparar Entrega final: CI/release, test E2E, edicion de entidades si entra en alcance, recordatorios proactivos, invitaciones familiares o exportacion.
+Las historias Must-Have y los Should-Have principales ya fueron convertidos en specs OpenSpec, implementados y archivados, salvo la integracion de US-06 desde mantenimiento y el coste acumulado de US-05. Edicion de vehiculos, odometro rapido, recordatorios proactivos y CI ya estan incorporados; permanecen E2E, release/evidencias y la seleccion de capacidades posteriores sin renunciar a la vision Desktop y posible iOS.

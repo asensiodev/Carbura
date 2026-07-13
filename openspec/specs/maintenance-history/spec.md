@@ -46,4 +46,4 @@ The system SHALL allow the Android user to delete a maintenance record from a ve
 
 #### Scenario: Delete maintenance record
 - **WHEN** the user confirms deletion of a maintenance record
-- **THEN** the record is removed from local persistence and no longer appears in the history
+- **THEN** the record is retained as a tombstone pending synchronization and no longer appears in the active history

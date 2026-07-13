@@ -1,6 +1,6 @@
-# Carbura Sync Roadmap
+# Hoja de ruta de sincronizacion de Carbura
 
-Este documento fija el alcance de sincronizacion para no depender del contexto de conversaciones. La implementacion debe seguir siendo KMP-first: dominio, contratos, estrategia de merge y repositorios compartidos viven en modulos comunes; Android y Desktop solo aportan triggers de ciclo de vida e integraciones de plataforma.
+Este documento fija el alcance de sincronizacion para no depender del contexto de conversaciones. La implementacion es KMP-first: dominio, contratos, estrategia de merge y repositorios compartidos viven en modulos comunes; Android aporta los triggers actuales y Desktop los incorporara en su futura aplicacion.
 
 ## Principios
 
@@ -29,6 +29,8 @@ Objetivo: sincronizacion end-to-end simple y funcional para Android y reutilizab
 - Mostrar estado minimo: sincronizando, ultima sincronizacion y error no bloqueante.
 - Tests de merge, pending sync y conservacion local ante error remoto.
 
+Cada ciclo resuelve la familia activa, adopta filas antiguas asociadas a `local-family`, realiza un full pull para comparar con los cambios pendientes, sube solo los cambios cuya version remota no es mas reciente y termina con otro full pull. No existe cursor incremental; los borrados convergen como tombstones mediante `deleted_at`.
+
 ### Fuera de v0
 
 - WorkManager/background sync con la app cerrada.
@@ -42,7 +44,9 @@ Objetivo: sincronizacion end-to-end simple y funcional para Android y reutilizab
 ### Triggers v0
 
 - Android: session ready, app foreground, timer in-app, after local mutation, manual action.
-- Desktop: app start/session ready, timer while window is active, after local mutation, manual action.
+- Desktop futuro: app start/session ready, timer mientras la ventana este activa, mutaciones y accion manual.
+
+En Android los triggers reales son sesion/familia lista, `ON_START` con limitacion temporal, temporizador durante la composicion autenticada, mutaciones desde los ViewModels y accion manual. Un `Mutex` serializa las ejecuciones.
 
 ## Sync v1 - Robustez y UX
 
@@ -71,6 +75,6 @@ Objetivo: cubrir escenarios de colaboracion familiar y datos frescos sin interac
 - Sync de adjuntos y documentos.
 - Auditoria o historial de cambios si el modelo familiar lo requiere.
 
-## Decision Actual
+## Decision actual
 
 `Sync v0` ya esta implementado. No se implementa WorkManager ni realtime todavia. El objetivo de v0 es funcionalidad completa pero acotada: datos locales y remotos convergen cuando la app se usa, sin prometer actividad con la app cerrada.

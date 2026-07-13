@@ -1,8 +1,8 @@
-# Supabase Setup
+# Configuracion de Supabase
 
 Este documento guia la configuracion inicial de Supabase para Carbura. No incluye secretos reales y debe usarse junto con `local.properties.example`.
 
-## Uso En Carbura
+## Uso en Carbura
 
 Supabase se usa como backend remoto para:
 
@@ -12,7 +12,7 @@ Supabase se usa como backend remoto para:
 
 La app Android es Android-first en Entrega 2. La conexion Supabase ya se usa desde los modulos KMP para auth, perfil familiar y sync v0.
 
-## Crear Proyecto
+## Crear proyecto
 
 1. Entra en <https://supabase.com/dashboard>.
 2. Crea un nuevo proyecto.
@@ -30,7 +30,7 @@ GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
 
 No commitees `local.properties` ni claves reales.
 
-## Aplicar Migraciones
+## Aplicar migraciones
 
 Opcion recomendada:
 
@@ -38,9 +38,11 @@ Opcion recomendada:
 2. Ejecuta, en orden, las migraciones de `supabase/migrations/`:
    - `202607010001_initial_schema.sql`
    - `202607070001_ensure_user_profile_rpc.sql`
-   - `202607080001_sync_v0_schema.sql`
-   - `202607080002_sync_v0_text_entity_ids.sql`
-3. Revisa en `Table Editor` que existan las tablas principales:
+    - `202607080001_sync_v0_schema.sql`
+    - `202607080002_sync_v0_text_entity_ids.sql`
+    - `202607120001_vehicle_planning_fields.sql`
+3. La migracion `202607070001_ensure_user_profile_rpc.sql` crea la RPC y concede al rol `authenticated` los permisos necesarios; no existe una migracion separada de grants.
+4. Revisa en `Table Editor` que existan las tablas principales:
    - `families`
    - `user_profiles`
    - `vehicles`
@@ -50,7 +52,7 @@ Opcion recomendada:
 
 Alternativa posterior: usar Supabase CLI para aplicar migraciones desde local si el flujo de backend crece.
 
-## GitHub Integration
+## Integracion con GitHub
 
 Supabase permite conectar GitHub para aplicar cambios de schema automaticamente al hacer push o merge. Para Carbura queda diferido porque ahora interesa mantener el flujo simple y controlado:
 
@@ -58,7 +60,7 @@ Supabase permite conectar GitHub para aplicar cambios de schema automaticamente 
 - La aplicacion inicial puede hacerse manualmente desde SQL Editor.
 - La integracion automatica se evaluara si el flujo de migraciones crece.
 
-## Smoke Test Manual
+## Prueba de humo manual
 
 Tras aplicar la migracion:
 
@@ -71,7 +73,7 @@ Tras aplicar la migracion:
 7. Ejecuta sync manual desde la pantalla Usuario.
 8. Comprueba que ese usuario puede leer/escribir datos de su familia y que otro usuario no puede leer datos ajenos.
 
-## Notas De Seguridad
+## Notas de seguridad
 
 - `SUPABASE_ANON_KEY` es publica para cliente, pero no debe mezclarse con claves privadas ni service role keys.
 - Nunca commitear `service_role`, password de base de datos, OAuth client secret ni `local.properties`.

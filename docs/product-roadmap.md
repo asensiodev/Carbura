@@ -1,8 +1,10 @@
-# Carbura Product Roadmap
+# Hoja de ruta de producto de Carbura
 
 Este documento recoge mejoras de producto que tienen sentido, pero quedan fuera de Entrega 2 para proteger estabilidad.
 
 ## Recordatorios Proactivos Por Vehiculo
+
+**Estado:** implementados en Android para objetivos opcionales de ITV, seguro y revision por kilometraje, con confirmacion del usuario, IDs estables, reconciliacion y prevencion de duplicados.
 
 ### Problema
 
@@ -10,7 +12,7 @@ El flujo actual permite crear recordatorios custom, pero el usuario debe saber q
 
 ### Direccion Propuesta
 
-En una iteracion posterior, el alta o edicion de vehiculo deberia permitir capturar datos clave:
+El alta y la edicion de vehiculo permiten capturar datos clave:
 
 - Fecha de ITV.
 - Fecha de renovacion del seguro.
@@ -24,15 +26,14 @@ Con esos datos, Carbura podria generar recordatorios sugeridos automaticamente y
 1. El usuario anade un vehiculo.
 2. La app pregunta datos utiles opcionales: ITV, seguro, kilometros.
 3. Carbura propone avisos automaticamente.
-4. Si el usuario activa avisos, se programan notificaciones locales.
+4. Si el usuario acepta los avisos con fecha, se programan notificaciones locales.
 5. Los recordatorios custom siguen existiendo para necesidades no previstas.
 
-### Por Que No En El MVP Parcial
+### Evolucion Pendiente
 
-- Requiere ampliar formularios, dominio y sync.
-- Necesita un modelo claro para recordatorios generados vs custom.
-- Conviene pensar bien edicion de vehiculo antes de meter campos obligatorios.
-- El MVP actual ya demuestra el ciclo basico: vehiculos, mantenimiento, recordatorios, notificaciones y sync.
+- Integrar `nextDueDate` en el formulario de mantenimiento para generar el recordatorio asociado a una ITV o seguro registrado.
+- Evaluar intervalos configurables sin convertirlos en campos obligatorios.
+- Mantener diferenciados los recordatorios sugeridos y los personalizados.
 
 ## Notificaciones Y Navegacion
 

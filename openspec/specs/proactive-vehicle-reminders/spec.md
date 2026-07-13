@@ -1,7 +1,7 @@
 # proactive-vehicle-reminders Specification
 
 ## Purpose
-TBD - created by archiving change add-proactive-vehicle-reminders. Update Purpose after archive.
+Define optional reminder suggestions derived from vehicle planning fields and their explicit confirmation, reconciliation, and notification behavior.
 ## Requirements
 ### Requirement: Vehicle Reminder Suggestions
 The system SHALL derive optional reminder suggestions from a vehicle's next ITV date, insurance renewal date, and next service odometer.
@@ -65,4 +65,3 @@ The system SHALL use the existing local notification behavior for confirmed vehi
 #### Scenario: Odometer suggestion has no date notification
 - **WHEN** a vehicle-generated service reminder has only an odometer target
 - **THEN** the app persists the reminder without scheduling a date-based notification
-

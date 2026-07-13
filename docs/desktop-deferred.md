@@ -1,15 +1,15 @@
-# Desktop Deferred For Entrega 2
+# Desktop diferido en Entrega 2
 
-Desktop remains part of Carbura's architecture, but it is deferred for Entrega 2 to keep the Android MVP stable.
+Desktop permanece en la vision multiplataforma de Carbura, pero se difirio en Entrega 2 para estabilizar el MVP Android. iOS puede evaluarse en una fase posterior.
 
-Reason:
+Motivo:
 
-- Entrega 2 prioritizes an Android MVP with backend and database connected.
-- Desktop should not block Gradle setup, Android build, or feature delivery.
-- Shared `core:*`, `feature:*` and `app:shared` modules are prepared so Desktop can be added later with a thin `app:desktop` shell.
+- Entrega 2 prioriza un MVP Android conectado al backend y la base de datos.
+- Desktop no debe bloquear Gradle, la compilacion Android ni la entrega de capacidades.
+- Los modulos compartidos `core:*`, `feature:*` y `app:shared` permiten incorporar despues un shell `app:desktop`.
 
-Revisit condition:
+Condiciones para retomarlo:
 
-- Android build remains stable after Entrega 2.
-- Vehicle, maintenance, reminders, auth and sync flows are functionally closed.
-- Entrega final scope has room for Desktop without risking CI/release/E2E evidence.
+- La compilacion Android permanece estable.
+- Los flujos de vehiculos, mantenimiento, recordatorios, auth y sync estan cerrados funcionalmente.
+- El alcance disponible permite avanzar en Desktop sin poner en riesgo CI, release ni evidencias E2E.

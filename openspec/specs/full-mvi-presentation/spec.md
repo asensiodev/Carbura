@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Define complete MVI feature contracts, testable coroutine dispatching, and flow testing conventions.
+
+## Requirements
 
 ### Requirement: Full MVI Feature Contract
 Feature presentation SHALL use explicit `UiState`, `Event` and `Effect` contracts.

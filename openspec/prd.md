@@ -1,6 +1,6 @@
 # PRD - Carbura
 
-> Product Requirements Document
+> Documento de requisitos de producto
 > Autor: Angel Asensio Cuevasanta
 > Proyecto: Carbura - TFM AI4Devs
 > Version: 1.0 - Mayo 2026
@@ -9,7 +9,7 @@
 
 ## 1. Vision del producto
 
-**Carbura** es una aplicacion multiplataforma (Android + Desktop) para gestionar el mantenimiento de los vehiculos de una familia. Permite registrar revisiones, ITVs, seguros, averias y cambios de aceite o neumaticos, recibir recordatorios antes de que venzan fechas clave, y consultar el historial completo y los costes de cada vehiculo desde cualquier dispositivo.
+**Carbura** es una aplicacion multiplataforma para gestionar el mantenimiento de los vehiculos de una familia. La entrega actual materializa el producto en Android sobre una base Kotlin Multiplatform; la vision incorpora una aplicacion Desktop para macOS y Windows y mantiene iOS como posible evolucion. Permite registrar revisiones, ITVs, seguros, averias y cambios de aceite o neumaticos, recibir recordatorios antes de fechas clave y consultar el historial y los costes de cada vehiculo.
 
 **Slogan:** *Tu garaje, siempre a punto.*
 
@@ -54,7 +54,7 @@ Las apps existentes en el mercado son demasiado complejas (enfocadas en flotas, 
 
 ---
 
-## 5. Scope del MVP
+## 5. Alcance del MVP
 
 El scope se divide en dos niveles alineados con la priorizacion de `docs/user-stories.md`: el **MVP core** (Must-Have, imprescindible para el flujo E2E de la entrega) y el **MVP extendido** (Should/Could-Have, se implementa si el tiempo lo permite).
 
@@ -62,8 +62,8 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 
 - Gestion de multiples vehiculos (coche, moto, furgoneta) bajo un garaje familiar.
 - Registro de mantenimientos: ITV, cambio de aceite, cambio de neumaticos, seguro, revision general, averias y tipos personalizados.
-- Historial completo por vehiculo con costes.
-- Recordatorios automaticos por fecha tras registrar ITV o seguro.
+- Historial por vehiculo con costes individuales; el agregado de costes queda pendiente.
+- Recordatorios manuales y sugerencias proactivas a partir de los objetivos de ITV, seguro y kilometraje del vehiculo. La generacion desde el formulario de mantenimiento sigue pendiente.
 - Autenticacion con cuenta de Google.
 - Persistencia local offline-first (la app funciona sin conexion en el dispositivo).
 - App Android como plataforma principal de la demo E2E.
@@ -71,15 +71,15 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 ### MVP extendido (Should-Have / Could-Have)
 
 - Pantalla de proximos recordatorios y **notificaciones locales** con antelacion configurable (por defecto: 30 dias antes para ITV y seguro). *(Should)*
-- App Desktop (macOS y Windows via Compose Multiplatform) desde la misma base KMP. *(Should)*
-- Recordatorios por kilometros y actualizacion rapida del odometro. *(Could)*
-- Sincronizacion en la nube entre dispositivos de la misma familia. *(Could)*
+- App Desktop (macOS y Windows via Compose Multiplatform) desde la misma base KMP. *(Should, evolucion futura)*
+- Recordatorios por kilometros y actualizacion rapida del odometro. *(Implementado en Android)*
+- Sincronizacion en la nube entre instalaciones autenticadas de la misma familia. *(Implementado como sync v0)*
 - Sistema de invitacion para unirse al garaje familiar (codigo de 6 caracteres). *(Could)*
 - Exportacion del historial de un vehiculo a PDF/CSV. *(Could)*
 
 ### Fuera del MVP
 
-- iOS (queda preparado en la arquitectura KMP, se implementa en version futura).
+- iOS (posible evolucion futura a evaluar sobre la arquitectura KMP).
 - Registro de combustible y coste por km.
 - Integracion con OBD2 o telemetria del vehiculo.
 - Notificaciones push remotas (el MVP usa solo notificaciones locales).
@@ -109,12 +109,12 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 
 ## 7. Requisitos no funcionales
 
-- **Offline-first**: todas las operaciones de lectura y escritura funcionan sin conexion. La sincronizacion es eventual y transparente.
+- **Local-first**: las mutaciones de vehiculos, mantenimientos y recordatorios se guardan primero en SQLDelight y quedan pendientes ante fallos remotos. El arranque autenticado resuelve sesion y familia e intenta una sincronizacion inicial antes de mostrar el contenido principal.
 - **Privacidad**: los datos no se comparten con terceros. Sin anuncios. Sin analiticas de uso.
 - **Rendimiento**: la app debe arrancar en menos de 2 segundos en condiciones normales.
-- **Multiplataforma**: Android (API 26+) y Desktop (macOS + Windows) desde la misma base de codigo KMP.
+- **Multiplataforma**: Android (API 26+) es el entregable ejecutable actual; la base KMP comparte dominio, datos y presentacion para evolucionar hacia Desktop y, si se valida, iOS.
 - **Escalabilidad del backend**: arquitectura Supabase con Row Level Security por `family_id`, preparada para multiples familias independientes desde el dia 1.
-- **Seguridad**: autenticacion OAuth 2.0 via Google. En Android se prioriza Credential Manager con Google ID y fallback controlado a Google Sign-In/OAuth cuando el dispositivo no lo soporte. Tokens JWT gestionados por Supabase Auth. Secrets nunca en el repositorio.
+- **Seguridad**: autenticacion con Google ID mediante Credential Manager y Supabase Auth. El flujo actual permite reintentar ante error; un fallback OAuth alternativo queda como mejora. Tokens JWT gestionados por Supabase Auth y secretos fuera del repositorio.
 
 ---
 
@@ -123,19 +123,19 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 | Capa | Tecnologia |
 |---|---|
 | UI Android | Compose for Android |
-| UI Desktop | Compose for Desktop opcional, reutilizando design system/componentes compartidos cuando aporte valor |
-| UI iOS futura | SwiftUI o Compose Multiplatform a evaluar; arquitectura preparada, fuera del MVP |
+| UI Desktop futura | Compose for Desktop, reutilizando logica y componentes compartidos cuando aporte valor |
+| UI iOS posible | SwiftUI o Compose Multiplatform a evaluar en una fase posterior |
 | Logica compartida | Kotlin Multiplatform (commonMain) para dominio, casos de uso, contratos, modelos, validaciones y UiState |
 | Modularizacion | Modulos Gradle con convention plugins en `build-logic` |
-| Design system | `core:designsystem` con tema, tokens y componentes Compose reutilizables |
+| Design system | `core:designsystem` con tema y tokens Android; evolucion multiplataforma futura |
 | Base de datos local | SQLDelight |
 | HTTP Client | Ktor Client (KMP) |
-| Autenticacion cliente | Contrato KMP comun; Android adapter con Credential Manager + Google ID y fallback Google Sign-In/OAuth; Desktop OAuth opcional; iOS futuro con adapter propio |
+| Autenticacion cliente | Contrato KMP comun; adaptador Android con Credential Manager + Google ID; adaptadores Desktop/iOS futuros |
 | Inyeccion de dependencias | Koin (KMP) |
 | Serializacion | kotlinx.serialization |
-| Backend / Auth | Supabase (PostgreSQL + Auth + Storage) |
-| Almacenamiento de adjuntos | Supabase Storage |
-| Sincronizacion | Custom timestamp-based (last-write-wins) |
+| Backend / Auth | Supabase Auth, PostgreSQL, PostgREST y RLS |
+| Almacenamiento de adjuntos | Supabase Storage, previsto pero no integrado |
+| Sincronizacion | Full pull por familia de entidades, push de pendientes, tombstones y `last-write-wins` |
 
 ---
 
@@ -144,7 +144,7 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 Clean Architecture modular. Se comparte en `commonMain` todo lo que sea dominio, contratos, modelos, estado y logica testeable. Las integraciones nativas viven detras de contratos comunes y se implementan por plataforma:
 
 ```text
-Presentation (Compose Android / Compose Desktop)
+Presentation (Compose Android; Compose Desktop futuro)
       ↓
 ViewModel + UiState (commonMain)
       ↓
@@ -157,7 +157,7 @@ Platform adapters + LocalDataSource (SQLDelight) + RemoteDataSource (Ktor + Supa
 SyncManager (commonMain) - gestiona conflictos last-write-wins
 ```
 
-Patron general para dependencias de plataforma: auth, permisos, notificaciones, secure storage, deep links y APIs del sistema se definen como contratos en KMP y se resuelven con adapters `androidMain`, `desktopMain` o `iosMain` futuro.
+Patron general para dependencias de plataforma: auth, permisos, notificaciones, secure storage, deep links y APIs del sistema se definen como contratos en KMP. Android aporta los adaptadores productivos actuales; Desktop e iOS los incorporaran cuando entren en alcance.
 
 ---
 
@@ -169,14 +169,14 @@ Patron general para dependencias de plataforma: auth, permisos, notificaciones, 
 | `User` | Miembro de la familia. Vinculado a cuenta de Google via Supabase Auth. |
 | `Vehicle` | Vehiculo del garaje (coche, moto, furgoneta). Pertenece a una `Family`. |
 | `MaintenanceType` | Tipo de mantenimiento (ITV, aceite, neumaticos, seguro...). Globales + personalizados. |
-| `MaintenanceRecord` | Evento de mantenimiento registrado (fecha, km, coste, taller, notas, adjuntos). |
+| `MaintenanceRecord` | Evento de mantenimiento registrado (fecha, km, coste, moneda, taller, notas y proxima fecha opcional en el modelo). |
 | `Reminder` | Recordatorio futuro por fecha y/o km. Genera notificacion local cuando se acerca. |
 
 ---
 
 ## 11. Metodologia de desarrollo
 
-- **SDD (Specification-Driven Development)** con OpenSpec: las specs son la fuente de verdad. Todo cambio pasa por `/openspec-proposal` -> `/openspec-apply` -> `/openspec-archive`.
+- **SDD (Specification-Driven Development)** con OpenSpec: las specs son la fuente de verdad. Los cambios se exploran, proponen, aplican y archivan con `/opsx-explore`, `/opsx-propose`, `/opsx-apply` y `/opsx-archive`.
 - **TDD (Test-Driven Development)** dentro de cada tarea: Red -> Green -> Refactor.
 - **DDD ligero (Domain-Driven Design)** para modelar el dominio principal sin sobrediseñar el MVP: entidades, use cases, repositorios como contratos y value objects solo cuando aporten claridad.
 - **Agente de IA**: OpenCode como copiloto en todas las fases (analisis, diseno, implementacion, tests, documentacion).
@@ -186,13 +186,13 @@ Patron general para dependencias de plataforma: auth, permisos, notificaciones, 
 
 ---
 
-## 12. Roadmap y plazos
+## 12. Hoja de ruta y plazos
 
 | Fecha | Hito |
 |---|---|
 | **12 junio 2026** | Entrega de documentacion (PRD, user stories, tickets, readme.md y toolchain de IA/proceso) |
 | **10 julio 2026** | Codigo funcional: MVP Android con auth, vehiculos, mantenimientos, historial, recordatorios, notificaciones locales y sync con backend/base de datos conectados |
-| **29 julio 2026** | Entrega final refinada: UX pulida, tests (unitarios, integracion y E2E), CI/CD, evidencia de despliegue y documentacion completa |
+| **29 julio 2026** | Entrega final refinada: UX pulida, tests, CI, evidencia de despliegue y documentacion completa; Desktop solo si no compromete el cierre Android |
 
 ### Fases de desarrollo
 
@@ -200,7 +200,7 @@ Patron general para dependencias de plataforma: auth, permisos, notificaciones, 
 Mayo 2026        -> Documentacion: PRD, specs, user stories, tickets, readme.md
 Junio 2026       -> Implementacion core: auth, vehiculos, mantenimientos, historial
 Julio (1-10)     -> Recordatorios, notificaciones locales, sync v0, UX polish, cierre del flujo E2E Android
-Julio (10-29)    -> Tests E2E, CI/CD + release, refinado UX, extendido si hay margen
+Julio (10-29)    -> CI ya operativa; E2E, release, evidencias y refinado UX; extendido si hay margen
                     (Desktop, exportacion, invitaciones), documentacion final
 ```
 
@@ -215,10 +215,10 @@ Las instrucciones del curso estiman una dedicacion orientativa de ~30 horas. Est
 ### Criterios core (obligatorios para la entrega final)
 
 - Un usuario puede crear su garaje, anadir vehiculos y registrar mantenimientos en menos de 3 minutos desde cero.
-- Los recordatorios de ITV/seguro se generan automaticamente al registrar el evento, con 30 dias de antelacion por defecto.
-- El historial muestra todos los eventos con fecha, km y coste, ordenados por fecha descendente.
-- La app funciona completamente offline en el dispositivo local.
-- El flujo E2E core esta cubierto por al menos un test E2E automatizado y la suite pasa en CI.
+- El usuario puede crear recordatorios manuales y aceptar sugerencias proactivas derivadas de los objetivos del vehiculo sin duplicados.
+- El historial muestra los eventos con fecha, km y coste individual, ordenados por fecha descendente.
+- Las mutaciones principales permanecen disponibles localmente y convergen con Supabase mediante sync v0 cuando la app esta activa.
+- La suite de calidad, tests y compilacion Android pasa en CI; el E2E Android completo permanece como criterio de cierre.
 
 ### Criterios extendidos (si se implementa el MVP extendido)
 

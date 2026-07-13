@@ -1,3 +1,6 @@
+## Purpose
+Define the authenticated Android entry flow, shared login MVI behavior, and sign-out access.
+
 ## Requirements
 
 ### Requirement: Login Gate

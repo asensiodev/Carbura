@@ -1,11 +1,11 @@
-# Final Development Plan
+# Plan de desarrollo final
 
-Each step is implemented as a separate OpenSpec change using the project workflow: proposal, review, TDD Red-Green-Refactor, device verification, and archive.
+Cada paso se gestiona mediante un cambio OpenSpec cuando corresponde: propuesta, revision, TDD pragmatico, verificacion y archivo.
 
-1. Implement vehicle editing and quick odometer updates, including local persistence, validation, and synchronization.
-2. Implement proactive reminder suggestions from vehicle ITV, insurance, and odometer data, including notification rescheduling and duplicate prevention.
-3. Audit and polish the complete Android UX: navigation, vehicle detail, loading, empty, error, offline and sync states, accessibility, and responsive layouts.
-4. Decide and implement the remaining final-scope feature: family invitations, PDF/CSV export, or neither if stability requires limiting scope.
-5. Add a Desktop vertical slice for macOS and Windows that covers authentication, garage, vehicle history, reminders, and synchronization using shared code.
-6. Add the final stable Android E2E test for the primary user journey.
-7. Complete release verification, documentation, screenshots, and final demonstration evidence.
+1. **Completado:** edicion de vehiculos y actualizacion rapida del odometro con persistencia, validacion y sincronizacion.
+2. **Completado:** sugerencias proactivas desde ITV, seguro y kilometraje del vehiculo, con reprogramacion y prevencion de duplicados.
+3. Auditar y pulir la UX Android completa: navegacion, detalle, estados de carga, vacio, error, offline y sync, accesibilidad y layouts.
+4. Integrar el recordatorio desde mantenimiento y decidir entre coste acumulado, invitaciones o exportacion segun el riesgo del cierre.
+5. Mantener Desktop como siguiente vertical multiplataforma para macOS y Windows; evaluar iOS posteriormente sin condicionar la entrega Android.
+6. Anadir el E2E Android estable del recorrido principal.
+7. Completar release, documentacion, capturas y evidencias de la demostracion final. La CI de calidad, tests y APK debug ya esta operativa.

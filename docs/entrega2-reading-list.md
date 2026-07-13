@@ -1,5 +1,7 @@
 # Carbura - Lecturas Previas Entrega 2
 
+> **Nota histórica:** esta guía conserva íntegramente las lecturas y decisiones preparatorias de la Entrega 2.
+
 Este documento indica que leer antes de empezar la implementacion de Entrega 2. El objetivo no es estudiar todo, sino llegar con contexto suficiente para crear el proyecto KMP, usar OpenCode/OpenSpec con criterio y configurar Supabase sin improvisar.
 
 Tiempo recomendado antes de empezar: **90-120 minutos**.

@@ -60,7 +60,7 @@ The system SHALL allow the Android user to delete a pending reminder after confi
 
 #### Scenario: Delete pending reminder
 - **WHEN** the user confirms deletion of a pending reminder
-- **THEN** the reminder is removed from local persistence and no longer appears in the pending reminders list
+- **THEN** the reminder is retained as a tombstone pending synchronization, its notification is canceled, and it no longer appears in the active reminder list
 
 ### Requirement: Local Reminder Notifications
 The system SHALL schedule local Android notifications for pending reminders with due dates.
