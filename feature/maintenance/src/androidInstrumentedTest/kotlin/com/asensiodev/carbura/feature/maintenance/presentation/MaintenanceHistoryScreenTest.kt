@@ -2,6 +2,7 @@ package com.asensiodev.carbura.feature.maintenance.presentation
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasContentDescription
@@ -44,17 +45,7 @@ class MaintenanceHistoryScreenTest {
 
     @Test
     fun longRecordShowsLocalizedDateCostAndItemSpecificDeleteAction() {
-        val record =
-            MaintenanceRecord(
-                id = MaintenanceRecordId("record-1"),
-                familyId = familyId,
-                vehicleId = vehicle.id,
-                maintenanceTypeId = MaintenanceTypeId("type-revisión-general-extraordinariamente-larga"),
-                maintenanceTypeCode = MaintenanceTypeCode.Custom,
-                performedOn = CalendarDate("2026-07-17"),
-                odometerKm = 12_300,
-                costCents = 8_950,
-            )
+        val record = record()
         setScreen(state = state(records = listOf(record)))
 
         composeRule.onNodeWithText(record.displayType()).assertIsDisplayed()
@@ -63,6 +54,25 @@ class MaintenanceHistoryScreenTest {
         composeRule
             .onNode(hasContentDescription("Borrar mantenimiento ${record.displayType()}"), useUnmergedTree = true)
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun deleteDispatchesOnlyAfterItemSpecificConfirmation() {
+        val record = record()
+        var deletedRecord: MaintenanceRecord? = null
+        setScreen(
+            state = state(records = listOf(record)),
+            onDeleteMaintenance = { deletedRecord = it },
+        )
+
+        composeRule
+            .onNode(hasContentDescription("Borrar mantenimiento ${record.displayType()}"), useUnmergedTree = true)
+            .performClick()
+
+        composeRule.runOnIdle { check(deletedRecord == null) }
+        composeRule.onAllNodesWithText(record.displayType()).assertCountEquals(2)
+        composeRule.onNodeWithText("Borrar").performClick()
+        composeRule.runOnIdle { check(deletedRecord === record) }
     }
 
     @Test
@@ -80,6 +90,7 @@ class MaintenanceHistoryScreenTest {
     private fun setScreen(
         state: MaintenanceHistoryUiState,
         onRetry: () -> Unit = {},
+        onDeleteMaintenance: (MaintenanceRecord) -> Unit = {},
         fontScale: Float = 1f,
     ) {
         composeRule.setContent {
@@ -99,7 +110,7 @@ class MaintenanceHistoryScreenTest {
                         onWorkshopChange = {},
                         onNotesChange = {},
                         onSubmitMaintenance = {},
-                        onDeleteMaintenance = {},
+                        onDeleteMaintenance = onDeleteMaintenance,
                         onRetry = onRetry,
                     )
                 }
@@ -118,6 +129,18 @@ class MaintenanceHistoryScreenTest {
         loadState = loadState,
         validationError = validationError,
     )
+
+    private fun record() =
+        MaintenanceRecord(
+            id = MaintenanceRecordId("record-1"),
+            familyId = familyId,
+            vehicleId = vehicle.id,
+            maintenanceTypeId = MaintenanceTypeId("type-revisión-general-extraordinariamente-larga"),
+            maintenanceTypeCode = MaintenanceTypeCode.Custom,
+            performedOn = CalendarDate("2026-07-17"),
+            odometerKm = 12_300,
+            costCents = 8_950,
+        )
 
     private companion object {
         val familyId = FamilyId("family-test")

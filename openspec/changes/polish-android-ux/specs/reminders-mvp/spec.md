@@ -24,3 +24,10 @@ Reminders SHALL provide recoverable load failure, retry, mutation progress, resp
 #### Scenario: Notification permission cannot be requested again
 - **WHEN** Android no longer presents the notification permission prompt after denial
 - **THEN** the screen explains how to enable notifications in system settings without blocking reminder management
+
+### Requirement: Adaptive Reminder Creation Action
+Reminders SHALL expose reminder creation through a thumb-reachable labeled action on compact non-empty screens while retaining prerequisite and empty-state actions.
+
+#### Scenario: Pending reminders exist on a compact phone
+- **WHEN** the reminder list is displayed and vehicle prerequisites are satisfied
+- **THEN** a labeled creation action is available near the bottom end and does not obscure the final reminder card

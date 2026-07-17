@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -71,6 +72,24 @@ class VehicleFormViewModelTest {
             assertEquals(vehicle.id, repository.vehicles.single().id)
             assertEquals("Moto familiar", repository.vehicles.single().name)
             assertEquals(null, viewModel.uiState.value.editingVehicleId)
+        }
+
+    @Test
+    fun fullEditTracksDirtyStateUntilDismissed() =
+        runTest {
+            val viewModel = viewModel(FakeFormVehicleRepository())
+            viewModel.onEvent(VehicleFormEvent.EditVehicleRequested(vehicle()))
+            assertFalse(viewModel.uiState.value.isEditDirty)
+
+            viewModel.onEvent(VehicleFormEvent.EditNameChanged("Nombre temporal"))
+            assertTrue(viewModel.uiState.value.isEditDirty)
+            viewModel.onEvent(VehicleFormEvent.EditNameChanged("Coche familiar"))
+            assertFalse(viewModel.uiState.value.isEditDirty)
+
+            viewModel.onEvent(VehicleFormEvent.EditOdometerChanged("12001"))
+            viewModel.onEvent(VehicleFormEvent.DismissVehicleEdit)
+            assertEquals(null, viewModel.uiState.value.editingVehicleId)
+            assertFalse(viewModel.uiState.value.isEditDirty)
         }
 
     @Test

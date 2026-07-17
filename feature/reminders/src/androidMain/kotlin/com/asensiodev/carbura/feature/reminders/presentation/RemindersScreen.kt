@@ -12,6 +12,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -33,6 +34,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -43,6 +45,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -252,10 +255,27 @@ internal fun RemindersScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val showAddReminderAction = !state.isLoading && !state.hasLoadError && !state.hasNoVehicles && !state.isEmpty
+        val useCompactAddAction = maxWidth < 600.dp
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
+            floatingActionButton = {
+                if (showAddReminderAction && useCompactAddAction) {
+                    ExtendedFloatingActionButton(
+                        onClick = { showReminderSheet = true },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                            )
+                        },
+                        text = { Text(stringResource(R.string.add_reminder_button)) },
+                        modifier = Modifier.testTag("add_reminder_fab"),
+                    )
+                }
+            },
         ) { _ ->
             Box(
                 modifier = Modifier.fillMaxSize().statusBarsPadding(),
@@ -268,12 +288,18 @@ internal fun RemindersScreen(
                             .widthIn(max = 720.dp)
                             .fillMaxWidth()
                             .testTag("reminders_content"),
-                    contentPadding = PaddingValues(Spacings.spacing24),
+                    contentPadding =
+                        PaddingValues(
+                            start = Spacings.spacing24,
+                            top = Spacings.spacing24,
+                            end = Spacings.spacing24,
+                            bottom = if (showAddReminderAction && useCompactAddAction) 104.dp else Spacings.spacing24,
+                        ),
                     verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
                 ) {
                     item {
                         RemindersHeader(
-                            showAddReminderAction = !state.isLoading && !state.hasLoadError && !state.hasNoVehicles && !state.isEmpty,
+                            showAddReminderAction = showAddReminderAction && !useCompactAddAction,
                             onAddReminder = { showReminderSheet = true },
                         )
                     }
@@ -806,6 +832,7 @@ private fun ReminderCard(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .testTag("reminder_card_${reminder.id.value}")
                 .semantics {
                     if (activeAction?.reminderId == reminder.id) {
                         stateDescription = busyDescription

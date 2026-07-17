@@ -1,5 +1,6 @@
 package com.asensiodev.carbura.feature.garage.presentation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,8 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
@@ -33,6 +36,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,8 +47,11 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -55,9 +62,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -250,8 +260,12 @@ internal fun GarageScreen(
 ) {
     var showVehicleSheet by remember { mutableStateOf(false) }
     var vehiclePendingDeletion by remember { mutableStateOf<Vehicle?>(null) }
+    var showDiscardEditConfirmation by remember(formState.editingVehicleId) { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val snackbarHostState = remember { SnackbarHostState() }
+    val isCompact = LocalConfiguration.current.screenWidthDp < 600
+    val showCompactAddAction =
+        isCompact && overviewState.loadState == GarageLoadState.Loaded && !overviewState.isEmpty
 
     LaunchedEffect(vehicleCreatedSignal) {
         if (vehicleCreatedSignal > 0) {
@@ -269,18 +283,45 @@ internal fun GarageScreen(
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
+            floatingActionButton = {
+                if (showCompactAddAction) {
+                    val addVehicleLabel = stringResource(R.string.add_vehicle_fab)
+                    ExtendedFloatingActionButton(
+                        onClick = { showVehicleSheet = true },
+                        modifier =
+                            Modifier
+                                .semantics { contentDescription = addVehicleLabel }
+                                .testTag("garage_add_vehicle_fab"),
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = null,
+                            )
+                        },
+                        text = { Text(addVehicleLabel) },
+                    )
+                }
+            },
         ) { _ ->
             ConstrainedScreen(modifier = Modifier.statusBarsPadding()) {
                 LazyColumn(
                     modifier =
                         Modifier
-                            .fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = Spacings.spacing24),
+                            .fillMaxSize()
+                            .testTag("garage_vehicle_list"),
+                    contentPadding =
+                        PaddingValues(
+                            top = Spacings.spacing24,
+                            bottom = if (showCompactAddAction) 112.dp else Spacings.spacing24,
+                        ),
                     verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
                 ) {
                     item {
                         GarageHeader(
-                            showAddVehicleAction = overviewState.loadState == GarageLoadState.Loaded && !overviewState.isEmpty,
+                            showAddVehicleAction =
+                                !isCompact &&
+                                    overviewState.loadState == GarageLoadState.Loaded &&
+                                    !overviewState.isEmpty,
                             onAddVehicle = { showVehicleSheet = true },
                         )
                     }
@@ -407,119 +448,61 @@ internal fun GarageScreen(
 
     if (formState.editingVehicleId != null && formState.odometerDecreaseConfirmation == null) {
         val isSavingEdit = formState.activeMutation is VehicleFormMutation.Updating
-        AlertDialog(
-            onDismissRequest = { if (!isSavingEdit) onDismissEdit() },
-            title = {
-                Text(
-                    stringResource(
-                        if (formState.editMode == VehicleEditMode.Full) {
-                            R.string.edit_vehicle_title
-                        } else {
-                            R.string.update_odometer_title
-                        },
-                    ),
+        val requestFullEditDismiss = {
+            if (!isSavingEdit) {
+                if (formState.isEditDirty) showDiscardEditConfirmation = true else onDismissEdit()
+            }
+        }
+        when {
+            formState.editMode == VehicleEditMode.Full && isCompact ->
+                FullScreenVehicleEditor(
+                    state = formState,
+                    isSaving = isSavingEdit,
+                    onDismissRequest = requestFullEditDismiss,
+                    onNameChange = onEditNameChange,
+                    onLicensePlateChange = onEditLicensePlateChange,
+                    onOdometerChange = onEditOdometerChange,
+                    onTypeSelected = onEditTypeSelected,
+                    onNextItvDateChange = onEditNextItvDateChange,
+                    onInsuranceRenewalDateChange = onEditInsuranceRenewalDateChange,
+                    onNextServiceOdometerChange = onEditNextServiceOdometerChange,
+                    onSubmit = onSubmitEdit,
                 )
-            },
-            text = {
-                Column(
-                    modifier =
-                        Modifier
-                            .verticalScroll(rememberScrollState())
-                            .imePadding(),
-                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
-                ) {
-                    if (formState.editMode == VehicleEditMode.Full) {
-                        val nameError = formState.editValidationError == CarburaString.ValidationBlankVehicleName
-                        OutlinedTextField(
-                            value = formState.editName,
-                            onValueChange = onEditNameChange,
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.vehicle_name_label)) },
-                            isError = nameError,
-                            supportingText =
-                                if (nameError) {
-                                    { ValidationErrorText(formState.editValidationError) }
-                                } else {
-                                    null
-                                },
-                            singleLine = true,
-                        )
-                        VehicleTypeSelector(formState.editType, onEditTypeSelected)
-                        OutlinedTextField(
-                            value = formState.editLicensePlate,
-                            onValueChange = onEditLicensePlateChange,
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.license_plate_label)) },
-                            singleLine = true,
-                        )
-                        OptionalDatePickerField(
-                            label = stringResource(R.string.next_itv_date_label),
-                            value = formState.editNextItvDate,
-                            onValueChange = onEditNextItvDateChange,
-                        )
-                        OptionalDatePickerField(
-                            label = stringResource(R.string.insurance_renewal_date_label),
-                            value = formState.editInsuranceRenewalDate,
-                            onValueChange = onEditInsuranceRenewalDateChange,
-                        )
-                        OutlinedTextField(
-                            value = formState.editNextServiceOdometerKm,
-                            onValueChange = onEditNextServiceOdometerChange,
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.next_service_odometer_label)) },
-                            isError =
-                                formState.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
-                                    formState.editNextServiceOdometerKm.isInvalidOdometerInput(),
-                            supportingText =
-                                if (
-                                    formState.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
-                                    formState.editNextServiceOdometerKm.isInvalidOdometerInput()
-                                ) {
-                                    { ValidationErrorText(formState.editValidationError) }
-                                } else {
-                                    null
-                                },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                        )
-                    }
-                    OutlinedTextField(
-                        value = formState.editOdometerKm,
-                        onValueChange = onEditOdometerChange,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.current_odometer_label)) },
-                        isError =
-                            formState.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
-                                !formState.editNextServiceOdometerKm.isInvalidOdometerInput(),
-                        supportingText =
-                            if (
-                                formState.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
-                                !formState.editNextServiceOdometerKm.isInvalidOdometerInput()
-                            ) {
-                                { ValidationErrorText(formState.editValidationError) }
-                            } else {
-                                null
-                            },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                    )
-                    if (formState.persistenceError) {
-                        PersistenceErrorText(stringResource(R.string.vehicle_save_error))
-                    }
-                }
-            },
+            else ->
+                VehicleEditDialog(
+                    state = formState,
+                    fullEdit = formState.editMode == VehicleEditMode.Full,
+                    isSaving = isSavingEdit,
+                    onDismissRequest =
+                        if (formState.editMode == VehicleEditMode.Full) requestFullEditDismiss else onDismissEdit,
+                    onNameChange = onEditNameChange,
+                    onLicensePlateChange = onEditLicensePlateChange,
+                    onOdometerChange = onEditOdometerChange,
+                    onTypeSelected = onEditTypeSelected,
+                    onNextItvDateChange = onEditNextItvDateChange,
+                    onInsuranceRenewalDateChange = onEditInsuranceRenewalDateChange,
+                    onNextServiceOdometerChange = onEditNextServiceOdometerChange,
+                    onSubmit = onSubmitEdit,
+                )
+        }
+    }
+
+    if (showDiscardEditConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDiscardEditConfirmation = false },
+            title = { Text(stringResource(R.string.discard_vehicle_changes_title)) },
+            text = { Text(stringResource(R.string.discard_vehicle_changes_message)) },
             confirmButton = {
-                TextButton(onClick = onSubmitEdit, enabled = !isSavingEdit) {
-                    Text(
-                        stringResource(
-                            if (isSavingEdit) R.string.saving_vehicle else R.string.save_changes_button,
-                        ),
-                    )
+                TextButton(onClick = {
+                    showDiscardEditConfirmation = false
+                    onDismissEdit()
+                }) {
+                    Text(stringResource(R.string.discard_changes_button))
                 }
             },
             dismissButton = {
-                TextButton(onClick = onDismissEdit, enabled = !isSavingEdit) {
-                    Text(stringResource(R.string.cancel_button))
+                TextButton(onClick = { showDiscardEditConfirmation = false }) {
+                    Text(stringResource(R.string.keep_editing_button))
                 }
             },
         )
@@ -574,6 +557,245 @@ internal fun GarageScreen(
                 }
             },
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FullScreenVehicleEditor(
+    state: VehicleFormUiState,
+    isSaving: Boolean,
+    onDismissRequest: () -> Unit,
+    onNameChange: (String) -> Unit,
+    onLicensePlateChange: (String) -> Unit,
+    onOdometerChange: (String) -> Unit,
+    onTypeSelected: (VehicleType) -> Unit,
+    onNextItvDateChange: (String) -> Unit,
+    onInsuranceRenewalDateChange: (String) -> Unit,
+    onNextServiceOdometerChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+) {
+    BackHandler(onBack = onDismissRequest)
+    Surface(
+        modifier = Modifier.fillMaxSize().testTag("full_screen_vehicle_editor"),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(stringResource(R.string.edit_vehicle_title))
+                            Text(
+                                text = state.editName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onDismissRequest, enabled = !isSaving) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.close_vehicle_editor),
+                            )
+                        }
+                    },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                )
+            },
+            bottomBar = {
+                Surface(shadowElevation = 8.dp) {
+                    Button(
+                        onClick = onSubmit,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .imePadding()
+                                .padding(Spacings.spacing16)
+                                .testTag("full_screen_vehicle_save"),
+                        enabled = !isSaving,
+                    ) {
+                        Text(stringResource(if (isSaving) R.string.saving_vehicle else R.string.save_changes_button))
+                    }
+                }
+            },
+        ) { contentPadding ->
+            ConstrainedScreen(
+                modifier = Modifier.padding(contentPadding),
+                contentPadding = PaddingValues(vertical = Spacings.spacing16),
+            ) {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .imePadding(),
+                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
+                ) {
+                    Text(
+                        text = stringResource(R.string.vehicle_details_section_title),
+                        modifier = Modifier.semantics { heading() },
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    VehicleEditFields(
+                        state = state,
+                        fullEdit = true,
+                        onNameChange = onNameChange,
+                        onLicensePlateChange = onLicensePlateChange,
+                        onOdometerChange = onOdometerChange,
+                        onTypeSelected = onTypeSelected,
+                        onNextItvDateChange = onNextItvDateChange,
+                        onInsuranceRenewalDateChange = onInsuranceRenewalDateChange,
+                        onNextServiceOdometerChange = onNextServiceOdometerChange,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VehicleEditDialog(
+    state: VehicleFormUiState,
+    fullEdit: Boolean,
+    isSaving: Boolean,
+    onDismissRequest: () -> Unit,
+    onNameChange: (String) -> Unit,
+    onLicensePlateChange: (String) -> Unit,
+    onOdometerChange: (String) -> Unit,
+    onTypeSelected: (VehicleType) -> Unit,
+    onNextItvDateChange: (String) -> Unit,
+    onInsuranceRenewalDateChange: (String) -> Unit,
+    onNextServiceOdometerChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = {
+            Text(stringResource(if (fullEdit) R.string.edit_vehicle_title else R.string.update_odometer_title))
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()).imePadding(),
+                verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
+            ) {
+                VehicleEditFields(
+                    state = state,
+                    fullEdit = fullEdit,
+                    onNameChange = onNameChange,
+                    onLicensePlateChange = onLicensePlateChange,
+                    onOdometerChange = onOdometerChange,
+                    onTypeSelected = onTypeSelected,
+                    onNextItvDateChange = onNextItvDateChange,
+                    onInsuranceRenewalDateChange = onInsuranceRenewalDateChange,
+                    onNextServiceOdometerChange = onNextServiceOdometerChange,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onSubmit, enabled = !isSaving) {
+                Text(stringResource(if (isSaving) R.string.saving_vehicle else R.string.save_changes_button))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest, enabled = !isSaving) {
+                Text(stringResource(R.string.cancel_button))
+            }
+        },
+    )
+}
+
+@Composable
+private fun VehicleEditFields(
+    state: VehicleFormUiState,
+    fullEdit: Boolean,
+    onNameChange: (String) -> Unit,
+    onLicensePlateChange: (String) -> Unit,
+    onOdometerChange: (String) -> Unit,
+    onTypeSelected: (VehicleType) -> Unit,
+    onNextItvDateChange: (String) -> Unit,
+    onInsuranceRenewalDateChange: (String) -> Unit,
+    onNextServiceOdometerChange: (String) -> Unit,
+) {
+    if (fullEdit) {
+        val nameError = state.editValidationError == CarburaString.ValidationBlankVehicleName
+        OutlinedTextField(
+            value = state.editName,
+            onValueChange = onNameChange,
+            modifier = Modifier.fillMaxWidth().testTag("vehicle_edit_name"),
+            label = { Text(stringResource(R.string.vehicle_name_label)) },
+            isError = nameError,
+            supportingText = if (nameError) ({ ValidationErrorText(state.editValidationError) }) else null,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+            singleLine = true,
+        )
+        VehicleTypeSelector(state.editType, onTypeSelected)
+        OutlinedTextField(
+            value = state.editLicensePlate,
+            onValueChange = onLicensePlateChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.license_plate_label)) },
+            singleLine = true,
+        )
+        OptionalDatePickerField(
+            label = stringResource(R.string.next_itv_date_label),
+            value = state.editNextItvDate,
+            onValueChange = onNextItvDateChange,
+        )
+        OptionalDatePickerField(
+            label = stringResource(R.string.insurance_renewal_date_label),
+            value = state.editInsuranceRenewalDate,
+            onValueChange = onInsuranceRenewalDateChange,
+        )
+        OutlinedTextField(
+            value = state.editNextServiceOdometerKm,
+            onValueChange = onNextServiceOdometerChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.next_service_odometer_label)) },
+            isError =
+                state.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
+                    state.editNextServiceOdometerKm.isInvalidOdometerInput(),
+            supportingText =
+                if (
+                    state.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
+                    state.editNextServiceOdometerKm.isInvalidOdometerInput()
+                ) {
+                    { ValidationErrorText(state.editValidationError) }
+                } else {
+                    null
+                },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+        )
+    }
+    OutlinedTextField(
+        value = state.editOdometerKm,
+        onValueChange = onOdometerChange,
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(stringResource(R.string.current_odometer_label)) },
+        isError =
+            state.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
+                !state.editNextServiceOdometerKm.isInvalidOdometerInput(),
+        supportingText =
+            if (
+                state.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
+                !state.editNextServiceOdometerKm.isInvalidOdometerInput()
+            ) {
+                { ValidationErrorText(state.editValidationError) }
+            } else {
+                null
+            },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        singleLine = true,
+    )
+    if (state.persistenceError) {
+        PersistenceErrorText(stringResource(R.string.vehicle_save_error))
     }
 }
 
@@ -900,7 +1122,7 @@ internal fun VehicleCard(
     onEditVehicle: (Vehicle) -> Unit,
     onQuickOdometerUpdate: (Vehicle) -> Unit,
 ) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(modifier = Modifier.fillMaxWidth().testTag("vehicle_card_${vehicle.id.value}")) {
         Column(
             modifier =
                 Modifier
@@ -912,11 +1134,28 @@ internal fun VehicleCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,
             ) {
-                Text(
-                    text = vehicle.name,
-                    modifier = Modifier.weight(1f).semantics { heading() },
-                    style = MaterialTheme.typography.titleLarge,
-                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing4),
+                ) {
+                    Text(
+                        text = vehicle.name,
+                        modifier = Modifier.semantics { heading() },
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    Text(
+                        text = vehicle.type.label(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    vehicle.licensePlate?.takeIf { it.isNotBlank() }?.let { plate ->
+                        Text(
+                            text = plate,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 IconButton(
                     onClick = { onEditVehicle(vehicle) },
                     modifier = Modifier.size(48.dp),
@@ -939,15 +1178,18 @@ internal fun VehicleCard(
                     )
                 }
             }
-            Text(
-                text = vehicle.type.label(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = "${vehicle.currentOdometerKm} km",
-                style = MaterialTheme.typography.titleMedium,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing4)) {
+                Text(
+                    text = stringResource(R.string.odometer_summary_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(R.string.odometer_summary_value, vehicle.currentOdometerKm),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
             Button(
                 onClick = { onSelectVehicle(vehicle) },
                 modifier = Modifier.fillMaxWidth(),

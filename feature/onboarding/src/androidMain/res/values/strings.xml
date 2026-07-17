@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="onboarding_title">Carbura</string>
-    <string name="onboarding_subtitle">Accede para conectar tu garaje familiar con Supabase.</string>
+    <string name="onboarding_subtitle">Gestiona los vehículos de tu familia, su mantenimiento y sus recordatorios en un solo lugar.</string>
     <string name="onboarding_google_button">Continuar con Google</string>
     <string name="onboarding_google_retry_button">Reintentar con Google</string>
     <string name="onboarding_initializing">Comprobando tu sesión...</string>

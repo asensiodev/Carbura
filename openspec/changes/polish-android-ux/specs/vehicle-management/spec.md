@@ -28,8 +28,19 @@ Garage vehicle cards SHALL prioritize opening vehicle context and updating the o
 - **THEN** its name, odometer, primary detail action, and odometer action remain visible without overlapping edit or delete controls
 
 ### Requirement: Responsive Vehicle Forms
-Vehicle creation and full editing SHALL remain scrollable and operable with compact height, software keyboard, and optional planning fields.
+Vehicle creation and full editing SHALL remain scrollable and operable with compact height, software keyboard, and optional planning fields. Full editing SHALL use a dedicated full-screen presentation on compact Android windows instead of a constrained alert dialog.
 
 #### Scenario: Edit all optional fields in landscape
 - **WHEN** the user edits a vehicle in landscape with the keyboard visible
 - **THEN** every field and save action remains reachable without clipping
+
+#### Scenario: Edit a vehicle on a compact phone
+- **WHEN** the user selects the edit action from a vehicle card
+- **THEN** a full-screen editor identifies the vehicle, provides clear navigation, and keeps the save action reachable above system and IME insets
+
+### Requirement: Adaptive Vehicle Creation Action
+Garage SHALL expose vehicle creation through a thumb-reachable labeled action on compact non-empty screens while retaining an inline action in the empty state.
+
+#### Scenario: Garage contains vehicles on a compact phone
+- **WHEN** the vehicle list is displayed
+- **THEN** a labeled creation action is available near the bottom end and does not obscure the final vehicle card

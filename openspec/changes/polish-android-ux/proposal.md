@@ -11,6 +11,9 @@ Carbura's Android flows are functionally complete for the current MVP, but navig
 - Add a no-vehicles prerequisite state before reminder creation and replace unbounded or ambiguous single-choice controls.
 - Make long forms and content responsive to compact height, landscape, large fonts, IME insets, and expanded widths.
 - Improve accessibility semantics for headings, errors, selected controls, statuses, and item-specific actions.
+- Present onboarding as an optically centered product entry point with benefit-led copy that does not expose backend vendors.
+- Replace the compact full-edit dialog with a full-screen vehicle form and move compact add actions into a thumb-reachable position.
+- Require confirmation for irreversible delete actions while keeping frequent reversible actions lightweight.
 - Align system bars and the Android dark palette with the existing Carbura visual language.
 - Add focused navigation, ViewModel, Compose UI, responsive-layout, and accessibility tests for the polished flows.
 - Exclude maintenance-generated reminders, background sync, realtime, conflict UI, invitations, and broad adaptive-navigation redesign from this change.
@@ -24,10 +27,10 @@ Carbura's Android flows are functionally complete for the current MVP, but navig
 ### Modified Capabilities
 
 - `android-edge-to-edge-ui`: Extend safe-inset behavior to constrained, IME-safe, large-text, and consistent dark system-bar presentation.
-- `vehicle-management`: Improve canonical navigation, selected-vehicle context, garage card hierarchy, and responsive vehicle forms.
+- `vehicle-management`: Improve canonical navigation, selected-vehicle context, garage card hierarchy, adaptive add actions, and full-screen compact vehicle editing.
 - `maintenance-history`: Add vehicle identity, current-date initialization, recoverable loading, responsive records, and field-associated validation.
 - `reminders-mvp`: Add the no-vehicles prerequisite, bounded vehicle selection, recoverable loading, responsive cards, and permission-denial guidance.
-- `login-onboarding`: Replace technical error exposure with accessible user-facing recovery and responsive login content.
+- `login-onboarding`: Replace technical implementation exposure with accessible, benefit-led recovery and optically centered responsive login content.
 - `sync-v0`: Surface non-blocking sync failure outside the User tab and refresh visible local content after successful pulls.
 
 ## Impact

@@ -12,6 +12,7 @@
     <string name="vehicle_type_other">Otro</string>
     <string name="current_odometer_label">Kilómetros actuales</string>
     <string name="add_vehicle_button">Añadir</string>
+    <string name="add_vehicle_fab">Añadir vehículo</string>
     <string name="add_first_vehicle_button">Añadir vehículo</string>
     <string name="save_vehicle_button">Guardar vehículo</string>
     <string name="vehicle_list_title">Tus vehículos</string>
@@ -33,6 +34,12 @@
     <string name="vehicle_updated_message">%1$s actualizado.</string>
     <string name="edit_vehicle_content_description">Editar %1$s</string>
     <string name="edit_vehicle_title">Editar vehículo</string>
+    <string name="close_vehicle_editor">Cerrar edición del vehículo</string>
+    <string name="vehicle_details_section_title">Datos del vehículo</string>
+    <string name="discard_vehicle_changes_title">¿Descartar cambios?</string>
+    <string name="discard_vehicle_changes_message">Los cambios realizados en el vehículo no se guardarán.</string>
+    <string name="discard_changes_button">Descartar</string>
+    <string name="keep_editing_button">Seguir editando</string>
     <string name="update_odometer_button">Actualizar km</string>
     <string name="update_odometer_title">Actualizar kilómetros</string>
     <string name="license_plate_label">Matrícula (opcional)</string>
@@ -57,4 +64,6 @@
     <string name="vehicle_delete_error">No se ha podido borrar el vehículo. Inténtalo de nuevo.</string>
     <string name="saving_vehicle">Guardando...</string>
     <string name="deleting_vehicle">Borrando vehículo</string>
+    <string name="odometer_summary_label">Kilometraje actual</string>
+    <string name="odometer_summary_value">%1$d km</string>
 </resources>

@@ -54,3 +54,10 @@ Repeated loading, empty, recoverable error, and constrained-content presentation
 #### Scenario: Feature renders a recoverable error
 - **WHEN** a list feature cannot load local data
 - **THEN** it uses the shared error presentation with feature-specific guidance and Retry action
+
+### Requirement: Irreversible Action Confirmation
+Android UI SHALL require item-specific confirmation before dispatching an irreversible delete action for a vehicle, maintenance record, or reminder.
+
+#### Scenario: User activates delete
+- **WHEN** the user selects delete for an existing item
+- **THEN** the UI names the affected item and requires explicit confirmation before dispatching the delete event

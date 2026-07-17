@@ -5,16 +5,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertWidthIsEqualTo
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.unit.dp
 import com.asensiodev.carbura.core.designsystem.CarburaTheme
 import com.asensiodev.carbura.core.model.CalendarDate
@@ -24,6 +28,7 @@ import com.asensiodev.carbura.core.model.ReminderId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -82,6 +87,44 @@ class RemindersScreenTest {
     }
 
     @Test
+    fun compactNonEmptyListHasReachableLabeledFab() {
+        composeRule.setRemindersContent(state = loadedState(reminders = listOf(reminder())))
+
+        composeRule.onNodeWithText("Añadir recordatorio", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag("add_reminder_fab").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("Nuevo recordatorio").assertIsDisplayed()
+    }
+
+    @Test
+    fun compactFabDoesNotObscureFinalListItem() {
+        val reminders = (1..8).map { reminder(id = "reminder-$it", title = "Recordatorio $it") }
+        composeRule.setRemindersContent(state = loadedState(reminders = reminders))
+
+        composeRule.onNodeWithTag("reminders_content").performScrollToIndex(9)
+        composeRule.onNodeWithTag("reminder_card_reminder-8").assertIsDisplayed()
+        val finalItemBounds = composeRule.onNodeWithTag("reminder_card_reminder-8").getBoundsInRoot()
+        val fabBounds = composeRule.onNodeWithTag("add_reminder_fab").getBoundsInRoot()
+        assertTrue(finalItemBounds.bottom <= fabBounds.top)
+    }
+
+    @Test
+    fun deleteDispatchesOnlyAfterItemSpecificConfirmation() {
+        val reminder = reminder(title = "Seguro familiar")
+        var deletedReminder: Reminder? = null
+        composeRule.setRemindersContent(
+            state = loadedState(reminders = listOf(reminder)),
+            onDeleteReminder = { deletedReminder = it },
+        )
+
+        composeRule.onNodeWithContentDescription("Borrar recordatorio Seguro familiar").performClick()
+
+        composeRule.runOnIdle { assertNull(deletedReminder) }
+        composeRule.onAllNodesWithText("Seguro familiar").assertCountEquals(2)
+        composeRule.onNodeWithText("Borrar").performClick()
+        composeRule.runOnIdle { assertTrue(deletedReminder === reminder) }
+    }
+
+    @Test
     fun manyVehicleSelectorIsSingleChoiceAndSaveRemainsReachable() {
         val vehicles = (1..20).map { vehicle("vehicle-$it", "Vehículo $it") }
         composeRule.setRemindersContent(state = loadedState(vehicles = vehicles))
@@ -110,6 +153,7 @@ class RemindersScreenTest {
         notificationPermissionState: NotificationPermissionState = NotificationPermissionState.Granted,
         onRetry: () -> Unit = {},
         onNavigateToGarage: () -> Unit = {},
+        onDeleteReminder: (Reminder) -> Unit = {},
     ) {
         setContent {
             CarburaTheme {
@@ -118,6 +162,7 @@ class RemindersScreenTest {
                     notificationPermissionState = notificationPermissionState,
                     onRetry = onRetry,
                     onNavigateToGarage = onNavigateToGarage,
+                    onDeleteReminder = onDeleteReminder,
                 )
             }
         }
@@ -129,6 +174,7 @@ class RemindersScreenTest {
         notificationPermissionState: NotificationPermissionState = NotificationPermissionState.Granted,
         onRetry: () -> Unit = {},
         onNavigateToGarage: () -> Unit = {},
+        onDeleteReminder: (Reminder) -> Unit = {},
     ) {
         RemindersScreen(
             state = state,
@@ -141,7 +187,7 @@ class RemindersScreenTest {
             onDueOdometerChange = {},
             onSubmitReminder = {},
             onCompleteReminder = {},
-            onDeleteReminder = {},
+            onDeleteReminder = onDeleteReminder,
             onRetry = onRetry,
             onNavigateToGarage = onNavigateToGarage,
             notificationPermissionState = notificationPermissionState,
@@ -160,15 +206,17 @@ class RemindersScreenTest {
         selectedVehicleId = vehicles.firstOrNull()?.id,
     )
 
-    private fun reminder(title: String = "Pasar ITV") =
-        Reminder(
-            id = ReminderId("reminder-1"),
-            familyId = FamilyId("family-1"),
-            vehicleId = VehicleId("missing-vehicle"),
-            maintenanceTypeId = null,
-            title = title,
-            dueDate = CalendarDate("2026-08-01"),
-        )
+    private fun reminder(
+        id: String = "reminder-1",
+        title: String = "Pasar ITV",
+    ) = Reminder(
+        id = ReminderId(id),
+        familyId = FamilyId("family-1"),
+        vehicleId = VehicleId("missing-vehicle"),
+        maintenanceTypeId = null,
+        title = title,
+        dueDate = CalendarDate("2026-08-01"),
+    )
 
     private fun vehicle(
         id: String,

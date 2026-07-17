@@ -66,5 +66,18 @@
 
 - [x] 9.1 Run focused navigation, design-system, Garage, Maintenance, Reminders, Onboarding, and sync feedback tests.
 - [x] 9.2 Run `./gradlew qualityCheck test assembleDebug` and resolve all regressions.
-- [ ] 9.3 Install the debug APK and manually verify normal launch, notification launch, top-level navigation, retry, offline sync feedback, long forms, large text, and system-bar contrast on Android.
+- [x] 9.3 Install the debug APK and manually verify normal launch, notification launch, top-level navigation, retry, offline sync feedback, long forms, large text, and system-bar contrast on Android.
 - [x] 9.4 Confirm maintenance-generated reminders, background sync, invitations, and broader adaptive navigation remain unchanged and out of scope.
+
+## 10. Product Interaction Refinement
+
+- [x] 10.1 Add onboarding tests for optical centering with scroll fallback and benefit-led copy without backend vendor names.
+- [x] 10.2 Center the onboarding access panel when space allows and replace infrastructure-facing copy with user-facing functionality.
+- [x] 10.3 Add Garage tests for compact full-screen editing, reachable save and discard behavior, long content, and retained quick-odometer presentation.
+- [x] 10.4 Replace compact full vehicle editing in `AlertDialog` with a dedicated full-screen editor while preserving form state and confirmations.
+- [x] 10.5 Add compact Garage and Reminders tests for labeled thumb-reachable creation actions and unobscured final list content.
+- [x] 10.6 Replace compact header add buttons with labeled extended floating actions while retaining empty-state calls to action.
+- [x] 10.7 Refine vehicle card information hierarchy without changing vehicle or maintenance domain behavior.
+- [x] 10.8 Audit vehicle, maintenance, and reminder deletion entry points and test item-specific confirmation before event dispatch.
+- [x] 10.9 Run focused onboarding, Garage, Reminders, and destructive-action Compose tests.
+- [x] 10.10 Run `./gradlew qualityCheck test assembleDebug` and smoke-test the updated flows on Android.

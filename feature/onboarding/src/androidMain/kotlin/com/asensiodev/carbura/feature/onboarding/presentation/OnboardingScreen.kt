@@ -122,7 +122,8 @@ internal fun OnboardingScreen(
     Surface(
         modifier =
             modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                .testTag("onboarding_screen"),
         color = MaterialTheme.colorScheme.background,
     ) {
         Box(
@@ -133,7 +134,7 @@ internal fun OnboardingScreen(
                     .imePadding()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = Spacings.spacing24, vertical = Spacings.spacing16),
-            contentAlignment = Alignment.TopCenter,
+            contentAlignment = Alignment.Center,
         ) {
             Card(
                 modifier =

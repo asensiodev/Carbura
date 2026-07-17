@@ -25,6 +25,7 @@ data class VehicleFormUiState(
     val editNextItvDate: String = "",
     val editInsuranceRenewalDate: String = "",
     val editNextServiceOdometerKm: String = "",
+    val isEditDirty: Boolean = false,
     val odometerDecreaseConfirmation: OdometerDecreaseConfirmation? = null,
     val reminderSuggestions: List<VehicleReminderSuggestion> = emptyList(),
     val reminderConfirmationMode: VehicleSaveMode? = null,

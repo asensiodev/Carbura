@@ -106,10 +106,12 @@ class VehicleFormViewModel(
 
     private fun updateEdit(transform: (VehicleFormUiState) -> VehicleFormUiState) {
         _uiState.update {
-            transform(it).copy(
+            val updated = transform(it)
+            updated.copy(
                 editValidationError = null,
                 persistenceError = false,
                 odometerDecreaseConfirmation = null,
+                isEditDirty = updated.differsFrom(editingVehicle),
             )
         }
     }
@@ -130,6 +132,7 @@ class VehicleFormViewModel(
                 editNextItvDate = vehicle.nextItvDate?.iso8601.orEmpty(),
                 editInsuranceRenewalDate = vehicle.insuranceRenewalDate?.iso8601.orEmpty(),
                 editNextServiceOdometerKm = vehicle.nextServiceOdometerKm?.toString().orEmpty(),
+                isEditDirty = false,
                 editValidationError = null,
                 persistenceError = false,
                 odometerDecreaseConfirmation = null,
@@ -150,6 +153,7 @@ class VehicleFormViewModel(
                 editNextItvDate = "",
                 editInsuranceRenewalDate = "",
                 editNextServiceOdometerKm = "",
+                isEditDirty = false,
                 editValidationError = null,
                 persistenceError = false,
                 odometerDecreaseConfirmation = null,
@@ -355,6 +359,18 @@ private fun randomVehicleId(): VehicleId = VehicleId("vehicle-${Random.nextInt(1
 private fun String.toCalendarDateOrNull(): CalendarDate? = trim().takeIf { it.isNotEmpty() }?.let(::CalendarDate)
 
 private fun String.isInvalidOptionalOdometer(): Boolean = isNotBlank() && (toIntOrNull()?.let { it < 0 } != false)
+
+private fun VehicleFormUiState.differsFrom(vehicle: Vehicle?): Boolean =
+    vehicle != null &&
+        (
+            editName != vehicle.name ||
+                editLicensePlate != vehicle.licensePlate.orEmpty() ||
+                editOdometerKm != vehicle.currentOdometerKm.toString() ||
+                editType != vehicle.type ||
+                editNextItvDate != vehicle.nextItvDate?.iso8601.orEmpty() ||
+                editInsuranceRenewalDate != vehicle.insuranceRenewalDate?.iso8601.orEmpty() ||
+                editNextServiceOdometerKm != vehicle.nextServiceOdometerKm?.toString().orEmpty()
+        )
 
 private fun ValidationFailure.toGarageMessage(): CarburaString =
     when (this) {

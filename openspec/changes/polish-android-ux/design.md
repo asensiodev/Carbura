@@ -71,6 +71,18 @@ Long forms use vertical scrolling, IME padding, and safe insets. Content is cent
 
 This addresses phones, landscape, tablets, and large text without introducing navigation rails or two-pane layouts.
 
+### Stabilize product interaction patterns before Desktop
+
+Android establishes the product vocabulary, hierarchy, and interaction contracts before Desktop UI work begins, but platform containers remain adaptive rather than identical. Compact Android uses thumb-reachable creation actions and a full-screen vehicle editor; expanded Android may use header actions and a constrained wide form. Future Desktop UI can reuse presentation state, validation, terminology, and design tokens while selecting desktop-appropriate navigation, density, and form containers.
+
+Onboarding is optically centered when space allows and falls back to scrolling for compact height, IME visibility, and large text. Primary copy describes the user benefit and never names the backend vendor.
+
+Vehicle creation and editing use the same clear form hierarchy. Full editing is not hosted in an `AlertDialog` on compact windows because the number of fields, keyboard interaction, and secondary confirmations exceed a dialog's responsibility. Quick odometer editing remains a focused dialog or sheet.
+
+Garage and Reminders expose creation through a labeled extended floating action on compact screens while empty states retain their inline call to action. Expanded layouts may keep creation in the page header. Lists reserve bottom content padding so the floating action never obscures the final item.
+
+Irreversible deletion always requires an item-specific confirmation. Frequent reversible transitions, such as completing a reminder, should prefer immediate feedback and future Undo behavior rather than confirmation fatigue.
+
 ### Add Compose UI tests only for high-risk contracts
 
 Android test dependencies and focused semantics/navigation tests are added for notification launch navigation, loading/error/retry, selected-vehicle context, no-vehicle reminder prerequisite, large text/compact constraints, and accessible error/selection semantics. Existing common ViewModel tests remain the primary state-machine coverage.

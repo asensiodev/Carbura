@@ -7,7 +7,7 @@
     <string name="reminder_due_date_label">Fecha objetivo (opcional)</string>
     <string name="select_reminder_due_date_button">Seleccionar fecha</string>
     <string name="reminder_due_odometer_label">Kilómetros (opcional)</string>
-    <string name="add_reminder_button">Añadir</string>
+    <string name="add_reminder_button">Añadir recordatorio</string>
     <string name="add_first_reminder_button">Añadir recordatorio</string>
     <string name="save_reminder_button">Guardar recordatorio</string>
     <string name="pending_reminders_title">Pendientes</string>
