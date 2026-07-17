@@ -7,8 +7,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -42,7 +45,6 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,30 +52,45 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
+import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
+import com.asensiodev.carbura.core.model.VehicleType
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.featuremaintenance.R
 import org.koin.core.context.GlobalContext
 import org.koin.core.parameter.parametersOf
+import java.text.NumberFormat
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Currency
+import java.util.Locale
 
 @Composable
 fun MaintenanceHistoryRoute(
     vehicleId: String,
     familyId: String,
     onBack: () -> Unit,
+    refreshSignal: Long = 0L,
     modifier: Modifier = Modifier,
     viewModel: MaintenanceHistoryViewModel = rememberMaintenanceHistoryViewModel(vehicleId, familyId),
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var effectMessage by remember { mutableStateOf<CarburaString?>(null) }
     var effectMessageArg by remember { mutableStateOf<String?>(null) }
     var maintenanceCreatedSignal by remember { mutableStateOf(0) }
@@ -81,6 +98,10 @@ fun MaintenanceHistoryRoute(
 
     LaunchedEffect(viewModel) {
         viewModel.onEvent(MaintenanceHistoryEvent.Started)
+    }
+
+    LaunchedEffect(viewModel, refreshSignal) {
+        if (refreshSignal > 0L) viewModel.onEvent(MaintenanceHistoryEvent.Refresh)
     }
 
     LaunchedEffect(viewModel) {
@@ -131,6 +152,7 @@ fun MaintenanceHistoryRoute(
         onNotesChange = { viewModel.onEvent(MaintenanceHistoryEvent.NotesChanged(it)) },
         onSubmitMaintenance = { viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance) },
         onDeleteMaintenance = { viewModel.onEvent(MaintenanceHistoryEvent.DeleteMaintenance(it.id)) },
+        onRetry = { viewModel.onEvent(MaintenanceHistoryEvent.Retry) },
         modifier = modifier,
     )
 }
@@ -146,7 +168,7 @@ private fun rememberMaintenanceHistoryViewModel(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MaintenanceHistoryScreen(
+internal fun MaintenanceHistoryScreen(
     state: MaintenanceHistoryUiState,
     effectMessage: String?,
     maintenanceCreatedSignal: Int,
@@ -160,6 +182,7 @@ private fun MaintenanceHistoryScreen(
     onNotesChange: (String) -> Unit,
     onSubmitMaintenance: () -> Unit,
     onDeleteMaintenance: (MaintenanceRecord) -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showMaintenanceSheet by remember { mutableStateOf(false) }
@@ -197,39 +220,72 @@ private fun MaintenanceHistoryScreen(
                 )
             },
         ) { innerPadding ->
-            LazyColumn(
+            Box(
                 modifier =
                     Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
-                contentPadding = PaddingValues(Spacings.spacing24),
-                verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
+                contentAlignment = Alignment.TopCenter,
             ) {
-                item {
-                    MaintenanceHeader(onAddMaintenance = { showMaintenanceSheet = true })
-                }
-
-                item {
-                    Text(
-                        text = stringResource(R.string.maintenance_history_title),
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                }
-
-                if (state.isLoading) {
-                    item {
-                        LoadingStateCard(message = stringResource(R.string.maintenance_loading_message))
+                LazyColumn(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .widthIn(max = 720.dp),
+                    contentPadding = PaddingValues(Spacings.spacing24),
+                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
+                ) {
+                    state.vehicle?.let { vehicle ->
+                        item { VehicleContextCard(vehicle) }
                     }
-                } else if (state.isEmpty) {
+
                     item {
-                        EmptyHistoryCard(onAddMaintenance = { showMaintenanceSheet = true })
+                        MaintenanceHeader(onAddMaintenance = { showMaintenanceSheet = true })
                     }
-                } else {
-                    items(state.records) { record ->
-                        MaintenanceRecordCard(
-                            record = record,
-                            onDeleteMaintenance = { recordPendingDeletion = record },
+
+                    item {
+                        Text(
+                            text = stringResource(R.string.maintenance_history_title),
+                            modifier = Modifier.semantics { heading() },
+                            style = MaterialTheme.typography.titleLarge,
                         )
+                    }
+
+                    if (state.persistenceError) {
+                        item {
+                            val message = stringResource(R.string.maintenance_persistence_error)
+                            Text(
+                                text = message,
+                                modifier =
+                                    Modifier.semantics {
+                                        liveRegion = LiveRegionMode.Assertive
+                                        error(message)
+                                    },
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+
+                    when (state.loadState) {
+                        MaintenanceLoadState.Loading ->
+                            item {
+                                LoadingStateCard(message = stringResource(R.string.maintenance_loading_message))
+                            }
+                        MaintenanceLoadState.Error -> item { LoadErrorCard(onRetry) }
+                        MaintenanceLoadState.Content -> {
+                            if (state.isEmpty) {
+                                item { EmptyHistoryCard(onAddMaintenance = { showMaintenanceSheet = true }) }
+                            } else {
+                                items(state.records, key = { it.id.value }) { record ->
+                                    MaintenanceRecordCard(
+                                        record = record,
+                                        isDeleting = state.activeMutation == MaintenanceMutation.Deleting(record.id),
+                                        actionsEnabled = state.activeMutation == null,
+                                        onDeleteMaintenance = { recordPendingDeletion = record },
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -260,11 +316,15 @@ private fun MaintenanceHistoryScreen(
                 onNotesChange = onNotesChange,
                 onSubmitMaintenance = onSubmitMaintenance,
                 modifier =
-                    Modifier.padding(
-                        start = Spacings.spacing24,
-                        end = Spacings.spacing24,
-                        bottom = Spacings.spacing24,
-                    ),
+                    Modifier
+                        .widthIn(max = 720.dp)
+                        .navigationBarsPadding()
+                        .imePadding()
+                        .padding(
+                            start = Spacings.spacing24,
+                            end = Spacings.spacing24,
+                            bottom = Spacings.spacing24,
+                        ),
             )
         }
     }
@@ -285,6 +345,7 @@ private fun MaintenanceHistoryScreen(
             },
             confirmButton = {
                 TextButton(
+                    enabled = state.activeMutation == null,
                     onClick = {
                         recordPendingDeletion = null
                         onDeleteMaintenance(record)
@@ -322,14 +383,12 @@ private fun LoadingStateCard(message: String) {
 
 @Composable
 private fun MaintenanceHeader(onAddMaintenance: () -> Unit) {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacings.spacing16),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
     ) {
         Text(
             text = stringResource(R.string.maintenance_subtitle),
-            modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -360,19 +419,24 @@ private fun MaintenanceForm(
     ) {
         Text(
             text = stringResource(R.string.maintenance_form_title),
+            modifier = Modifier.semantics { heading() },
             style = MaterialTheme.typography.titleMedium,
         )
+        val typeError = state.validationError == CarburaString.ValidationBlankMaintenanceType
         OutlinedTextField(
             value = state.type,
             onValueChange = onTypeChange,
             modifier = Modifier.fillMaxWidth(),
             label = { Text(stringResource(R.string.maintenance_type_label)) },
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+            isError = typeError,
+            supportingText = if (typeError) validationSupportingText(state.validationError) else null,
             singleLine = true,
         )
         MaintenanceDatePickerField(
             value = state.performedOn,
             onValueChange = onPerformedOnChange,
+            error = state.validationError == CarburaString.ValidationInvalidMaintenanceDate,
         )
         OutlinedTextField(
             value = state.odometerKm,
@@ -380,6 +444,13 @@ private fun MaintenanceForm(
             modifier = Modifier.fillMaxWidth(),
             label = { Text(stringResource(R.string.maintenance_odometer_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            isError = state.validationError == CarburaString.ValidationNegativeMaintenanceOdometer,
+            supportingText =
+                if (state.validationError == CarburaString.ValidationNegativeMaintenanceOdometer) {
+                    validationSupportingText(state.validationError)
+                } else {
+                    null
+                },
             singleLine = true,
         )
         OutlinedTextField(
@@ -388,6 +459,13 @@ private fun MaintenanceForm(
             modifier = Modifier.fillMaxWidth(),
             label = { Text(stringResource(R.string.maintenance_cost_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            isError = state.validationError == CarburaString.ValidationNegativeMaintenanceCost,
+            supportingText =
+                if (state.validationError == CarburaString.ValidationNegativeMaintenanceCost) {
+                    validationSupportingText(state.validationError)
+                } else {
+                    null
+                },
             singleLine = true,
         )
         OutlinedTextField(
@@ -406,9 +484,18 @@ private fun MaintenanceForm(
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             minLines = 2,
         )
-        if (state.errorMessage != null) {
+        if (state.validationError == CarburaString.ValidationGeneric) {
             Text(
-                text = stringResource(state.errorMessage.maintenanceStringRes()),
+                text = stringResource(state.validationError.maintenanceStringRes()),
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        if (state.persistenceError) {
+            Text(
+                text = stringResource(R.string.maintenance_persistence_error),
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -416,8 +503,15 @@ private fun MaintenanceForm(
         Button(
             onClick = onSubmitMaintenance,
             modifier = Modifier.fillMaxWidth(),
+            enabled = state.activeMutation == null,
         ) {
-            Text(stringResource(R.string.save_maintenance_button))
+            Text(
+                if (state.isSaving) {
+                    stringResource(R.string.maintenance_saving_status)
+                } else {
+                    stringResource(R.string.save_maintenance_button)
+                },
+            )
         }
     }
 }
@@ -427,11 +521,16 @@ private fun MaintenanceForm(
 private fun MaintenanceDatePickerField(
     value: String,
     onValueChange: (String) -> Unit,
+    error: Boolean,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = value.toUtcMillisOrNull())
 
-    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+    val errorMessage = stringResource(R.string.validation_invalid_maintenance_date)
+    Column(
+        modifier = Modifier.semantics { if (error) error(errorMessage) },
+        verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
+    ) {
         Text(
             text = stringResource(R.string.maintenance_date_label),
             style = MaterialTheme.typography.labelLarge,
@@ -441,6 +540,9 @@ private fun MaintenanceDatePickerField(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(value)
+        }
+        if (error) {
+            Text(errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
     }
 
@@ -506,6 +608,8 @@ private fun EmptyHistoryCard(onAddMaintenance: () -> Unit) {
 @Composable
 private fun MaintenanceRecordCard(
     record: MaintenanceRecord,
+    isDeleting: Boolean,
+    actionsEnabled: Boolean,
     onDeleteMaintenance: (MaintenanceRecord) -> Unit,
 ) {
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
@@ -513,33 +617,19 @@ private fun MaintenanceRecordCard(
             modifier = Modifier.padding(Spacings.spacing16),
             verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = record.displayType(),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = record.performedOn.iso8601,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    IconButton(onClick = { onDeleteMaintenance(record) }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.delete_maintenance_content_description),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
-            }
+            Text(
+                text = record.displayType(),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = record.performedOn.localizedDate(),
+                style = MaterialTheme.typography.bodyMedium,
+            )
             record.odometerKm?.let { odometer ->
-                Text("$odometer km", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.maintenance_odometer_value, odometer), style = MaterialTheme.typography.bodyMedium)
             }
             record.costCents?.let { costCents ->
-                Text("${costCents / 100}.${(costCents % 100).toString().padStart(2, '0')} ${record.currency}")
+                Text(costCents.localizedCost(record.currency))
             }
             record.workshop?.let { workshop ->
                 Text(workshop, style = MaterialTheme.typography.bodyMedium)
@@ -551,9 +641,88 @@ private fun MaintenanceRecordCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            IconButton(
+                onClick = { onDeleteMaintenance(record) },
+                enabled = actionsEnabled,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.delete_maintenance_content_description, record.displayType()),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+            if (isDeleting) {
+                Text(
+                    text = stringResource(R.string.maintenance_deleting_status),
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
         }
     }
 }
+
+@Composable
+private fun VehicleContextCard(vehicle: Vehicle) {
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(Spacings.spacing16),
+            verticalArrangement = Arrangement.spacedBy(Spacings.spacing4),
+        ) {
+            Text(vehicle.name, modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
+            val description = listOfNotNull(vehicle.brand, vehicle.model).joinToString(" ")
+            if (description.isNotBlank()) Text(description, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                stringResource(R.string.maintenance_vehicle_summary, vehicle.type.localizedLabel(), vehicle.currentOdometerKm),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            vehicle.licensePlate?.let { Text(stringResource(R.string.maintenance_vehicle_plate, it)) }
+        }
+    }
+}
+
+@Composable
+private fun VehicleType.localizedLabel(): String =
+    stringResource(
+        when (this) {
+            VehicleType.Car -> R.string.vehicle_type_car
+            VehicleType.Motorcycle -> R.string.vehicle_type_motorcycle
+            VehicleType.Van -> R.string.vehicle_type_van
+            VehicleType.Other -> R.string.vehicle_type_other
+        },
+    )
+
+@Composable
+private fun LoadErrorCard(onRetry: () -> Unit) {
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(Spacings.spacing24),
+            verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
+        ) {
+            Text(stringResource(R.string.maintenance_load_error_title), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.maintenance_load_error_description))
+            Button(onClick = onRetry) { Text(stringResource(R.string.maintenance_retry_button)) }
+        }
+    }
+}
+
+@Composable
+private fun validationSupportingText(error: CarburaString?): (@Composable () -> Unit)? =
+    error?.let { { Text(stringResource(it.maintenanceStringRes())) } }
+
+internal fun com.asensiodev.carbura.core.model.CalendarDate.localizedDate(locale: Locale = Locale.getDefault()): String =
+    LocalDate.parse(iso8601).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
+
+internal fun Int.localizedCost(
+    currencyCode: String,
+    locale: Locale = Locale.getDefault(),
+): String =
+    NumberFormat
+        .getCurrencyInstance(locale)
+        .apply {
+            currency = Currency.getInstance(currencyCode)
+        }.format(this / 100.0)
 
 private fun String.toUtcMillisOrNull(): Long? =
     runCatching {

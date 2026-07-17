@@ -25,6 +25,14 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingViewModelTest {
     @Test
+    fun initialStateBlocksLoginWhileSessionInitializes() {
+        val state = OnboardingUiState()
+
+        assertTrue(state.isInitializing)
+        assertFalse(state.canSubmitLogin)
+    }
+
+    @Test
     fun startupWithoutSessionShowsUnauthenticatedState() =
         runTest {
             val viewModel = onboardingViewModel(authGateway = FakeAuthGateway(currentSession = null))
@@ -78,7 +86,8 @@ class OnboardingViewModelTest {
             assertFalse(state.isInitializing)
             assertFalse(state.isAuthenticated)
             assertEquals(null, state.familyId)
-            assertEquals("Profile unavailable", state.errorMessage)
+            assertEquals(OnboardingError.ProfileUnavailable, state.error)
+            assertTrue(state.errorDiagnostic.orEmpty().contains("Profile unavailable"))
         }
 
     @Test
@@ -124,7 +133,8 @@ class OnboardingViewModelTest {
             val state = viewModel.uiState.value
             assertFalse(state.isLoading)
             assertFalse(state.isAuthenticated)
-            assertEquals("Missing config", state.errorMessage)
+            assertEquals(OnboardingError.SignInFailed, state.error)
+            assertTrue(state.errorDiagnostic.orEmpty().contains("Missing config"))
         }
 
     @Test
@@ -176,7 +186,8 @@ class OnboardingViewModelTest {
             val state = viewModel.uiState.value
             assertFalse(state.isLoading)
             assertFalse(state.isAuthenticated)
-            assertEquals("Database error", state.errorMessage)
+            assertEquals(OnboardingError.ProfileCreationFailed, state.error)
+            assertTrue(state.errorDiagnostic.orEmpty().contains("Database error"))
         }
 
     @Test
@@ -222,7 +233,32 @@ class OnboardingViewModelTest {
             val state = viewModel.uiState.value
             assertFalse(state.isLoading)
             assertFalse(state.isAuthenticated)
-            assertEquals("Invalid token", state.errorMessage)
+            assertEquals(OnboardingError.SignInFailed, state.error)
+            assertTrue(state.errorDiagnostic.orEmpty().contains("Invalid token"))
+        }
+
+    @Test
+    fun credentialFailureIsNormalizedAndCanBeRetried() =
+        runTest {
+            val authGateway = FakeAuthGateway(signInError = IllegalStateException("OAuth client secret"))
+            val viewModel = onboardingViewModel(authGateway = authGateway)
+
+            viewModel.onEvent(OnboardingEvent.Started)
+            advanceUntilIdle()
+            viewModel.onEvent(OnboardingEvent.GoogleSignInError("GOOGLE_CLIENT_ID missing"))
+
+            assertEquals(OnboardingError.SignInFailed, viewModel.uiState.value.error)
+            assertEquals("GOOGLE_CLIENT_ID missing", viewModel.uiState.value.errorDiagnostic)
+            assertTrue(viewModel.uiState.value.canSubmitLogin)
+
+            authGateway.signInError = null
+            viewModel.onEvent(OnboardingEvent.GoogleSignInClicked)
+            advanceUntilIdle()
+
+            assertEquals(null, viewModel.uiState.value.error)
+            assertEquals(null, viewModel.uiState.value.errorDiagnostic)
+            assertTrue(viewModel.uiState.value.isAuthenticated)
+            assertEquals(1, authGateway.signInAttempts)
         }
 
     @Test
@@ -326,18 +362,22 @@ private class FakeAuthGateway(
             accessToken = "access-token",
             user = AuthUser("user-1", "angela@example.com", "Angela"),
         ),
-    private val signInError: Throwable? = null,
+    var signInError: Throwable? = null,
     private val signInGate: CompletableDeferred<Unit>? = null,
 ) : AuthGateway {
+    var signInAttempts: Int = 0
+
     override suspend fun currentSession(): AuthSession? = currentSession
 
     override suspend fun signInWithGoogle(): AuthSession {
+        signInAttempts += 1
         signInGate?.await()
         signInError?.let { throw it }
         return signInSession
     }
 
     override suspend fun signInWithGoogle(idToken: String): AuthSession {
+        signInAttempts += 1
         signInGate?.await()
         signInError?.let { throw it }
         return signInSession

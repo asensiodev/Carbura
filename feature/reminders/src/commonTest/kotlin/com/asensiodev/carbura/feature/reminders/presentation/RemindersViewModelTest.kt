@@ -17,10 +17,12 @@ import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.core.testing.TestDispatcherProvider
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -41,6 +43,16 @@ class RemindersViewModelTest {
         )
 
     @Test
+    fun initialStateIsLoadingWithoutShowingEmptyContent() =
+        runTest {
+            val state = remindersViewModel().uiState.value
+
+            assertTrue(state.isLoading)
+            assertFalse(state.isEmpty)
+            assertFalse(state.hasNoVehicles)
+        }
+
+    @Test
     fun startedLoadsVehiclesAndPendingReminders() =
         runTest {
             val viewModel =
@@ -57,6 +69,67 @@ class RemindersViewModelTest {
             assertEquals(listOf(vehicle), state.vehicles)
             assertEquals(listOf("itv"), state.reminders.map { it.id.value })
             assertEquals(vehicle.id, state.selectedVehicleId)
+        }
+
+    @Test
+    fun refreshUpdatesRemindersWithoutClearingForm() =
+        runTest {
+            val repository = FakeReminderRepository()
+            val viewModel =
+                remindersViewModel(
+                    vehicleRepository = FakeVehicleRepository(listOf(vehicle)),
+                    reminderRepository = repository,
+                )
+            viewModel.onEvent(RemindersEvent.TitleChanged("Borrador"))
+            repository.saveReminder(reminder("remote"))
+
+            viewModel.onEvent(RemindersEvent.Refresh)
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf("remote"),
+                viewModel.uiState.value.reminders
+                    .map { it.id.value },
+            )
+            assertEquals("Borrador", viewModel.uiState.value.title)
+        }
+
+    @Test
+    fun loadFailureCanBeRetried() =
+        runTest {
+            val vehicleRepository = FakeVehicleRepository(listOf(vehicle), failReads = true)
+            val viewModel = remindersViewModel(vehicleRepository = vehicleRepository)
+
+            viewModel.onEvent(RemindersEvent.Started)
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.hasLoadError)
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertFalse(viewModel.uiState.value.isEmpty)
+
+            vehicleRepository.failReads = false
+            viewModel.onEvent(RemindersEvent.Retry)
+            advanceUntilIdle()
+
+            assertFalse(viewModel.uiState.value.hasLoadError)
+            assertEquals(listOf(vehicle), viewModel.uiState.value.vehicles)
+        }
+
+    @Test
+    fun noVehiclesExposesPrerequisiteAndGarageNavigationEffect() =
+        runTest {
+            val viewModel = remindersViewModel()
+            viewModel.onEvent(RemindersEvent.Started)
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.hasNoVehicles)
+
+            viewModel.effects.test {
+                viewModel.onEvent(RemindersEvent.GarageRequested)
+                runCurrent()
+                assertEquals(RemindersEffect.NavigateToGarage, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
@@ -86,6 +159,64 @@ class RemindersViewModelTest {
                 viewModel.uiState.value.title
                     .isBlank(),
             )
+            assertEquals(1, viewModel.uiState.value.reminders.size)
+        }
+
+    @Test
+    fun submitShowsProgressAndIgnoresDuplicateSubmission() =
+        runTest {
+            val saveGate = CompletableDeferred<Unit>()
+            val repository = FakeReminderRepository(saveGate = saveGate)
+            val viewModel =
+                remindersViewModel(
+                    vehicleRepository = FakeVehicleRepository(listOf(vehicle)),
+                    reminderRepository = repository,
+                )
+            viewModel.onEvent(RemindersEvent.Started)
+            advanceUntilIdle()
+            viewModel.onEvent(RemindersEvent.TitleChanged("Pasar ITV"))
+            viewModel.onEvent(RemindersEvent.DueDateChanged("2026-07-10"))
+
+            viewModel.onEvent(RemindersEvent.SubmitReminder)
+            runCurrent()
+            assertEquals(ReminderAction.Create, viewModel.uiState.value.activeAction)
+
+            viewModel.onEvent(RemindersEvent.SubmitReminder)
+            runCurrent()
+            assertEquals(1, repository.saveCalls)
+
+            saveGate.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(null, viewModel.uiState.value.activeAction)
+            assertEquals(1, repository.saveCalls)
+        }
+
+    @Test
+    fun failedMutationKeepsFormAndAllowsRetry() =
+        runTest {
+            val repository = FakeReminderRepository(failSaves = true)
+            val viewModel =
+                remindersViewModel(
+                    vehicleRepository = FakeVehicleRepository(listOf(vehicle)),
+                    reminderRepository = repository,
+                )
+            viewModel.onEvent(RemindersEvent.Started)
+            advanceUntilIdle()
+            viewModel.onEvent(RemindersEvent.TitleChanged("Pasar ITV"))
+            viewModel.onEvent(RemindersEvent.DueDateChanged("2026-07-10"))
+
+            viewModel.onEvent(RemindersEvent.SubmitReminder)
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.hasPersistenceError)
+            assertEquals("Pasar ITV", viewModel.uiState.value.title)
+            assertEquals(null, viewModel.uiState.value.activeAction)
+
+            repository.failSaves = false
+            viewModel.onEvent(RemindersEvent.SubmitReminder)
+            advanceUntilIdle()
+
+            assertFalse(viewModel.uiState.value.hasPersistenceError)
             assertEquals(1, viewModel.uiState.value.reminders.size)
         }
 
@@ -192,8 +323,12 @@ class RemindersViewModelTest {
 
 private class FakeVehicleRepository(
     private val vehicles: List<Vehicle> = emptyList(),
+    var failReads: Boolean = false,
 ) : VehicleRepository {
-    override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> = vehicles.filter { it.familyId == familyId }
+    override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> {
+        if (failReads) error("vehicle read failed")
+        return vehicles.filter { it.familyId == familyId }
+    }
 
     override suspend fun saveVehicle(vehicle: Vehicle) = Unit
 
@@ -202,8 +337,11 @@ private class FakeVehicleRepository(
 
 private class FakeReminderRepository(
     initialReminders: List<Reminder> = emptyList(),
+    var failSaves: Boolean = false,
+    private val saveGate: CompletableDeferred<Unit>? = null,
 ) : ReminderRepository {
     val savedReminders = initialReminders.toMutableList()
+    var saveCalls = 0
 
     override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> =
         savedReminders.filter { it.familyId == familyId && !it.isCompleted }
@@ -211,6 +349,9 @@ private class FakeReminderRepository(
     override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> = savedReminders.filter { it.vehicleId == vehicleId }
 
     override suspend fun saveReminder(reminder: Reminder) {
+        saveCalls += 1
+        saveGate?.await()
+        if (failSaves) error("reminder save failed")
         savedReminders += reminder
     }
 

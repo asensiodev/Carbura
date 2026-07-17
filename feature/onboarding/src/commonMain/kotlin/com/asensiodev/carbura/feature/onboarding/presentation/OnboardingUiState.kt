@@ -8,7 +8,16 @@ data class OnboardingUiState(
     val email: String? = null,
     val familyId: String? = null,
     val familyName: String? = null,
-    val errorMessage: String? = null,
+    val error: OnboardingError? = null,
+    val errorDiagnostic: String? = null,
 ) {
     val canSubmitLogin: Boolean = !isInitializing && !isLoading
+}
+
+enum class OnboardingError {
+    SessionUnavailable,
+    ProfileUnavailable,
+    SignInFailed,
+    ProfileCreationFailed,
+    SignOutFailed,
 }

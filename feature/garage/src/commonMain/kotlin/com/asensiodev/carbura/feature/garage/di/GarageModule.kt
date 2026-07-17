@@ -6,7 +6,8 @@ import com.asensiodev.carbura.core.domain.vehicle.usecase.CreateVehicleUseCase
 import com.asensiodev.carbura.core.domain.vehicle.usecase.DeleteVehicleUseCase
 import com.asensiodev.carbura.core.domain.vehicle.usecase.UpdateVehicleUseCase
 import com.asensiodev.carbura.core.model.FamilyId
-import com.asensiodev.carbura.feature.garage.presentation.GarageViewModel
+import com.asensiodev.carbura.feature.garage.presentation.overview.GarageOverviewViewModel
+import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormViewModel
 import org.koin.dsl.module
 
 val garageModule =
@@ -17,12 +18,20 @@ val garageModule =
         factory { DeriveVehicleReminderSuggestionsUseCase() }
         factory { SaveVehicleWithRemindersUseCase(get(), get(), get(), get()) }
         factory { parameters ->
-            GarageViewModel(
+            GarageOverviewViewModel(
+                familyId = parameters.get<FamilyId>(),
+                vehicleRepository = get(),
+                dispatchers = get(),
+                deleteVehicleUseCase = get(),
+                syncManager = get(),
+            )
+        }
+        factory { parameters ->
+            VehicleFormViewModel(
                 familyId = parameters.get<FamilyId>(),
                 vehicleRepository = get(),
                 dispatchers = get(),
                 createVehicleUseCase = get(),
-                deleteVehicleUseCase = get(),
                 updateVehicleUseCase = get(),
                 deriveVehicleReminderSuggestions = get(),
                 saveVehicleWithRemindersUseCase = get(),

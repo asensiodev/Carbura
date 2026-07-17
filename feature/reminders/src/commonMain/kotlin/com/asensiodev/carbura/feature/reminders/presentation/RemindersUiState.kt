@@ -6,7 +6,8 @@ import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.stringresources.CarburaString
 
 data class RemindersUiState(
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
+    val hasLoadError: Boolean = false,
     val reminders: List<Reminder> = emptyList(),
     val vehicles: List<Vehicle> = emptyList(),
     val title: String = "",
@@ -14,6 +15,21 @@ data class RemindersUiState(
     val dueDate: String = "",
     val dueOdometerKm: String = "",
     val errorMessage: CarburaString? = null,
+    val hasPersistenceError: Boolean = false,
+    val activeAction: ReminderAction? = null,
 ) {
-    val isEmpty: Boolean = reminders.isEmpty() && !isLoading
+    val hasNoVehicles: Boolean = !isLoading && !hasLoadError && vehicles.isEmpty()
+    val isEmpty: Boolean = !isLoading && !hasLoadError && reminders.isEmpty()
+}
+
+sealed interface ReminderAction {
+    data object Create : ReminderAction
+
+    data class Complete(
+        val reminderId: com.asensiodev.carbura.core.model.ReminderId,
+    ) : ReminderAction
+
+    data class Delete(
+        val reminderId: com.asensiodev.carbura.core.model.ReminderId,
+    ) : ReminderAction
 }

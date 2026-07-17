@@ -18,15 +18,6 @@ sealed interface CarburaRoute : NavKey {
     }
 
     @Serializable
-    data class CreateMaintenance(
-        val vehicleId: String,
-    ) : CarburaRoute {
-        companion object {
-            fun from(vehicleId: VehicleId): CreateMaintenance = CreateMaintenance(vehicleId.value)
-        }
-    }
-
-    @Serializable
     data object Reminders : CarburaRoute
 
     @Serializable

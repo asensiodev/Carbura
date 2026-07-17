@@ -7,6 +7,7 @@ compileSdk = "36"
 coreKtx = "1.16.0"
 coroutines = "1.10.2"
 credentials = "1.2.2"
+espresso = "3.7.0"
 googleid = "1.1.1"
 java = "17"
 koin = "4.1.1"
@@ -20,6 +21,7 @@ navigation3 = "1.1.4"
 sqldelight = "2.1.0"
 supabase = "3.2.3"
 targetSdk = "35"
+testRunner = "1.7.0"
 turbine = "1.2.1"
 detekt = "1.23.8"
 ktlint = "13.0.0"
@@ -34,14 +36,19 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
 androidx-credentials-playauth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
+androidx-test-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidxViewModel" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "testRunner" }
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }

@@ -7,12 +7,21 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -20,7 +29,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ElevatedCard
@@ -31,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -40,7 +49,6 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,14 +56,36 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.asensiodev.carbura.core.designsystem.ConstrainedScreen
+import com.asensiodev.carbura.core.designsystem.LoadingState
+import com.asensiodev.carbura.core.designsystem.RetryState
 import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleType
 import com.asensiodev.carbura.core.stringresources.CarburaString
+import com.asensiodev.carbura.feature.garage.presentation.overview.GarageLoadState
+import com.asensiodev.carbura.feature.garage.presentation.overview.GarageOverviewEffect
+import com.asensiodev.carbura.feature.garage.presentation.overview.GarageOverviewEvent
+import com.asensiodev.carbura.feature.garage.presentation.overview.GarageOverviewUiState
+import com.asensiodev.carbura.feature.garage.presentation.overview.GarageOverviewViewModel
+import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleEditMode
+import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormEffect
+import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormEvent
+import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormMutation
+import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormUiState
+import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormViewModel
 import com.asensiodev.carbura.featuregarage.R
 import org.koin.core.context.GlobalContext
 import org.koin.core.parameter.parametersOf
@@ -66,49 +96,61 @@ import java.time.ZoneOffset
 @Composable
 fun GarageRoute(
     familyId: String,
+    refreshSignal: Long = 0L,
     modifier: Modifier = Modifier,
     onVehicleSelected: (String) -> Unit = {},
-    viewModel: GarageViewModel = rememberGarageViewModel(familyId),
+    overviewViewModel: GarageOverviewViewModel = rememberGarageOverviewViewModel(familyId),
+    vehicleFormViewModel: VehicleFormViewModel = rememberVehicleFormViewModel(familyId),
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val overviewState by overviewViewModel.uiState.collectAsStateWithLifecycle()
+    val formState by vehicleFormViewModel.uiState.collectAsStateWithLifecycle()
     var effectMessage by remember { mutableStateOf<CarburaString?>(null) }
     var effectMessageArg by remember { mutableStateOf<String?>(null) }
     var vehicleCreatedSignal by remember { mutableStateOf(0) }
     var vehicleSuccessSignal by remember { mutableStateOf(0) }
 
-    LaunchedEffect(viewModel) {
-        viewModel.onEvent(GarageEvent.Started)
+    LaunchedEffect(overviewViewModel) {
+        overviewViewModel.onEvent(GarageOverviewEvent.Started)
     }
 
-    LaunchedEffect(viewModel) {
-        viewModel.effects.collect { effect ->
-            when (effect) {
-                is GarageEffect.VehicleCreated -> {
-                    effectMessage = CarburaString.VehicleCreatedMessage
-                    effectMessageArg = effect.vehicleName
-                    vehicleCreatedSignal += 1
-                    vehicleSuccessSignal += 1
-                }
+    LaunchedEffect(overviewViewModel, refreshSignal) {
+        if (refreshSignal > 0L) overviewViewModel.onEvent(GarageOverviewEvent.Refresh)
+    }
 
-                is GarageEffect.VehicleDeleted -> {
+    LaunchedEffect(overviewViewModel) {
+        overviewViewModel.effects.collect { effect ->
+            when (effect) {
+                is GarageOverviewEffect.VehicleDeleted -> {
                     effectMessage = CarburaString.VehicleDeletedMessage
                     effectMessageArg = effect.vehicleName
                     vehicleSuccessSignal += 1
                 }
+                is GarageOverviewEffect.NavigateToVehicleHistory -> {
+                    onVehicleSelected(effect.vehicleId.value)
+                }
+            }
+        }
+    }
 
-                is GarageEffect.VehicleUpdated -> {
+    LaunchedEffect(vehicleFormViewModel, overviewViewModel) {
+        vehicleFormViewModel.effects.collect { effect ->
+            when (effect) {
+                is VehicleFormEffect.VehicleCreated -> {
+                    effectMessage = CarburaString.VehicleCreatedMessage
+                    effectMessageArg = effect.vehicleName
+                    vehicleCreatedSignal += 1
+                    vehicleSuccessSignal += 1
+                    overviewViewModel.onEvent(GarageOverviewEvent.Refresh)
+                }
+                is VehicleFormEffect.VehicleUpdated -> {
                     effectMessage = CarburaString.VehicleUpdatedMessage
                     effectMessageArg = effect.vehicleName
                     vehicleSuccessSignal += 1
+                    overviewViewModel.onEvent(GarageOverviewEvent.Refresh)
                 }
-
-                is GarageEffect.ValidationFailed -> {
+                is VehicleFormEffect.ValidationFailed -> {
                     effectMessage = effect.message
                     effectMessageArg = null
-                }
-
-                is GarageEffect.NavigateToVehicleHistory -> {
-                    onVehicleSelected(effect.vehicleId.value)
                 }
             }
         }
@@ -125,48 +167,57 @@ fun GarageRoute(
         }
 
     GarageScreen(
-        state = uiState,
+        overviewState = overviewState,
+        formState = formState,
         effectMessage = resolvedEffectMessage,
         vehicleCreatedSignal = vehicleCreatedSignal,
         vehicleSuccessSignal = vehicleSuccessSignal,
-        onNameChange = { value -> viewModel.onEvent(GarageEvent.NameChanged(value)) },
-        onOdometerChange = { value -> viewModel.onEvent(GarageEvent.OdometerChanged(value)) },
-        onTypeSelected = { value -> viewModel.onEvent(GarageEvent.TypeSelected(value)) },
-        onNextItvDateChange = { viewModel.onEvent(GarageEvent.NextItvDateChanged(it)) },
-        onInsuranceRenewalDateChange = { viewModel.onEvent(GarageEvent.InsuranceRenewalDateChanged(it)) },
-        onNextServiceOdometerChange = { viewModel.onEvent(GarageEvent.NextServiceOdometerChanged(it)) },
-        onCreateVehicle = { viewModel.onEvent(GarageEvent.SubmitVehicle) },
-        onSelectVehicle = { vehicle -> viewModel.onEvent(GarageEvent.VehicleSelected(vehicle.id)) },
-        onDeleteVehicle = { vehicle -> viewModel.onEvent(GarageEvent.DeleteVehicleConfirmed(vehicle.id)) },
-        onEditVehicle = { vehicle -> viewModel.onEvent(GarageEvent.EditVehicleRequested(vehicle.id)) },
-        onQuickOdometerUpdate = { vehicle -> viewModel.onEvent(GarageEvent.QuickOdometerUpdateRequested(vehicle.id)) },
-        onEditNameChange = { viewModel.onEvent(GarageEvent.EditNameChanged(it)) },
-        onEditLicensePlateChange = { viewModel.onEvent(GarageEvent.EditLicensePlateChanged(it)) },
-        onEditOdometerChange = { viewModel.onEvent(GarageEvent.EditOdometerChanged(it)) },
-        onEditTypeSelected = { viewModel.onEvent(GarageEvent.EditTypeSelected(it)) },
-        onEditNextItvDateChange = { viewModel.onEvent(GarageEvent.EditNextItvDateChanged(it)) },
-        onEditInsuranceRenewalDateChange = { viewModel.onEvent(GarageEvent.EditInsuranceRenewalDateChanged(it)) },
-        onEditNextServiceOdometerChange = { viewModel.onEvent(GarageEvent.EditNextServiceOdometerChanged(it)) },
-        onSubmitEdit = { viewModel.onEvent(GarageEvent.SubmitVehicleEdit) },
-        onDismissEdit = { viewModel.onEvent(GarageEvent.DismissVehicleEdit) },
-        onConfirmOdometerDecrease = { viewModel.onEvent(GarageEvent.ConfirmOdometerDecrease) },
-        onCancelOdometerDecrease = { viewModel.onEvent(GarageEvent.CancelOdometerDecrease) },
-        onConfirmReminderSuggestions = { viewModel.onEvent(GarageEvent.ConfirmReminderSuggestions) },
-        onDeclineReminderSuggestions = { viewModel.onEvent(GarageEvent.DeclineReminderSuggestions) },
+        onNameChange = { vehicleFormViewModel.onEvent(VehicleFormEvent.NameChanged(it)) },
+        onOdometerChange = { vehicleFormViewModel.onEvent(VehicleFormEvent.OdometerChanged(it)) },
+        onTypeSelected = { vehicleFormViewModel.onEvent(VehicleFormEvent.TypeSelected(it)) },
+        onNextItvDateChange = { vehicleFormViewModel.onEvent(VehicleFormEvent.NextItvDateChanged(it)) },
+        onInsuranceRenewalDateChange = { vehicleFormViewModel.onEvent(VehicleFormEvent.InsuranceRenewalDateChanged(it)) },
+        onNextServiceOdometerChange = { vehicleFormViewModel.onEvent(VehicleFormEvent.NextServiceOdometerChanged(it)) },
+        onCreateVehicle = { vehicleFormViewModel.onEvent(VehicleFormEvent.SubmitVehicle) },
+        onSelectVehicle = { overviewViewModel.onEvent(GarageOverviewEvent.VehicleSelected(it.id)) },
+        onDeleteVehicle = { overviewViewModel.onEvent(GarageOverviewEvent.DeleteVehicleConfirmed(it.id)) },
+        onEditVehicle = { vehicleFormViewModel.onEvent(VehicleFormEvent.EditVehicleRequested(it)) },
+        onQuickOdometerUpdate = { vehicleFormViewModel.onEvent(VehicleFormEvent.QuickOdometerUpdateRequested(it)) },
+        onEditNameChange = { vehicleFormViewModel.onEvent(VehicleFormEvent.EditNameChanged(it)) },
+        onEditLicensePlateChange = { vehicleFormViewModel.onEvent(VehicleFormEvent.EditLicensePlateChanged(it)) },
+        onEditOdometerChange = { vehicleFormViewModel.onEvent(VehicleFormEvent.EditOdometerChanged(it)) },
+        onEditTypeSelected = { vehicleFormViewModel.onEvent(VehicleFormEvent.EditTypeSelected(it)) },
+        onEditNextItvDateChange = { vehicleFormViewModel.onEvent(VehicleFormEvent.EditNextItvDateChanged(it)) },
+        onEditInsuranceRenewalDateChange = { vehicleFormViewModel.onEvent(VehicleFormEvent.EditInsuranceRenewalDateChanged(it)) },
+        onEditNextServiceOdometerChange = { vehicleFormViewModel.onEvent(VehicleFormEvent.EditNextServiceOdometerChanged(it)) },
+        onSubmitEdit = { vehicleFormViewModel.onEvent(VehicleFormEvent.SubmitVehicleEdit) },
+        onDismissEdit = { vehicleFormViewModel.onEvent(VehicleFormEvent.DismissVehicleEdit) },
+        onConfirmOdometerDecrease = { vehicleFormViewModel.onEvent(VehicleFormEvent.ConfirmOdometerDecrease) },
+        onCancelOdometerDecrease = { vehicleFormViewModel.onEvent(VehicleFormEvent.CancelOdometerDecrease) },
+        onConfirmReminderSuggestions = { vehicleFormViewModel.onEvent(VehicleFormEvent.ConfirmReminderSuggestions) },
+        onDeclineReminderSuggestions = { vehicleFormViewModel.onEvent(VehicleFormEvent.DeclineReminderSuggestions) },
+        onRetry = { overviewViewModel.onEvent(GarageOverviewEvent.Retry) },
         modifier = modifier,
     )
 }
 
 @Composable
-private fun rememberGarageViewModel(familyId: String): GarageViewModel =
+private fun rememberGarageOverviewViewModel(familyId: String): GarageOverviewViewModel =
+    remember(familyId) {
+        GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
+    }
+
+@Composable
+private fun rememberVehicleFormViewModel(familyId: String): VehicleFormViewModel =
     remember(familyId) {
         GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
     }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GarageScreen(
-    state: GarageUiState,
+internal fun GarageScreen(
+    overviewState: GarageOverviewUiState,
+    formState: VehicleFormUiState,
     effectMessage: String?,
     vehicleCreatedSignal: Int,
     vehicleSuccessSignal: Int,
@@ -194,6 +245,7 @@ private fun GarageScreen(
     onCancelOdometerDecrease: () -> Unit,
     onConfirmReminderSuggestions: () -> Unit,
     onDeclineReminderSuggestions: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showVehicleSheet by remember { mutableStateOf(false) }
@@ -218,46 +270,72 @@ private fun GarageScreen(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
         ) { _ ->
-            LazyColumn(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding(),
-                contentPadding = PaddingValues(Spacings.spacing24),
-                verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
-            ) {
-                item {
-                    GarageHeader(
-                        showAddVehicleAction = !state.isEmpty,
-                        onAddVehicle = { showVehicleSheet = true },
-                    )
-                }
-
-                if (state.isLoading) {
+            ConstrainedScreen(modifier = Modifier.statusBarsPadding()) {
+                LazyColumn(
+                    modifier =
+                        Modifier
+                            .fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = Spacings.spacing24),
+                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
+                ) {
                     item {
-                        LoadingStateCard(message = stringResource(R.string.garage_loading_message))
-                    }
-                } else if (state.isEmpty) {
-                    item {
-                        EmptyGarageCard(
+                        GarageHeader(
+                            showAddVehicleAction = overviewState.loadState == GarageLoadState.Loaded && !overviewState.isEmpty,
                             onAddVehicle = { showVehicleSheet = true },
                         )
                     }
-                } else {
-                    item {
-                        Text(
-                            text = stringResource(R.string.vehicle_list_title),
-                            style = MaterialTheme.typography.titleLarge,
-                        )
+
+                    when (overviewState.loadState) {
+                        GarageLoadState.Loading -> {
+                            item {
+                                LoadingState(
+                                    message = stringResource(R.string.garage_loading_message),
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 240.dp, max = 400.dp),
+                                )
+                            }
+                        }
+                        GarageLoadState.Error -> {
+                            item {
+                                RetryState(
+                                    title = stringResource(R.string.garage_load_error_title),
+                                    description = stringResource(R.string.garage_load_error_description),
+                                    retryLabel = stringResource(R.string.retry_button),
+                                    onRetry = onRetry,
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 240.dp, max = 400.dp),
+                                )
+                            }
+                        }
+                        GarageLoadState.Loaded ->
+                            if (overviewState.isEmpty) {
+                                item {
+                                    EmptyGarageCard(
+                                        onAddVehicle = { showVehicleSheet = true },
+                                    )
+                                }
+                            } else {
+                                item {
+                                    Text(
+                                        text = stringResource(R.string.vehicle_list_title),
+                                        modifier = Modifier.semantics { heading() },
+                                        style = MaterialTheme.typography.titleLarge,
+                                    )
+                                }
+                                items(overviewState.vehicles) { vehicle ->
+                                    VehicleCard(
+                                        vehicle = vehicle,
+                                        actionsEnabled =
+                                            overviewState.deletingVehicleId == null && formState.activeMutation == null,
+                                        deleting = overviewState.deletingVehicleId == vehicle.id,
+                                        onSelectVehicle = onSelectVehicle,
+                                        onDeleteVehicle = { vehiclePendingDeletion = vehicle },
+                                        onEditVehicle = onEditVehicle,
+                                        onQuickOdometerUpdate = onQuickOdometerUpdate,
+                                    )
+                                }
+                            }
                     }
-                    items(state.vehicles) { vehicle ->
-                        VehicleCard(
-                            vehicle = vehicle,
-                            onSelectVehicle = onSelectVehicle,
-                            onDeleteVehicle = { vehiclePendingDeletion = vehicle },
-                            onEditVehicle = onEditVehicle,
-                            onQuickOdometerUpdate = onQuickOdometerUpdate,
-                        )
+                    if (overviewState.deleteError) {
+                        item { PersistenceErrorText(stringResource(R.string.vehicle_delete_error)) }
                     }
                 }
             }
@@ -274,78 +352,67 @@ private fun GarageScreen(
 
     if (showVehicleSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showVehicleSheet = false },
+            onDismissRequest = {
+                if (formState.activeMutation != VehicleFormMutation.Creating) showVehicleSheet = false
+            },
             sheetState = sheetState,
         ) {
-            VehicleForm(
-                title =
-                    if (state.isEmpty) {
-                        stringResource(R.string.vehicle_form_title_first)
-                    } else {
-                        stringResource(R.string.vehicle_form_title_next)
-                    },
-                name = state.name,
-                odometer = state.odometerKm,
-                selectedType = state.selectedType,
-                nextItvDate = state.nextItvDate,
-                insuranceRenewalDate = state.insuranceRenewalDate,
-                nextServiceOdometer = state.nextServiceOdometerKm,
-                errorMessage = state.errorMessage,
-                onNameChange = onNameChange,
-                onOdometerChange = onOdometerChange,
-                onTypeSelected = onTypeSelected,
-                onNextItvDateChange = onNextItvDateChange,
-                onInsuranceRenewalDateChange = onInsuranceRenewalDateChange,
-                onNextServiceOdometerChange = onNextServiceOdometerChange,
-                onCreateVehicle = onCreateVehicle,
-                modifier =
-                    Modifier.padding(
-                        start = Spacings.spacing24,
-                        end = Spacings.spacing24,
-                        bottom = Spacings.spacing24,
-                    ),
-            )
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                VehicleForm(
+                    title =
+                        if (overviewState.isEmpty) {
+                            stringResource(R.string.vehicle_form_title_first)
+                        } else {
+                            stringResource(R.string.vehicle_form_title_next)
+                        },
+                    name = formState.name,
+                    odometer = formState.odometerKm,
+                    selectedType = formState.selectedType,
+                    nextItvDate = formState.nextItvDate,
+                    insuranceRenewalDate = formState.insuranceRenewalDate,
+                    nextServiceOdometer = formState.nextServiceOdometerKm,
+                    errorMessage = formState.createValidationError,
+                    persistenceError = formState.persistenceError,
+                    isSaving = formState.activeMutation == VehicleFormMutation.Creating,
+                    onNameChange = onNameChange,
+                    onOdometerChange = onOdometerChange,
+                    onTypeSelected = onTypeSelected,
+                    onNextItvDateChange = onNextItvDateChange,
+                    onInsuranceRenewalDateChange = onInsuranceRenewalDateChange,
+                    onNextServiceOdometerChange = onNextServiceOdometerChange,
+                    onCreateVehicle = onCreateVehicle,
+                    modifier =
+                        Modifier
+                            .widthIn(max = 720.dp)
+                            .padding(
+                                start = Spacings.spacing24,
+                                end = Spacings.spacing24,
+                                bottom = Spacings.spacing24,
+                            ),
+                )
+            }
         }
     }
 
     vehiclePendingDeletion?.let { vehicle ->
-        AlertDialog(
-            onDismissRequest = { vehiclePendingDeletion = null },
-            title = { Text(stringResource(R.string.delete_vehicle_dialog_title)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
-                    Text(stringResource(R.string.delete_vehicle_dialog_description))
-                    Text(
-                        text = vehicle.name,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
+        VehicleDeleteDialog(
+            vehicle = vehicle,
+            onConfirm = {
+                vehiclePendingDeletion = null
+                onDeleteVehicle(vehicle)
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        vehiclePendingDeletion = null
-                        onDeleteVehicle(vehicle)
-                    },
-                ) {
-                    Text(stringResource(R.string.delete_vehicle_confirm_button))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { vehiclePendingDeletion = null }) {
-                    Text(stringResource(R.string.delete_vehicle_cancel_button))
-                }
-            },
+            onDismiss = { vehiclePendingDeletion = null },
         )
     }
 
-    if (state.editingVehicleId != null && state.odometerDecreaseConfirmation == null) {
+    if (formState.editingVehicleId != null && formState.odometerDecreaseConfirmation == null) {
+        val isSavingEdit = formState.activeMutation is VehicleFormMutation.Updating
         AlertDialog(
-            onDismissRequest = onDismissEdit,
+            onDismissRequest = { if (!isSavingEdit) onDismissEdit() },
             title = {
                 Text(
                     stringResource(
-                        if (state.editMode == VehicleEditMode.Full) {
+                        if (formState.editMode == VehicleEditMode.Full) {
                             R.string.edit_vehicle_title
                         } else {
                             R.string.update_odometer_title
@@ -354,18 +421,32 @@ private fun GarageScreen(
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing12)) {
-                    if (state.editMode == VehicleEditMode.Full) {
+                Column(
+                    modifier =
+                        Modifier
+                            .verticalScroll(rememberScrollState())
+                            .imePadding(),
+                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
+                ) {
+                    if (formState.editMode == VehicleEditMode.Full) {
+                        val nameError = formState.editValidationError == CarburaString.ValidationBlankVehicleName
                         OutlinedTextField(
-                            value = state.editName,
+                            value = formState.editName,
                             onValueChange = onEditNameChange,
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text(stringResource(R.string.vehicle_name_label)) },
+                            isError = nameError,
+                            supportingText =
+                                if (nameError) {
+                                    { ValidationErrorText(formState.editValidationError) }
+                                } else {
+                                    null
+                                },
                             singleLine = true,
                         )
-                        VehicleTypeSelector(state.editType, onEditTypeSelected)
+                        VehicleTypeSelector(formState.editType, onEditTypeSelected)
                         OutlinedTextField(
-                            value = state.editLicensePlate,
+                            value = formState.editLicensePlate,
                             onValueChange = onEditLicensePlateChange,
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text(stringResource(R.string.license_plate_label)) },
@@ -373,53 +454,78 @@ private fun GarageScreen(
                         )
                         OptionalDatePickerField(
                             label = stringResource(R.string.next_itv_date_label),
-                            value = state.editNextItvDate,
+                            value = formState.editNextItvDate,
                             onValueChange = onEditNextItvDateChange,
                         )
                         OptionalDatePickerField(
                             label = stringResource(R.string.insurance_renewal_date_label),
-                            value = state.editInsuranceRenewalDate,
+                            value = formState.editInsuranceRenewalDate,
                             onValueChange = onEditInsuranceRenewalDateChange,
                         )
                         OutlinedTextField(
-                            value = state.editNextServiceOdometerKm,
+                            value = formState.editNextServiceOdometerKm,
                             onValueChange = onEditNextServiceOdometerChange,
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text(stringResource(R.string.next_service_odometer_label)) },
+                            isError =
+                                formState.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
+                                    formState.editNextServiceOdometerKm.isInvalidOdometerInput(),
+                            supportingText =
+                                if (
+                                    formState.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
+                                    formState.editNextServiceOdometerKm.isInvalidOdometerInput()
+                                ) {
+                                    { ValidationErrorText(formState.editValidationError) }
+                                } else {
+                                    null
+                                },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                         )
                     }
                     OutlinedTextField(
-                        value = state.editOdometerKm,
+                        value = formState.editOdometerKm,
                         onValueChange = onEditOdometerChange,
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text(stringResource(R.string.current_odometer_label)) },
+                        isError =
+                            formState.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
+                                !formState.editNextServiceOdometerKm.isInvalidOdometerInput(),
+                        supportingText =
+                            if (
+                                formState.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
+                                !formState.editNextServiceOdometerKm.isInvalidOdometerInput()
+                            ) {
+                                { ValidationErrorText(formState.editValidationError) }
+                            } else {
+                                null
+                            },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                     )
-                    state.editErrorMessage?.let {
-                        Text(
-                            text = stringResource(it.garageStringRes()),
-                            color = MaterialTheme.colorScheme.error,
-                        )
+                    if (formState.persistenceError) {
+                        PersistenceErrorText(stringResource(R.string.vehicle_save_error))
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = onSubmitEdit) {
-                    Text(stringResource(R.string.save_changes_button))
+                TextButton(onClick = onSubmitEdit, enabled = !isSavingEdit) {
+                    Text(
+                        stringResource(
+                            if (isSavingEdit) R.string.saving_vehicle else R.string.save_changes_button,
+                        ),
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = onDismissEdit) {
+                TextButton(onClick = onDismissEdit, enabled = !isSavingEdit) {
                     Text(stringResource(R.string.cancel_button))
                 }
             },
         )
     }
 
-    state.odometerDecreaseConfirmation?.let { confirmation ->
+    formState.odometerDecreaseConfirmation?.let { confirmation ->
         AlertDialog(
             onDismissRequest = onCancelOdometerDecrease,
             title = { Text(stringResource(R.string.odometer_decrease_title)) },
@@ -445,14 +551,14 @@ private fun GarageScreen(
         )
     }
 
-    if (state.reminderConfirmationMode != null) {
+    if (formState.reminderConfirmationMode != null) {
         AlertDialog(
             onDismissRequest = onDeclineReminderSuggestions,
             title = { Text(stringResource(R.string.reminder_suggestions_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
                     Text(stringResource(R.string.reminder_suggestions_description))
-                    state.reminderSuggestions.forEach { suggestion ->
+                    formState.reminderSuggestions.forEach { suggestion ->
                         Text("- ${suggestion.reminder.title}")
                     }
                 }
@@ -469,6 +575,34 @@ private fun GarageScreen(
             },
         )
     }
+}
+
+@Composable
+internal fun VehicleDeleteDialog(
+    vehicle: Vehicle,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.delete_vehicle_dialog_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+                Text(stringResource(R.string.delete_vehicle_dialog_description))
+                Text(vehicle.name, fontWeight = FontWeight.SemiBold)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.delete_vehicle_confirm_button))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.delete_vehicle_cancel_button))
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -512,21 +646,33 @@ private fun OptionalDatePickerField(
 }
 
 @Composable
-private fun LoadingStateCard(message: String) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(Spacings.spacing16),
-            horizontalArrangement = Arrangement.spacedBy(Spacings.spacing12),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CircularProgressIndicator()
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+private fun ValidationErrorText(errorMessage: CarburaString?) {
+    if (errorMessage == null) return
+    val message = stringResource(errorMessage.garageStringRes())
+    Text(
+        text = message,
+        modifier =
+            Modifier.semantics {
+                error(message)
+                liveRegion = LiveRegionMode.Assertive
+            },
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodyMedium,
+    )
+}
+
+@Composable
+private fun PersistenceErrorText(message: String) {
+    Text(
+        text = message,
+        modifier =
+            Modifier.semantics {
+                error(message)
+                liveRegion = LiveRegionMode.Assertive
+            },
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodyMedium,
+    )
 }
 
 @Composable
@@ -535,26 +681,21 @@ private fun GarageHeader(
     onAddVehicle: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.garage_title),
-                style = MaterialTheme.typography.headlineLarge,
-            )
-            if (showAddVehicleAction) {
-                Button(onClick = onAddVehicle) {
-                    Text(stringResource(R.string.add_vehicle_button))
-                }
+        Text(
+            text = stringResource(R.string.garage_title),
+            modifier = Modifier.semantics { heading() },
+            style = MaterialTheme.typography.headlineLarge,
+        )
+        if (showAddVehicleAction) {
+            Button(onClick = onAddVehicle) {
+                Text(stringResource(R.string.add_vehicle_button))
             }
         }
     }
 }
 
 @Composable
-private fun VehicleForm(
+internal fun VehicleForm(
     title: String,
     name: String,
     odometer: String,
@@ -563,6 +704,8 @@ private fun VehicleForm(
     insuranceRenewalDate: String,
     nextServiceOdometer: String,
     errorMessage: CarburaString?,
+    persistenceError: Boolean,
+    isSaving: Boolean,
     onNameChange: (String) -> Unit,
     onOdometerChange: (String) -> Unit,
     onTypeSelected: (VehicleType) -> Unit,
@@ -572,20 +715,38 @@ private fun VehicleForm(
     onCreateVehicle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    Card(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .imePadding(),
+    ) {
         Column(
-            modifier = Modifier.padding(Spacings.spacing16),
+            modifier =
+                Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(Spacings.spacing16),
             verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
         ) {
             Text(
                 text = title,
+                modifier = Modifier.semantics { heading() },
                 style = MaterialTheme.typography.titleMedium,
             )
+            val nameError = errorMessage == CarburaString.ValidationBlankVehicleName
             OutlinedTextField(
                 value = name,
                 onValueChange = onNameChange,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.vehicle_name_label)) },
+                isError = nameError,
+                supportingText =
+                    if (nameError) {
+                        { ValidationErrorText(errorMessage) }
+                    } else {
+                        null
+                    },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                 singleLine = true,
             )
@@ -604,6 +765,18 @@ private fun VehicleForm(
                 onValueChange = onNextServiceOdometerChange,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.next_service_odometer_label)) },
+                isError =
+                    errorMessage == CarburaString.ValidationNegativeVehicleOdometer &&
+                        nextServiceOdometer.isInvalidOdometerInput(),
+                supportingText =
+                    if (
+                        errorMessage == CarburaString.ValidationNegativeVehicleOdometer &&
+                        nextServiceOdometer.isInvalidOdometerInput()
+                    ) {
+                        { ValidationErrorText(errorMessage) }
+                    } else {
+                        null
+                    },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
             )
@@ -616,61 +789,69 @@ private fun VehicleForm(
                 onValueChange = onOdometerChange,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.current_odometer_label)) },
+                isError =
+                    errorMessage == CarburaString.ValidationNegativeVehicleOdometer &&
+                        !nextServiceOdometer.isInvalidOdometerInput(),
+                supportingText =
+                    if (
+                        errorMessage == CarburaString.ValidationNegativeVehicleOdometer &&
+                        !nextServiceOdometer.isInvalidOdometerInput()
+                    ) {
+                        { ValidationErrorText(errorMessage) }
+                    } else {
+                        null
+                    },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
             )
-            if (errorMessage != null) {
-                Text(
-                    text = stringResource(errorMessage.garageStringRes()),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+            if (errorMessage != null && !nameError && errorMessage != CarburaString.ValidationNegativeVehicleOdometer) {
+                ValidationErrorText(errorMessage)
+            }
+            if (persistenceError) {
+                PersistenceErrorText(stringResource(R.string.vehicle_save_error))
             }
             Button(
                 onClick = onCreateVehicle,
                 modifier = Modifier.fillMaxWidth(),
+                enabled = !isSaving,
             ) {
-                Text(stringResource(R.string.save_vehicle_button))
+                Text(stringResource(if (isSaving) R.string.saving_vehicle else R.string.save_vehicle_button))
             }
         }
     }
 }
 
 @Composable
-private fun VehicleTypeSelector(
+internal fun VehicleTypeSelector(
     selectedType: VehicleType,
     onTypeSelected: (VehicleType) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+    Column(
+        modifier = Modifier.selectableGroup(),
+        verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
+    ) {
         Text(
             text = stringResource(R.string.vehicle_type_label),
             style = MaterialTheme.typography.titleSmall,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
-            VehicleTypeButton(
-                label = stringResource(R.string.vehicle_type_car),
-                selected = selectedType == VehicleType.Car,
-                onClick = { onTypeSelected(VehicleType.Car) },
-            )
-            VehicleTypeButton(
-                label = stringResource(R.string.vehicle_type_motorcycle),
-                selected = selectedType == VehicleType.Motorcycle,
-                onClick = { onTypeSelected(VehicleType.Motorcycle) },
-            )
+        VehicleType.entries.forEach { type ->
+            val selected = selectedType == type
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = selected,
+                            onClick = { onTypeSelected(type) },
+                            role = Role.RadioButton,
+                        ).padding(vertical = Spacings.spacing8),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacings.spacing8),
+            ) {
+                RadioButton(selected = selected, onClick = null)
+                Text(type.label())
+            }
         }
-    }
-}
-
-@Composable
-private fun VehicleTypeButton(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    if (selected) {
-        Button(onClick = onClick) { Text(label) }
-    } else {
-        OutlinedButton(onClick = onClick) { Text(label) }
     }
 }
 
@@ -710,8 +891,10 @@ private fun EmptyGarageCard(onAddVehicle: () -> Unit) {
 }
 
 @Composable
-private fun VehicleCard(
+internal fun VehicleCard(
     vehicle: Vehicle,
+    actionsEnabled: Boolean,
+    deleting: Boolean,
     onSelectVehicle: (Vehicle) -> Unit,
     onDeleteVehicle: (Vehicle) -> Unit,
     onEditVehicle: (Vehicle) -> Unit,
@@ -727,47 +910,59 @@ private fun VehicleCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
             ) {
-                Column {
-                    Text(
-                        text = vehicle.name,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        text = vehicle.type.label(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                Text(
+                    text = vehicle.name,
+                    modifier = Modifier.weight(1f).semantics { heading() },
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                IconButton(
+                    onClick = { onEditVehicle(vehicle) },
+                    modifier = Modifier.size(48.dp),
+                    enabled = actionsEnabled,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = stringResource(R.string.edit_vehicle_content_description, vehicle.name),
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
-                    Text(
-                        text = "${vehicle.currentOdometerKm} km",
-                        style = MaterialTheme.typography.bodyMedium,
+                IconButton(
+                    onClick = { onDeleteVehicle(vehicle) },
+                    modifier = Modifier.size(48.dp),
+                    enabled = actionsEnabled,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = stringResource(R.string.delete_vehicle_content_description, vehicle.name),
+                        tint = MaterialTheme.colorScheme.error,
                     )
-                    IconButton(onClick = { onDeleteVehicle(vehicle) }) {
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = stringResource(R.string.delete_vehicle_content_description),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                    IconButton(onClick = { onEditVehicle(vehicle) }) {
-                        Icon(
-                            imageVector = Icons.Filled.Edit,
-                            contentDescription = stringResource(R.string.edit_vehicle_content_description),
-                        )
-                    }
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
-                OutlinedButton(onClick = { onSelectVehicle(vehicle) }) {
-                    Text(stringResource(R.string.view_history_button))
-                }
-                TextButton(onClick = { onQuickOdometerUpdate(vehicle) }) {
-                    Text(stringResource(R.string.update_odometer_button))
-                }
+            Text(
+                text = vehicle.type.label(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = "${vehicle.currentOdometerKm} km",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Button(
+                onClick = { onSelectVehicle(vehicle) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = actionsEnabled,
+            ) {
+                Text(stringResource(R.string.view_history_button))
             }
+            OutlinedButton(
+                onClick = { onQuickOdometerUpdate(vehicle) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = actionsEnabled,
+            ) {
+                Text(stringResource(R.string.update_odometer_button))
+            }
+            if (deleting) Text(stringResource(R.string.deleting_vehicle))
         }
     }
 }
@@ -777,9 +972,8 @@ private fun VehicleType.label(): String =
     when (this) {
         VehicleType.Car -> stringResource(R.string.vehicle_type_car)
         VehicleType.Motorcycle -> stringResource(R.string.vehicle_type_motorcycle)
-        VehicleType.Van,
-        VehicleType.Other,
-        -> name
+        VehicleType.Van -> stringResource(R.string.vehicle_type_van)
+        VehicleType.Other -> stringResource(R.string.vehicle_type_other)
     }
 
 private fun String.toUtcMillisOrNull(): Long? =
@@ -797,3 +991,5 @@ private fun Long.toIsoDate(): String =
         .atZone(ZoneOffset.UTC)
         .toLocalDate()
         .toString()
+
+private fun String.isInvalidOdometerInput(): Boolean = isNotBlank() && (toIntOrNull()?.let { it < 0 } != false)

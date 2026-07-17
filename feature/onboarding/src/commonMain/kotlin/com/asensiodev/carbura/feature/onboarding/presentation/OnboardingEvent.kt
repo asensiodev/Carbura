@@ -5,15 +5,15 @@ sealed interface OnboardingEvent {
 
     data object GoogleSignInClicked : OnboardingEvent
 
+    data object GoogleCredentialRequestStarted : OnboardingEvent
+
     data class GoogleIdTokenReceived(
         val idToken: String,
     ) : OnboardingEvent
 
     data class GoogleSignInError(
-        val message: String,
+        val diagnostic: String,
     ) : OnboardingEvent
 
     data object SignOutClicked : OnboardingEvent
-
-    data object ErrorDismissed : OnboardingEvent
 }

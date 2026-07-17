@@ -23,6 +23,7 @@ val maintenanceModule =
                 createMaintenanceRecordFromInputUseCase = get(),
                 getVehicleHistoryUseCase = get(),
                 deleteMaintenanceRecordUseCase = get(),
+                vehicleRepository = get(),
                 syncManager = get(),
             )
         }

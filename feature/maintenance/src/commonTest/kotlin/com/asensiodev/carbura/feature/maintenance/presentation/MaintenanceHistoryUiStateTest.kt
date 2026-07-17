@@ -7,11 +7,15 @@ import kotlin.test.assertTrue
 class MaintenanceHistoryUiStateTest {
     @Test
     fun loadingStateIsNotEmptyState() {
-        assertFalse(MaintenanceHistoryUiState(isLoading = true).isEmpty)
+        assertFalse(MaintenanceHistoryUiState(performedOn = TODAY).isEmpty)
     }
 
     @Test
     fun emptyStateRequiresNoRecordsAndNotLoading() {
-        assertTrue(MaintenanceHistoryUiState(isLoading = false).isEmpty)
+        assertTrue(MaintenanceHistoryUiState(performedOn = TODAY, loadState = MaintenanceLoadState.Content).isEmpty)
+    }
+
+    private companion object {
+        const val TODAY = "2026-07-17"
     }
 }

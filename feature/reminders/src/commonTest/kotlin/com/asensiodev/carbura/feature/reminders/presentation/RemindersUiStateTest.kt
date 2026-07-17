@@ -14,4 +14,17 @@ class RemindersUiStateTest {
     fun emptyStateRequiresNoRemindersAndNotLoading() {
         assertTrue(RemindersUiState(isLoading = false).isEmpty)
     }
+
+    @Test
+    fun loadFailureIsNeitherEmptyNorNoVehicles() {
+        val state = RemindersUiState(isLoading = false, hasLoadError = true)
+
+        assertFalse(state.isEmpty)
+        assertFalse(state.hasNoVehicles)
+    }
+
+    @Test
+    fun loadedStateWithoutVehiclesExposesPrerequisite() {
+        assertTrue(RemindersUiState(isLoading = false).hasNoVehicles)
+    }
 }

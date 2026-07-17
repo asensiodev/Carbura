@@ -44,17 +44,24 @@ class RemindersViewModel(
 
     private val _effects = Channel<RemindersEffect>(capacity = Channel.BUFFERED)
     val effects: Flow<RemindersEffect> = _effects.receiveAsFlow()
+    private var isLoadInProgress = false
 
     private val scope: CoroutineScope
         get() = coroutineScope ?: viewModelScope
 
     fun onEvent(event: RemindersEvent) {
         when (event) {
-            RemindersEvent.Started -> scope.launch { loadReminders() }
-            is RemindersEvent.TitleChanged -> updateForm { it.copy(title = event.value, errorMessage = null) }
-            is RemindersEvent.VehicleSelected -> updateForm { it.copy(selectedVehicleId = event.vehicleId, errorMessage = null) }
-            is RemindersEvent.DueDateChanged -> updateForm { it.copy(dueDate = event.value, errorMessage = null) }
-            is RemindersEvent.DueOdometerChanged -> updateForm { it.copy(dueOdometerKm = event.value, errorMessage = null) }
+            RemindersEvent.Started -> scope.launch { loadReminders(showLoading = true) }
+            RemindersEvent.Retry -> scope.launch { loadReminders(showLoading = true) }
+            RemindersEvent.Refresh -> scope.launch { loadReminders(showLoading = false) }
+            RemindersEvent.GarageRequested -> scope.launch { _effects.send(RemindersEffect.NavigateToGarage) }
+            is RemindersEvent.TitleChanged -> updateForm { it.copy(title = event.value, errorMessage = null, hasPersistenceError = false) }
+            is RemindersEvent.VehicleSelected ->
+                updateForm { it.copy(selectedVehicleId = event.vehicleId, errorMessage = null, hasPersistenceError = false) }
+            is RemindersEvent.DueDateChanged ->
+                updateForm { it.copy(dueDate = event.value, errorMessage = null, hasPersistenceError = false) }
+            is RemindersEvent.DueOdometerChanged ->
+                updateForm { it.copy(dueOdometerKm = event.value, errorMessage = null, hasPersistenceError = false) }
             RemindersEvent.SubmitReminder -> scope.launch { createReminder() }
             is RemindersEvent.CompleteReminder -> scope.launch { completeReminder(event.reminderId) }
             is RemindersEvent.DeleteReminder -> scope.launch { deleteReminder(event.reminderId) }
@@ -65,22 +72,34 @@ class RemindersViewModel(
         _uiState.update(transform)
     }
 
-    private suspend fun loadReminders() {
-        _uiState.update { it.copy(isLoading = true) }
-        val vehicles = withContext(dispatchers.io) { vehicleRepository.observeVehicles(familyId) }
-        val reminders = withContext(dispatchers.io) { getPendingRemindersUseCase(familyId) }
-        _uiState.update {
-            it.copy(
-                isLoading = false,
-                vehicles = vehicles,
-                reminders = reminders,
-                selectedVehicleId = it.selectedVehicleId ?: vehicles.firstOrNull()?.id,
-            )
+    private suspend fun loadReminders(showLoading: Boolean) {
+        if (isLoadInProgress) return
+        isLoadInProgress = true
+        _uiState.update { it.copy(isLoading = showLoading, hasLoadError = false) }
+        try {
+            val vehicles = withContext(dispatchers.io) { vehicleRepository.observeVehicles(familyId) }
+            val reminders = withContext(dispatchers.io) { getPendingRemindersUseCase(familyId) }
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    hasLoadError = false,
+                    vehicles = vehicles,
+                    reminders = reminders,
+                    selectedVehicleId =
+                        it.selectedVehicleId?.takeIf { id -> vehicles.any { vehicle -> vehicle.id == id } }
+                            ?: vehicles.firstOrNull()?.id,
+                )
+            }
+        } catch (_: Exception) {
+            _uiState.update { it.copy(isLoading = false, hasLoadError = true) }
+        } finally {
+            isLoadInProgress = false
         }
     }
 
     private suspend fun createReminder() {
         val state = _uiState.value
+        if (state.activeAction != null) return
         val vehicleId = state.selectedVehicleId
         if (vehicleId == null) {
             emitValidation(CarburaString.ValidationMissingReminderVehicle)
@@ -111,14 +130,16 @@ class RemindersViewModel(
                 dueOdometerKm = dueOdometer,
             )
 
-        when (val result = withContext(dispatchers.io) { createReminderUseCase(reminder) }) {
-            is DomainResult.Success -> {
-                refreshAfterCreate(result.value.title)
+        _uiState.update { it.copy(activeAction = ReminderAction.Create, hasPersistenceError = false) }
+        try {
+            when (val result = withContext(dispatchers.io) { createReminderUseCase(reminder) }) {
+                is DomainResult.Success -> refreshAfterCreate(result.value.title)
+                is DomainResult.ValidationError -> emitValidation(result.reason.toRemindersMessage())
             }
-
-            is DomainResult.ValidationError -> {
-                emitValidation(result.reason.toRemindersMessage())
-            }
+        } catch (_: Exception) {
+            _uiState.update { it.copy(hasPersistenceError = true) }
+        } finally {
+            _uiState.update { it.copy(activeAction = null) }
         }
     }
 
@@ -138,29 +159,45 @@ class RemindersViewModel(
     }
 
     private suspend fun completeReminder(reminderId: ReminderId) {
+        if (_uiState.value.activeAction != null) return
         val title =
             _uiState.value.reminders
                 .firstOrNull { it.id == reminderId }
                 ?.title
                 .orEmpty()
-        withContext(dispatchers.io) { completeReminderUseCase(reminderId) }
-        val reminders = withContext(dispatchers.io) { getPendingRemindersUseCase(familyId) }
-        _uiState.update { it.copy(reminders = reminders, errorMessage = null) }
-        _effects.send(RemindersEffect.ReminderCompleted(title))
-        syncAfterMutation()
+        _uiState.update { it.copy(activeAction = ReminderAction.Complete(reminderId), hasPersistenceError = false) }
+        try {
+            withContext(dispatchers.io) { completeReminderUseCase(reminderId) }
+            val reminders = withContext(dispatchers.io) { getPendingRemindersUseCase(familyId) }
+            _uiState.update { it.copy(reminders = reminders, errorMessage = null) }
+            _effects.send(RemindersEffect.ReminderCompleted(title))
+            syncAfterMutation()
+        } catch (_: Exception) {
+            _uiState.update { it.copy(hasPersistenceError = true) }
+        } finally {
+            _uiState.update { it.copy(activeAction = null) }
+        }
     }
 
     private suspend fun deleteReminder(reminderId: ReminderId) {
+        if (_uiState.value.activeAction != null) return
         val title =
             _uiState.value.reminders
                 .firstOrNull { it.id == reminderId }
                 ?.title
                 .orEmpty()
-        withContext(dispatchers.io) { deleteReminderUseCase(reminderId) }
-        val reminders = withContext(dispatchers.io) { getPendingRemindersUseCase(familyId) }
-        _uiState.update { it.copy(reminders = reminders, errorMessage = null) }
-        _effects.send(RemindersEffect.ReminderDeleted(title))
-        syncAfterMutation()
+        _uiState.update { it.copy(activeAction = ReminderAction.Delete(reminderId), hasPersistenceError = false) }
+        try {
+            withContext(dispatchers.io) { deleteReminderUseCase(reminderId) }
+            val reminders = withContext(dispatchers.io) { getPendingRemindersUseCase(familyId) }
+            _uiState.update { it.copy(reminders = reminders, errorMessage = null) }
+            _effects.send(RemindersEffect.ReminderDeleted(title))
+            syncAfterMutation()
+        } catch (_: Exception) {
+            _uiState.update { it.copy(hasPersistenceError = true) }
+        } finally {
+            _uiState.update { it.copy(activeAction = null) }
+        }
     }
 
     private fun syncAfterMutation() {

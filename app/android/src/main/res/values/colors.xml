@@ -1,3 +1,5 @@
 <resources>
+    <color name="carbura_deep_green">#18332F</color>
+    <color name="carbura_gold">#F3C969</color>
     <color name="ic_launcher_background">#18332F</color>
 </resources>

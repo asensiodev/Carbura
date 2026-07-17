@@ -4,6 +4,8 @@
     <string name="tab_reminders">Recordatorios</string>
     <string name="tab_user">Usuario</string>
     <string name="initial_sync_loading">Sincronizando tus datos...</string>
+    <string name="sync_failure_message">No se pudo sincronizar. Tus cambios siguen guardados en este dispositivo.</string>
+    <string name="sync_retry_action">Reintentar</string>
     <string name="user_title">Usuario</string>
     <string name="user_subtitle">Tu cuenta y tu espacio familiar en Carbura.</string>
     <string name="user_profile_title">Perfil</string>

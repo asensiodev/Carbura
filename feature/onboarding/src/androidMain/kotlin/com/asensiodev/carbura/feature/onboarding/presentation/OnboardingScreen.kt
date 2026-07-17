@@ -7,8 +7,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -16,17 +20,27 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.NoCredentialException
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.asensiodev.carbura.core.auth.SupabaseSettings
 import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.featureonboarding.R
@@ -40,7 +54,7 @@ fun OnboardingRoute(
     modifier: Modifier = Modifier,
     viewModel: OnboardingViewModel,
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val credentialManager = remember { CredentialManager.create(context) }
@@ -53,6 +67,7 @@ fun OnboardingRoute(
         state = state,
         onGoogleSignIn = {
             scope.launch {
+                viewModel.onEvent(OnboardingEvent.GoogleCredentialRequestStarted)
                 try {
                     if (googleClientId.isBlank()) {
                         viewModel.onEvent(
@@ -84,11 +99,11 @@ fun OnboardingRoute(
                 } catch (e: NoCredentialException) {
                     viewModel.onEvent(
                         OnboardingEvent.GoogleSignInError(
-                            "No hay credenciales de Google disponibles en este dispositivo.",
+                            e.message ?: "No Google credential is available on this device.",
                         ),
                     )
                 } catch (e: Exception) {
-                    viewModel.onEvent(OnboardingEvent.GoogleSignInError(googleSignInErrorMessage(e)))
+                    viewModel.onEvent(OnboardingEvent.GoogleSignInError(e.diagnostic()))
                 }
             }
         },
@@ -96,20 +111,10 @@ fun OnboardingRoute(
     )
 }
 
-private fun googleSignInErrorMessage(error: Exception): String {
-    val rawMessage = error.message.orEmpty()
-    return if (rawMessage.contains("account reauth failed", ignoreCase = true) ||
-        rawMessage.contains("16", ignoreCase = true)
-    ) {
-        "Google no pudo reautenticar la cuenta. Revisa que el OAuth Android tenga el package " +
-            "y SHA-1/SHA-256 de esta app, y que GOOGLE_CLIENT_ID sea el Web OAuth Client ID."
-    } else {
-        rawMessage.ifBlank { "Unable to sign in with Google." }
-    }
-}
+private fun Exception.diagnostic(): String = "${this::class.simpleName ?: "Credential error"}: ${message.orEmpty()}"
 
 @Composable
-private fun OnboardingScreen(
+internal fun OnboardingScreen(
     state: OnboardingUiState,
     onGoogleSignIn: () -> Unit,
     modifier: Modifier = Modifier,
@@ -125,10 +130,18 @@ private fun OnboardingScreen(
                 Modifier
                     .fillMaxSize()
                     .safeDrawingPadding()
-                    .padding(Spacings.spacing24),
-            contentAlignment = Alignment.Center,
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = Spacings.spacing24, vertical = Spacings.spacing16),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier =
+                    Modifier
+                        .widthIn(max = 560.dp)
+                        .fillMaxWidth()
+                        .testTag("onboarding_content"),
+            ) {
                 Column(
                     modifier =
                         Modifier
@@ -139,6 +152,7 @@ private fun OnboardingScreen(
                     Text(
                         text = stringResource(R.string.onboarding_title),
                         style = MaterialTheme.typography.headlineLarge,
+                        modifier = Modifier.semantics { heading() },
                     )
                     Text(
                         text = stringResource(R.string.onboarding_subtitle),
@@ -146,8 +160,8 @@ private fun OnboardingScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
 
-                    if (state.errorMessage != null) {
-                        LoginError(errorMessage = state.errorMessage)
+                    if (state.error != null) {
+                        LoginError(errorMessage = stringResource(state.error.stringResource()))
                     }
 
                     Button(
@@ -155,12 +169,27 @@ private fun OnboardingScreen(
                         enabled = state.canSubmitLogin,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(stringResource(R.string.onboarding_google_button))
+                        Text(
+                            stringResource(
+                                if (state.error == null) {
+                                    R.string.onboarding_google_button
+                                } else {
+                                    R.string.onboarding_google_retry_button
+                                },
+                            ),
+                        )
                     }
 
-                    if (state.isLoading) {
+                    if (state.isInitializing || state.isLoading) {
                         LoadingMessage(
-                            text = stringResource(R.string.onboarding_loading),
+                            text =
+                                stringResource(
+                                    if (state.isInitializing) {
+                                        R.string.onboarding_initializing
+                                    } else {
+                                        R.string.onboarding_loading
+                                    },
+                                ),
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -172,7 +201,14 @@ private fun OnboardingScreen(
 
 @Composable
 private fun LoginError(errorMessage: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+    Column(
+        modifier =
+            Modifier.semantics {
+                liveRegion = LiveRegionMode.Assertive
+                error(errorMessage)
+            },
+        verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
+    ) {
         Text(
             text = stringResource(R.string.onboarding_error_title),
             color = MaterialTheme.colorScheme.error,
@@ -192,7 +228,12 @@ private fun LoadingMessage(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier,
+        modifier =
+            modifier.semantics {
+                liveRegion = LiveRegionMode.Polite
+                progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate
+                stateDescription = text
+            },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         CircularProgressIndicator()
@@ -204,3 +245,12 @@ private fun LoadingMessage(
         )
     }
 }
+
+private fun OnboardingError.stringResource(): Int =
+    when (this) {
+        OnboardingError.SessionUnavailable -> R.string.onboarding_error_session
+        OnboardingError.ProfileUnavailable -> R.string.onboarding_error_profile
+        OnboardingError.SignInFailed -> R.string.onboarding_error_sign_in
+        OnboardingError.ProfileCreationFailed -> R.string.onboarding_error_profile_creation
+        OnboardingError.SignOutFailed -> R.string.onboarding_error_sign_out
+    }

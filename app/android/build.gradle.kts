@@ -42,11 +42,13 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.koin.android)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
 
     debugImplementation(libs.bundles.compose.debug)
+    testImplementation(kotlin("test"))
 }
 
 tasks.named("preBuild") {

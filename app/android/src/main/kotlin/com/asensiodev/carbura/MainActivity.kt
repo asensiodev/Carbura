@@ -25,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,12 +35,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -56,6 +58,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
@@ -117,12 +120,11 @@ private fun CarburaApp(
     startRoute: String?,
     startRouteVersion: Int,
 ) {
-    val initialRoute = if (startRoute == START_ROUTE_REMINDERS) CarburaRoute.Reminders else CarburaRoute.Garage
-    val backStack = rememberNavBackStack(initialRoute)
+    val backStack = rememberNavBackStack(CarburaRoute.Garage)
     val onboardingViewModel = rememberOnboardingViewModel()
     val syncManager = rememberSyncManager()
-    val onboardingState by onboardingViewModel.uiState.collectAsState()
-    val syncStatus by syncManager.status.collectAsState()
+    val onboardingState by onboardingViewModel.uiState.collectAsStateWithLifecycle()
+    val syncStatus by syncManager.status.collectAsStateWithLifecycle()
     val syncScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     val lastForegroundSyncAttempt = remember { mutableLongStateOf(0L) }
@@ -132,15 +134,11 @@ private fun CarburaApp(
         onboardingViewModel.effects.collect { effect ->
             when (effect) {
                 OnboardingEffect.NavigateToGarage -> {
-                    while (backStack.size > 1) {
-                        backStack.removeLastOrNull()
-                    }
+                    backStack.navigateToTopLevel(CarburaRoute.Garage)
                 }
 
                 OnboardingEffect.NavigateToLogin -> {
-                    while (backStack.size > 1) {
-                        backStack.removeLastOrNull()
-                    }
+                    backStack.clearProtectedDestinations()
                 }
             }
         }
@@ -179,12 +177,7 @@ private fun CarburaApp(
 
     LaunchedEffect(startRouteVersion, initialSyncCompleted) {
         if (startRoute == START_ROUTE_REMINDERS) {
-            while (backStack.size > 1) {
-                backStack.removeLastOrNull()
-            }
-            if (backStack.lastOrNull() != CarburaRoute.Reminders) {
-                backStack.add(CarburaRoute.Reminders)
-            }
+            backStack.navigateToTopLevel(CarburaRoute.Reminders)
         }
     }
 
@@ -210,28 +203,32 @@ private fun CarburaApp(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    val currentRoute = backStack.lastOrNull() as? CarburaRoute ?: CarburaRoute.Garage
+    var refreshSignal by remember(familyId) { mutableLongStateOf(0L) }
+    var refreshDestination by remember(familyId) { mutableStateOf<CarburaRoute?>(null) }
+    var observedSyncTimestamp by remember(familyId) { mutableStateOf(syncStatus.lastSyncedAtMillis) }
+
+    LaunchedEffect(syncStatus.lastSyncedAtMillis) {
+        val timestamp = syncStatus.lastSyncedAtMillis
+        if (timestamp != null && timestamp != observedSyncTimestamp) {
+            observedSyncTimestamp = timestamp
+            refreshDestination = currentRoute
+            refreshSignal += 1L
+        }
+    }
+
     CarburaMainScaffold(
-        currentRoute = backStack.lastOrNull() as? CarburaRoute ?: CarburaRoute.Garage,
+        currentRoute = currentRoute,
+        syncStatus = syncStatus,
+        onRetrySync = { syncScope.launch { syncManager.syncNow() } },
         onGarageSelected = {
-            while (backStack.size > 1) {
-                backStack.removeLastOrNull()
-            }
+            backStack.navigateToTopLevel(CarburaRoute.Garage)
         },
         onRemindersSelected = {
-            while (backStack.size > 1) {
-                backStack.removeLastOrNull()
-            }
-            if (backStack.lastOrNull() != CarburaRoute.Reminders) {
-                backStack.add(CarburaRoute.Reminders)
-            }
+            backStack.navigateToTopLevel(CarburaRoute.Reminders)
         },
         onUserSelected = {
-            while (backStack.size > 1) {
-                backStack.removeLastOrNull()
-            }
-            if (backStack.lastOrNull() != CarburaRoute.User) {
-                backStack.add(CarburaRoute.User)
-            }
+            backStack.navigateToTopLevel(CarburaRoute.User)
         },
     ) { contentPadding ->
         val layoutDirection = LocalLayoutDirection.current
@@ -256,6 +253,7 @@ private fun CarburaApp(
                         NavEntry(route) {
                             GarageRoute(
                                 familyId = familyId,
+                                refreshSignal = refreshSignal.takeIf { refreshDestination == carburaRoute } ?: 0L,
                                 onVehicleSelected = { vehicleId ->
                                     backStack.add(CarburaRoute.VehicleDetail(vehicleId))
                                 },
@@ -267,6 +265,7 @@ private fun CarburaApp(
                             MaintenanceHistoryRoute(
                                 vehicleId = carburaRoute.vehicleId,
                                 familyId = familyId,
+                                refreshSignal = refreshSignal.takeIf { refreshDestination == carburaRoute } ?: 0L,
                                 onBack = {
                                     if (backStack.size > 1) {
                                         backStack.removeLastOrNull()
@@ -277,7 +276,11 @@ private fun CarburaApp(
 
                     CarburaRoute.Reminders ->
                         NavEntry(route) {
-                            RemindersRoute(familyId = familyId)
+                            RemindersRoute(
+                                familyId = familyId,
+                                refreshSignal = refreshSignal.takeIf { refreshDestination == carburaRoute } ?: 0L,
+                                onNavigateToGarage = { backStack.navigateToTopLevel(CarburaRoute.Garage) },
+                            )
                         }
 
                     CarburaRoute.User ->
@@ -289,14 +292,10 @@ private fun CarburaApp(
                                 syncStatus = syncStatus,
                                 onSyncNow = { syncScope.launch { syncManager.syncNow() } },
                                 onSignOut = {
+                                    backStack.clearProtectedDestinations()
                                     onboardingViewModel.onEvent(OnboardingEvent.SignOutClicked)
                                 },
                             )
-                        }
-
-                    is CarburaRoute.CreateMaintenance ->
-                        NavEntry(route) {
-                            GarageRoute(familyId = familyId)
                         }
                 }
             },
@@ -307,11 +306,36 @@ private fun CarburaApp(
 @Composable
 private fun CarburaMainScaffold(
     currentRoute: CarburaRoute,
+    syncStatus: SyncStatus,
+    onRetrySync: () -> Unit,
     onGarageSelected: () -> Unit,
     onRemindersSelected: () -> Unit,
     onUserSelected: () -> Unit,
     content: @Composable (PaddingValues) -> Unit,
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val feedbackTracker = remember { SyncFeedbackTracker() }
+    val failureMessage = stringResource(R.string.sync_failure_message)
+    val retryLabel = stringResource(R.string.sync_retry_action)
+
+    LaunchedEffect(syncStatus) {
+        when (feedbackTracker.update(syncStatus)) {
+            SyncFeedbackEvent.None -> Unit
+            SyncFeedbackEvent.Clear -> snackbarHostState.currentSnackbarData?.dismiss()
+            is SyncFeedbackEvent.ShowFailure -> {
+                val result =
+                    snackbarHostState.showSnackbar(
+                        message = failureMessage,
+                        actionLabel = retryLabel,
+                        duration = SnackbarDuration.Indefinite,
+                    )
+                if (result == SnackbarResult.ActionPerformed) {
+                    feedbackTracker.retryRequested()
+                    onRetrySync()
+                }
+            }
+        }
+    }
     val showBottomBar =
         currentRoute == CarburaRoute.Garage ||
             currentRoute == CarburaRoute.Reminders ||
@@ -320,6 +344,7 @@ private fun CarburaMainScaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
@@ -437,19 +462,16 @@ private fun UserRoute(
                             text = stringResource(R.string.user_sync_title),
                             style = MaterialTheme.typography.titleMedium,
                         )
-                        AssistChip(
-                            onClick = {},
-                            label = {
-                                Text(
-                                    text =
-                                        when {
-                                            syncStatus.isSyncing -> stringResource(R.string.user_syncing_status)
-                                            syncStatus.lastErrorMessage != null -> stringResource(R.string.user_sync_pending)
-                                            syncStatus.lastSyncedAtMillis != null -> stringResource(R.string.user_sync_ready)
-                                            else -> stringResource(R.string.user_sync_pending)
-                                        },
-                                )
-                            },
+                        Text(
+                            text =
+                                when {
+                                    syncStatus.isSyncing -> stringResource(R.string.user_syncing_status)
+                                    syncStatus.lastErrorMessage != null -> stringResource(R.string.user_sync_pending)
+                                    syncStatus.lastSyncedAtMillis != null -> stringResource(R.string.user_sync_ready)
+                                    else -> stringResource(R.string.user_sync_pending)
+                                },
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     if (syncStatus.isSyncing) {

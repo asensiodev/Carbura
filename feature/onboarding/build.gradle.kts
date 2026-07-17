@@ -24,8 +24,27 @@ kotlin {
         implementation(project.dependencies.platform(libs.androidx.compose.bom))
         implementation(libs.androidx.compose.material3)
         implementation(libs.androidx.compose.ui)
+        implementation(libs.androidx.lifecycle.runtime.compose)
         implementation(libs.androidx.credentials)
         implementation(libs.androidx.credentials.playauth)
         implementation(libs.googleid)
     }
+
+    sourceSets.androidInstrumentedTest.dependencies {
+        implementation(project.dependencies.platform(libs.androidx.compose.bom))
+        implementation("androidx.compose.ui:ui-test-junit4")
+        implementation("androidx.test:runner:1.7.0")
+        implementation("androidx.test.espresso:espresso-core:3.7.0")
+        implementation("androidx.test.ext:junit:1.3.0")
+    }
+}
+
+android {
+    defaultConfig {
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+}
+
+dependencies {
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

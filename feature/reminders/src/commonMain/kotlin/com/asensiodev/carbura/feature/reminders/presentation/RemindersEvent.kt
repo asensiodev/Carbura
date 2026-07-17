@@ -6,6 +6,12 @@ import com.asensiodev.carbura.core.model.VehicleId
 sealed interface RemindersEvent {
     data object Started : RemindersEvent
 
+    data object Retry : RemindersEvent
+
+    data object Refresh : RemindersEvent
+
+    data object GarageRequested : RemindersEvent
+
     data class TitleChanged(
         val value: String,
     ) : RemindersEvent
