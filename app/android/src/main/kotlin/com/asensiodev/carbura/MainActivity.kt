@@ -91,8 +91,8 @@ class MainActivity : ComponentActivity() {
         startRoute = intent?.getStringExtra(EXTRA_START_ROUTE)
         if (startRoute != null) startRouteVersion += 1
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
         )
         setContent {
             CarburaTheme {
