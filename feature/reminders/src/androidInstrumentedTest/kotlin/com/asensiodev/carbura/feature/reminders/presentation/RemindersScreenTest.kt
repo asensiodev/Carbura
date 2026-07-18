@@ -19,6 +19,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.dp
 import com.asensiodev.carbura.core.designsystem.CarburaTheme
 import com.asensiodev.carbura.core.model.CalendarDate
@@ -75,7 +77,7 @@ class RemindersScreenTest {
     }
 
     @Test
-    fun unavailableVehicleAndItemSpecificActionsAreAccessible() {
+    fun unavailableVehicleAndCompleteActionAreAccessible() {
         val reminder = reminder(title = "ITV familiar")
         composeRule.setRemindersContent(
             state = loadedState(reminders = listOf(reminder), vehicles = emptyList()),
@@ -83,7 +85,7 @@ class RemindersScreenTest {
 
         composeRule.onNodeWithText("Vehículo no disponible").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Completar recordatorio ITV familiar").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Borrar recordatorio ITV familiar").assertIsDisplayed()
+        composeRule.onNodeWithTag("reminder_card_${reminder.id.value}").assertIsDisplayed()
     }
 
     @Test
@@ -116,7 +118,7 @@ class RemindersScreenTest {
             onDeleteReminder = { deletedReminder = it },
         )
 
-        composeRule.onNodeWithContentDescription("Borrar recordatorio Seguro familiar").performClick()
+        composeRule.onNodeWithTag("reminder_card_${reminder.id.value}").performTouchInput { swipeLeft() }
 
         composeRule.runOnIdle { assertNull(deletedReminder) }
         composeRule.onAllNodesWithText("Seguro familiar").assertCountEquals(2)

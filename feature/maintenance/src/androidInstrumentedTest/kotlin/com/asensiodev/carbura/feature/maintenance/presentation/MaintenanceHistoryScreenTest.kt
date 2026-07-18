@@ -5,12 +5,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.asensiodev.carbura.core.designsystem.CarburaTheme
@@ -44,16 +46,14 @@ class MaintenanceHistoryScreenTest {
     }
 
     @Test
-    fun longRecordShowsLocalizedDateCostAndItemSpecificDeleteAction() {
+    fun longRecordShowsLocalizedDateCostAndSwipeAction() {
         val record = record()
         setScreen(state = state(records = listOf(record)))
 
         composeRule.onNodeWithText(record.displayType()).assertIsDisplayed()
         composeRule.onNodeWithText(record.performedOn.localizedDate()).assertIsDisplayed()
         composeRule.onNodeWithText(8_950.localizedCost("EUR")).assertIsDisplayed()
-        composeRule
-            .onNode(hasContentDescription("Borrar mantenimiento ${record.displayType()}"), useUnmergedTree = true)
-            .assertIsDisplayed()
+        composeRule.onNodeWithTag("maintenance_card_${record.id.value}").assertIsDisplayed()
     }
 
     @Test
@@ -65,9 +65,7 @@ class MaintenanceHistoryScreenTest {
             onDeleteMaintenance = { deletedRecord = it },
         )
 
-        composeRule
-            .onNode(hasContentDescription("Borrar mantenimiento ${record.displayType()}"), useUnmergedTree = true)
-            .performClick()
+        composeRule.onNodeWithTag("maintenance_card_${record.id.value}").performTouchInput { swipeLeft() }
 
         composeRule.runOnIdle { check(deletedRecord == null) }
         composeRule.onAllNodesWithText(record.displayType()).assertCountEquals(2)

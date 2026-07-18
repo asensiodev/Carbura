@@ -35,7 +35,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -47,7 +46,6 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -89,6 +87,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.asensiodev.carbura.core.designsystem.Spacings
+import com.asensiodev.carbura.core.designsystem.SwipeToDeleteContainer
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.Vehicle
@@ -828,7 +827,11 @@ private fun ReminderCard(
     val completeDescription = stringResource(R.string.complete_reminder_content_description, reminder.title)
     val deleteDescription = stringResource(R.string.delete_reminder_content_description, reminder.title)
     val busyDescription = stringResource(R.string.reminder_action_in_progress)
-    ElevatedCard(
+    SwipeToDeleteContainer(
+        actionLabel = stringResource(R.string.delete_reminder_confirm_button),
+        accessibilityLabel = deleteDescription,
+        enabled = activeAction == null,
+        onDeleteRequest = { onDeleteReminder(reminder) },
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -839,35 +842,26 @@ private fun ReminderCard(
                     }
                 },
     ) {
-        Column(
-            modifier = Modifier.padding(Spacings.spacing16),
-            verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
-        ) {
-            Text(reminder.title, style = MaterialTheme.typography.titleMedium)
-            Text(vehicleName, style = MaterialTheme.typography.bodyMedium)
-            reminder.dueDate?.let {
-                Text(it.iso8601, style = MaterialTheme.typography.bodyMedium)
-            }
-            reminder.dueOdometerKm?.let {
-                Text("$it km", style = MaterialTheme.typography.bodyMedium)
-            }
-            OutlinedButton(
-                onClick = { onCompleteReminder(reminder) },
-                enabled = activeAction == null,
-                modifier = Modifier.semantics { contentDescription = completeDescription },
+        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(Spacings.spacing16),
+                verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
             ) {
-                Text(stringResource(R.string.complete_reminder_button))
-            }
-            IconButton(
-                onClick = { onDeleteReminder(reminder) },
-                enabled = activeAction == null,
-                modifier = Modifier.semantics { contentDescription = deleteDescription },
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                )
+                Text(reminder.title, style = MaterialTheme.typography.titleMedium)
+                Text(vehicleName, style = MaterialTheme.typography.bodyMedium)
+                reminder.dueDate?.let {
+                    Text(it.iso8601, style = MaterialTheme.typography.bodyMedium)
+                }
+                reminder.dueOdometerKm?.let {
+                    Text("$it km", style = MaterialTheme.typography.bodyMedium)
+                }
+                OutlinedButton(
+                    onClick = { onCompleteReminder(reminder) },
+                    enabled = activeAction == null,
+                    modifier = Modifier.semantics { contentDescription = completeDescription },
+                ) {
+                    Text(stringResource(R.string.complete_reminder_button))
+                }
             }
         }
     }

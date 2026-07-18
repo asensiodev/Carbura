@@ -30,6 +30,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -67,15 +68,17 @@ class GarageScreenTest {
     @Test
     fun longVehicleCardHasItemSpecificActionsAtLargeText() {
         val name = "Furgoneta familiar con un nombre especialmente largo"
+        var deleteRequested = false
+        val vehicle = vehicle(name).copy(licensePlate = "1234 ABC")
         composeRule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(density = 1f, fontScale = 2f)) {
                 CarburaTheme {
                     VehicleCard(
-                        vehicle = vehicle(name).copy(licensePlate = "1234 ABC"),
+                        vehicle = vehicle,
                         actionsEnabled = true,
                         deleting = false,
                         onSelectVehicle = {},
-                        onDeleteVehicle = {},
+                        onDeleteVehicle = { deleteRequested = true },
                         onEditVehicle = {},
                         onQuickOdometerUpdate = {},
                     )
@@ -91,7 +94,8 @@ class GarageScreenTest {
         composeRule.onNodeWithText("Ver vehículo e historial").assertIsDisplayed()
         composeRule.onNodeWithText("Actualizar km").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Editar $name").assertIsDisplayed().assertHasClickAction()
-        composeRule.onNodeWithContentDescription("Borrar $name").assertIsDisplayed().assertHasClickAction()
+        composeRule.onNodeWithTag("vehicle_card_${vehicle.id.value}").performTouchInput { swipeLeft() }
+        composeRule.runOnIdle { check(deleteRequested) }
     }
 
     @Test

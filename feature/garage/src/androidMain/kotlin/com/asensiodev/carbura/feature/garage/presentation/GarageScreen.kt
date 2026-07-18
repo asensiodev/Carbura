@@ -26,7 +26,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -81,6 +80,7 @@ import com.asensiodev.carbura.core.designsystem.ConstrainedScreen
 import com.asensiodev.carbura.core.designsystem.LoadingState
 import com.asensiodev.carbura.core.designsystem.RetryState
 import com.asensiodev.carbura.core.designsystem.Spacings
+import com.asensiodev.carbura.core.designsystem.SwipeToDeleteContainer
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleType
@@ -1122,89 +1122,86 @@ internal fun VehicleCard(
     onEditVehicle: (Vehicle) -> Unit,
     onQuickOdometerUpdate: (Vehicle) -> Unit,
 ) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth().testTag("vehicle_card_${vehicle.id.value}")) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(Spacings.spacing16),
-            verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top,
+    SwipeToDeleteContainer(
+        actionLabel = stringResource(R.string.delete_vehicle_confirm_button),
+        accessibilityLabel = stringResource(R.string.delete_vehicle_content_description, vehicle.name),
+        enabled = actionsEnabled && !deleting,
+        onDeleteRequest = { onDeleteVehicle(vehicle) },
+        modifier = Modifier.fillMaxWidth().testTag("vehicle_card_${vehicle.id.value}"),
+    ) {
+        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(Spacings.spacing16),
+                verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing4),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top,
                 ) {
-                    Text(
-                        text = vehicle.name,
-                        modifier = Modifier.semantics { heading() },
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                    Text(
-                        text = vehicle.type.label(),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    vehicle.licensePlate?.takeIf { it.isNotBlank() }?.let { plate ->
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(Spacings.spacing4),
+                    ) {
                         Text(
-                            text = plate,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = vehicle.name,
+                            modifier = Modifier.semantics { heading() },
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        Text(
+                            text = vehicle.type.label(),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        vehicle.licensePlate?.takeIf { it.isNotBlank() }?.let { plate ->
+                            Text(
+                                text = plate,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    IconButton(
+                        onClick = { onEditVehicle(vehicle) },
+                        modifier = Modifier.size(48.dp),
+                        enabled = actionsEnabled,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Edit,
+                            contentDescription = stringResource(R.string.edit_vehicle_content_description, vehicle.name),
                         )
                     }
                 }
-                IconButton(
-                    onClick = { onEditVehicle(vehicle) },
-                    modifier = Modifier.size(48.dp),
-                    enabled = actionsEnabled,
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Edit,
-                        contentDescription = stringResource(R.string.edit_vehicle_content_description, vehicle.name),
+                Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing4)) {
+                    Text(
+                        text = stringResource(R.string.odometer_summary_label),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = stringResource(R.string.odometer_summary_value, vehicle.currentOdometerKm),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
-                IconButton(
-                    onClick = { onDeleteVehicle(vehicle) },
-                    modifier = Modifier.size(48.dp),
+                Button(
+                    onClick = { onSelectVehicle(vehicle) },
+                    modifier = Modifier.fillMaxWidth(),
                     enabled = actionsEnabled,
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Delete,
-                        contentDescription = stringResource(R.string.delete_vehicle_content_description, vehicle.name),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
+                    Text(stringResource(R.string.view_history_button))
                 }
+                OutlinedButton(
+                    onClick = { onQuickOdometerUpdate(vehicle) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = actionsEnabled,
+                ) {
+                    Text(stringResource(R.string.update_odometer_button))
+                }
+                if (deleting) Text(stringResource(R.string.deleting_vehicle))
             }
-            Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing4)) {
-                Text(
-                    text = stringResource(R.string.odometer_summary_label),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = stringResource(R.string.odometer_summary_value, vehicle.currentOdometerKm),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-            Button(
-                onClick = { onSelectVehicle(vehicle) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = actionsEnabled,
-            ) {
-                Text(stringResource(R.string.view_history_button))
-            }
-            OutlinedButton(
-                onClick = { onQuickOdometerUpdate(vehicle) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = actionsEnabled,
-            ) {
-                Text(stringResource(R.string.update_odometer_button))
-            }
-            if (deleting) Text(stringResource(R.string.deleting_vehicle))
         }
     }
 }

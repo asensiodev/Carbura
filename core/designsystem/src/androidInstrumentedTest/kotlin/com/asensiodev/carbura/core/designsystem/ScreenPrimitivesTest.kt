@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -19,6 +20,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
@@ -110,6 +113,28 @@ class ScreenPrimitivesTest {
             .assertIsDisplayed()
         composeRule.onNodeWithText("Reintentar").assertIsDisplayed().performClick()
         composeRule.runOnIdle { assertEquals(1, retries) }
+    }
+
+    @Test
+    fun swipeToDeleteExposesAccessibleActionAndRequestsDeletion() {
+        var deleteRequests = 0
+        composeRule.setContent {
+            CarburaTheme {
+                SwipeToDeleteContainer(
+                    actionLabel = "Borrar",
+                    accessibilityLabel = "Borrar vehiculo",
+                    enabled = true,
+                    onDeleteRequest = { deleteRequests += 1 },
+                    modifier = Modifier.size(300.dp, 100.dp).testTag("swipe-row"),
+                ) {
+                    Box(modifier = Modifier.fillMaxSize())
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("swipe-row").assert(SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions))
+        composeRule.onNodeWithTag("swipe-row").performTouchInput { swipeLeft() }
+        composeRule.runOnIdle { assertEquals(1, deleteRequests) }
     }
 
     private fun setConstrainedContent(

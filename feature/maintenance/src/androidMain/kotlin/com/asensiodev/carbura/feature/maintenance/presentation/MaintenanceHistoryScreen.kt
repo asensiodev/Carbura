@@ -24,7 +24,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -57,6 +56,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -70,6 +70,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.asensiodev.carbura.core.designsystem.Spacings
+import com.asensiodev.carbura.core.designsystem.SwipeToDeleteContainer
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
@@ -713,52 +714,50 @@ private fun MaintenanceRecordCard(
     actionsEnabled: Boolean,
     onDeleteMaintenance: (MaintenanceRecord) -> Unit,
 ) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(Spacings.spacing16),
-            verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
-        ) {
-            Text(
-                text = record.displayType(),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = record.performedOn.localizedDate(),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            record.odometerKm?.let { odometer ->
-                Text(stringResource(R.string.maintenance_odometer_value, odometer), style = MaterialTheme.typography.bodyMedium)
-            }
-            record.costCents?.let { costCents ->
-                Text(costCents.localizedCost(record.currency))
-            }
-            record.workshop?.let { workshop ->
-                Text(workshop, style = MaterialTheme.typography.bodyMedium)
-            }
-            record.notes?.let { notes ->
-                Text(
-                    text = notes,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(
-                onClick = { onDeleteMaintenance(record) },
-                enabled = actionsEnabled,
-                modifier = Modifier.align(Alignment.End),
+    val displayType = record.displayType()
+    SwipeToDeleteContainer(
+        actionLabel = stringResource(R.string.delete_maintenance_confirm_button),
+        accessibilityLabel = stringResource(R.string.delete_maintenance_content_description, displayType),
+        enabled = actionsEnabled && !isDeleting,
+        onDeleteRequest = { onDeleteMaintenance(record) },
+        modifier = Modifier.fillMaxWidth().testTag("maintenance_card_${record.id.value}"),
+    ) {
+        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(Spacings.spacing16),
+                verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
             ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.delete_maintenance_content_description, record.displayType()),
-                    tint = MaterialTheme.colorScheme.error,
-                )
-            }
-            if (isDeleting) {
                 Text(
-                    text = stringResource(R.string.maintenance_deleting_status),
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                    style = MaterialTheme.typography.labelMedium,
+                    text = displayType,
+                    style = MaterialTheme.typography.titleMedium,
                 )
+                Text(
+                    text = record.performedOn.localizedDate(),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                record.odometerKm?.let { odometer ->
+                    Text(stringResource(R.string.maintenance_odometer_value, odometer), style = MaterialTheme.typography.bodyMedium)
+                }
+                record.costCents?.let { costCents ->
+                    Text(costCents.localizedCost(record.currency))
+                }
+                record.workshop?.let { workshop ->
+                    Text(workshop, style = MaterialTheme.typography.bodyMedium)
+                }
+                record.notes?.let { notes ->
+                    Text(
+                        text = notes,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (isDeleting) {
+                    Text(
+                        text = stringResource(R.string.maintenance_deleting_status),
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
             }
         }
     }
