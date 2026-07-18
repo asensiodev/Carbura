@@ -8,6 +8,8 @@ import com.asensiodev.carbura.core.model.VehicleId
 
 internal class FakeReminderRepository : ReminderRepository {
     val savedReminders = mutableListOf<Reminder>()
+    val deletedReminderIds = mutableListOf<ReminderId>()
+    var failDeletes = false
 
     override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> =
         savedReminders.filter { it.familyId == familyId && !it.isCompleted }
@@ -27,6 +29,8 @@ internal class FakeReminderRepository : ReminderRepository {
     }
 
     override suspend fun deleteReminder(reminderId: ReminderId) {
+        if (failDeletes) error("reminder delete failed")
+        deletedReminderIds += reminderId
         savedReminders.removeAll { it.id == reminderId }
     }
 }

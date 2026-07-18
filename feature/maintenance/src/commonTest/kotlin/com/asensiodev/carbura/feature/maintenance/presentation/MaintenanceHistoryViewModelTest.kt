@@ -2,10 +2,15 @@ package com.asensiodev.carbura.feature.maintenance.presentation
 
 import app.cash.turbine.test
 import com.asensiodev.carbura.core.domain.maintenance.repository.MaintenanceRecordRepository
-import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceRecordFromInputUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceRecordUseCase
+import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderFromInputUseCase
+import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.GetVehicleHistoryUseCase
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
+import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
+import com.asensiodev.carbura.core.domain.reminder.usecase.CreateAutomaticReminderUseCase
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
@@ -13,6 +18,8 @@ import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.MaintenanceTypeId
+import com.asensiodev.carbura.core.model.Reminder
+import com.asensiodev.carbura.core.model.ReminderId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
@@ -105,7 +112,8 @@ class MaintenanceHistoryViewModelTest {
         runTest {
             val repository = FakeMaintenanceRecordRepository()
             val viewModel = maintenanceHistoryViewModel(repository = repository)
-            viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged("Borrador"))
+            viewModel.onEvent(MaintenanceHistoryEvent.TypeSelected(MaintenanceTypeCode.Custom))
+            viewModel.onEvent(MaintenanceHistoryEvent.CustomTypeLabelChanged("Borrador"))
             repository.saveMaintenanceRecord(record("remote", "2026-07-17"))
 
             viewModel.onEvent(MaintenanceHistoryEvent.Refresh)
@@ -116,7 +124,7 @@ class MaintenanceHistoryViewModelTest {
                 viewModel.uiState.value.records
                     .map { it.id.value },
             )
-            assertEquals("Borrador", viewModel.uiState.value.type)
+            assertEquals("Borrador", viewModel.uiState.value.customTypeLabel)
         }
 
     @Test
@@ -125,7 +133,8 @@ class MaintenanceHistoryViewModelTest {
             val viewModel = maintenanceHistoryViewModel(nextRecordId = { MaintenanceRecordId("record-1") })
 
             viewModel.effects.test {
-                viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged("Aceite"))
+                viewModel.onEvent(MaintenanceHistoryEvent.TypeSelected(MaintenanceTypeCode.Custom))
+                viewModel.onEvent(MaintenanceHistoryEvent.CustomTypeLabelChanged("Aceite"))
                 viewModel.onEvent(MaintenanceHistoryEvent.PerformedOnChanged("2026-07-04"))
                 viewModel.onEvent(MaintenanceHistoryEvent.OdometerChanged("12300"))
                 viewModel.onEvent(MaintenanceHistoryEvent.CostChanged("89.50"))
@@ -142,7 +151,8 @@ class MaintenanceHistoryViewModelTest {
             assertEquals(CalendarDate("2026-07-04"), state.records.single().performedOn)
             assertEquals(12300, state.records.single().odometerKm)
             assertEquals(8950, state.records.single().costCents)
-            assertEquals("", state.type)
+            assertEquals(MaintenanceTypeCode.Itv, state.maintenanceTypeCode)
+            assertEquals("", state.customTypeLabel)
             assertEquals("0", state.odometerKm)
         }
 
@@ -152,7 +162,8 @@ class MaintenanceHistoryViewModelTest {
             val viewModel = maintenanceHistoryViewModel()
 
             viewModel.effects.test {
-                viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged(" "))
+                viewModel.onEvent(MaintenanceHistoryEvent.TypeSelected(MaintenanceTypeCode.Custom))
+                viewModel.onEvent(MaintenanceHistoryEvent.CustomTypeLabelChanged(" "))
                 viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
                 advanceUntilIdle()
 
@@ -173,7 +184,8 @@ class MaintenanceHistoryViewModelTest {
             val viewModel = maintenanceHistoryViewModel()
 
             viewModel.effects.test {
-                viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged("Aceite"))
+                viewModel.onEvent(MaintenanceHistoryEvent.TypeSelected(MaintenanceTypeCode.Custom))
+                viewModel.onEvent(MaintenanceHistoryEvent.CustomTypeLabelChanged("Aceite"))
                 viewModel.onEvent(MaintenanceHistoryEvent.OdometerChanged("-1"))
                 viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
                 advanceUntilIdle()
@@ -195,7 +207,8 @@ class MaintenanceHistoryViewModelTest {
             val viewModel = maintenanceHistoryViewModel()
 
             viewModel.effects.test {
-                viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged("Aceite"))
+                viewModel.onEvent(MaintenanceHistoryEvent.TypeSelected(MaintenanceTypeCode.Custom))
+                viewModel.onEvent(MaintenanceHistoryEvent.CustomTypeLabelChanged("Aceite"))
                 viewModel.onEvent(MaintenanceHistoryEvent.PerformedOnChanged("04/07/2026"))
                 viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
                 advanceUntilIdle()
@@ -252,7 +265,8 @@ class MaintenanceHistoryViewModelTest {
             val saveGate = CompletableDeferred<Unit>()
             val repository = FakeMaintenanceRecordRepository(saveGate = saveGate)
             val viewModel = maintenanceHistoryViewModel(repository = repository)
-            viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged("Aceite"))
+            viewModel.onEvent(MaintenanceHistoryEvent.TypeSelected(MaintenanceTypeCode.Custom))
+            viewModel.onEvent(MaintenanceHistoryEvent.CustomTypeLabelChanged("Aceite"))
 
             viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
             viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
@@ -295,7 +309,8 @@ class MaintenanceHistoryViewModelTest {
         runTest {
             val repository = FakeMaintenanceRecordRepository(failSaves = true)
             val viewModel = maintenanceHistoryViewModel(repository = repository)
-            viewModel.onEvent(MaintenanceHistoryEvent.TypeChanged("Aceite"))
+            viewModel.onEvent(MaintenanceHistoryEvent.TypeSelected(MaintenanceTypeCode.Custom))
+            viewModel.onEvent(MaintenanceHistoryEvent.CustomTypeLabelChanged("Aceite"))
 
             viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
             advanceUntilIdle()
@@ -310,11 +325,76 @@ class MaintenanceHistoryViewModelTest {
             assertEquals(1, repository.savedRecords.size)
         }
 
+    @Test
+    fun itvWithNextDateCreatesReminderReportsItAndResetsEveryField() =
+        runTest {
+            val reminderRepository = FakeReminderRepository()
+            val viewModel = maintenanceHistoryViewModel(reminderRepository = reminderRepository)
+
+            viewModel.effects.test {
+                viewModel.onEvent(MaintenanceHistoryEvent.TypeSelected(MaintenanceTypeCode.Itv))
+                viewModel.onEvent(MaintenanceHistoryEvent.NextDueDateChanged("2027-07-17"))
+                viewModel.onEvent(MaintenanceHistoryEvent.NotesChanged("Con aviso"))
+                viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
+                advanceUntilIdle()
+
+                val effect = assertIs<MaintenanceHistoryEffect.MaintenanceCreated>(awaitItem())
+                assertTrue(effect.reminderCreated)
+                assertEquals(MaintenanceTypeCode.Itv, effect.typeCode)
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(1, reminderRepository.savedReminders.size)
+            assertEquals("", viewModel.uiState.value.nextDueDate)
+            assertEquals("", viewModel.uiState.value.notes)
+        }
+
+    @Test
+    fun selectingUnsupportedTypeClearsConditionalNextDate() =
+        runTest {
+            val viewModel = maintenanceHistoryViewModel()
+
+            viewModel.onEvent(MaintenanceHistoryEvent.NextDueDateChanged("2027-07-17"))
+            viewModel.onEvent(MaintenanceHistoryEvent.TypeSelected(MaintenanceTypeCode.Tires))
+
+            assertFalse(viewModel.uiState.value.supportsNextDueDate)
+            assertEquals("", viewModel.uiState.value.nextDueDate)
+        }
+
+    @Test
+    fun failedCreationPreservesFieldsAndReusesAllocatedRecordId() =
+        runTest {
+            val repository = FakeMaintenanceRecordRepository(failSaves = true)
+            var allocationCount = 0
+            val viewModel =
+                maintenanceHistoryViewModel(
+                    repository = repository,
+                    nextRecordId = { MaintenanceRecordId("record-${++allocationCount}") },
+                )
+            viewModel.onEvent(MaintenanceHistoryEvent.TypeSelected(MaintenanceTypeCode.Insurance))
+            viewModel.onEvent(MaintenanceHistoryEvent.NextDueDateChanged("2027-08-01"))
+
+            viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
+            advanceUntilIdle()
+            repository.failSaves = false
+            viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
+            advanceUntilIdle()
+
+            assertEquals(1, allocationCount)
+            assertEquals(
+                "record-1",
+                repository.savedRecords
+                    .single()
+                    .id.value,
+            )
+        }
+
     private fun TestScope.maintenanceHistoryViewModel(
         repository: FakeMaintenanceRecordRepository = FakeMaintenanceRecordRepository(),
         vehicleRepository: FakeVehicleRepository = FakeVehicleRepository(listOf(vehicle)),
         nextRecordId: () -> MaintenanceRecordId = { MaintenanceRecordId("record-test") },
         localDate: CalendarDate = CalendarDate("2026-07-17"),
+        reminderRepository: FakeReminderRepository = FakeReminderRepository(),
     ): MaintenanceHistoryViewModel {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         return MaintenanceHistoryViewModel(
@@ -326,12 +406,15 @@ class MaintenanceHistoryViewModelTest {
                     default = dispatcher,
                     main = dispatcher,
                 ),
-            createMaintenanceRecordFromInputUseCase =
-                CreateMaintenanceRecordFromInputUseCase(
-                    CreateMaintenanceRecordUseCase(repository),
+            createMaintenanceWithReminderFromInputUseCase =
+                CreateMaintenanceWithReminderFromInputUseCase(
+                    CreateMaintenanceWithReminderUseCase(
+                        CreateMaintenanceRecordUseCase(repository),
+                        CreateAutomaticReminderUseCase(reminderRepository, FakeNotificationScheduler()),
+                    ),
                 ),
             getVehicleHistoryUseCase = GetVehicleHistoryUseCase(repository),
-            deleteMaintenanceRecordUseCase = DeleteMaintenanceRecordUseCase(repository),
+            deleteMaintenanceRecordUseCase = DeleteMaintenanceRecordUseCase(repository, reminderRepository, FakeNotificationScheduler()),
             vehicleRepository = vehicleRepository,
             nextRecordId = nextRecordId,
             localDateProvider = LocalDateProvider { localDate },
@@ -392,4 +475,30 @@ private class FakeVehicleRepository(
     override suspend fun saveVehicle(vehicle: Vehicle) = Unit
 
     override suspend fun deleteVehicle(vehicleId: VehicleId) = Unit
+}
+
+private class FakeReminderRepository : ReminderRepository {
+    val savedReminders = mutableListOf<Reminder>()
+
+    override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> =
+        savedReminders.filter { it.familyId == familyId && !it.isCompleted }
+
+    override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> = savedReminders.filter { it.vehicleId == vehicleId }
+
+    override suspend fun saveReminder(reminder: Reminder) {
+        savedReminders.removeAll { it.id == reminder.id }
+        savedReminders += reminder
+    }
+
+    override suspend fun markReminderCompleted(reminderId: ReminderId) = Unit
+
+    override suspend fun deleteReminder(reminderId: ReminderId) {
+        savedReminders.removeAll { it.id == reminderId }
+    }
+}
+
+private class FakeNotificationScheduler : ReminderNotificationScheduler {
+    override suspend fun schedule(plan: ReminderNotificationPlan) = Unit
+
+    override suspend fun cancel(reminderId: ReminderId) = Unit
 }

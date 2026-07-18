@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
-import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceRecordFromInputUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceRecordInput
+import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderFromInputUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.GetVehicleHistoryUseCase
 import com.asensiodev.carbura.core.domain.sync.SyncManager
@@ -13,6 +13,7 @@ import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
+import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import kotlinx.coroutines.CancellationException
@@ -32,7 +33,7 @@ class MaintenanceHistoryViewModel(
     private val vehicleId: VehicleId,
     private val familyId: FamilyId,
     private val dispatchers: DispatcherProvider,
-    private val createMaintenanceRecordFromInputUseCase: CreateMaintenanceRecordFromInputUseCase,
+    private val createMaintenanceWithReminderFromInputUseCase: CreateMaintenanceWithReminderFromInputUseCase,
     private val getVehicleHistoryUseCase: GetVehicleHistoryUseCase,
     private val deleteMaintenanceRecordUseCase: DeleteMaintenanceRecordUseCase,
     private val vehicleRepository: VehicleRepository,
@@ -41,6 +42,7 @@ class MaintenanceHistoryViewModel(
     private val localDateProvider: LocalDateProvider = LocalDateProvider(::deviceLocalDate),
     private val coroutineScope: CoroutineScope? = null,
 ) : ViewModel() {
+    private var pendingRecordId: MaintenanceRecordId? = null
     private val _uiState = MutableStateFlow(MaintenanceHistoryUiState(performedOn = localDateProvider.currentDate().iso8601))
     val uiState: StateFlow<MaintenanceHistoryUiState> = _uiState.asStateFlow()
 
@@ -56,8 +58,24 @@ class MaintenanceHistoryViewModel(
             MaintenanceHistoryEvent.Retry,
             -> scope.launch { loadHistory(showLoading = true) }
             MaintenanceHistoryEvent.Refresh -> scope.launch { loadHistory(showLoading = false) }
-            is MaintenanceHistoryEvent.TypeChanged -> updateForm { it.copy(type = event.value, validationError = null) }
+            is MaintenanceHistoryEvent.TypeSelected ->
+                updateForm {
+                    it.copy(
+                        maintenanceTypeCode = event.value,
+                        customTypeLabel = if (event.value == MaintenanceTypeCode.Custom) it.customTypeLabel else "",
+                        nextDueDate =
+                            if (event.value == MaintenanceTypeCode.Itv || event.value == MaintenanceTypeCode.Insurance) {
+                                it.nextDueDate
+                            } else {
+                                ""
+                            },
+                        validationError = null,
+                    )
+                }
+            is MaintenanceHistoryEvent.CustomTypeLabelChanged ->
+                updateForm { it.copy(customTypeLabel = event.value, validationError = null) }
             is MaintenanceHistoryEvent.PerformedOnChanged -> updateForm { it.copy(performedOn = event.value, validationError = null) }
+            is MaintenanceHistoryEvent.NextDueDateChanged -> updateForm { it.copy(nextDueDate = event.value, validationError = null) }
             is MaintenanceHistoryEvent.OdometerChanged -> updateForm { it.copy(odometerKm = event.value, validationError = null) }
             is MaintenanceHistoryEvent.CostChanged -> updateForm { it.copy(cost = event.value, validationError = null) }
             is MaintenanceHistoryEvent.WorkshopChanged -> updateForm { it.copy(workshop = event.value, validationError = null) }
@@ -104,26 +122,30 @@ class MaintenanceHistoryViewModel(
         val state = _uiState.value
         val input =
             CreateMaintenanceRecordInput(
-                id = nextRecordId(),
+                id = pendingRecordId ?: nextRecordId().also { pendingRecordId = it },
                 familyId = familyId,
                 vehicleId = vehicleId,
-                type = state.type,
                 performedOn = state.performedOn,
                 odometerKm = state.odometerKm,
                 cost = state.cost,
                 workshop = state.workshop,
                 notes = state.notes,
+                maintenanceTypeCode = state.maintenanceTypeCode,
+                customTypeLabel = state.customTypeLabel,
+                nextDueDate = state.nextDueDate,
             )
 
         try {
-            when (val result = withContext(dispatchers.io) { createMaintenanceRecordFromInputUseCase(input) }) {
+            when (val result = withContext(dispatchers.io) { createMaintenanceWithReminderFromInputUseCase(input) }) {
                 is DomainResult.Success -> {
                     val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
                     _uiState.update {
                         it.copy(
                             records = records,
-                            type = "",
+                            maintenanceTypeCode = MaintenanceTypeCode.Itv,
+                            customTypeLabel = "",
                             performedOn = localDateProvider.currentDate().iso8601,
+                            nextDueDate = "",
                             odometerKm = "0",
                             cost = "",
                             workshop = "",
@@ -131,7 +153,14 @@ class MaintenanceHistoryViewModel(
                             validationError = null,
                         )
                     }
-                    _effects.send(MaintenanceHistoryEffect.MaintenanceCreated(input.type.trim()))
+                    pendingRecordId = null
+                    _effects.send(
+                        MaintenanceHistoryEffect.MaintenanceCreated(
+                            typeCode = input.maintenanceTypeCode,
+                            customTypeLabel = input.customTypeLabel.orEmpty().trim(),
+                            reminderCreated = result.value.generatedReminder != null,
+                        ),
+                    )
                     syncAfterMutation()
                 }
 

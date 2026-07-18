@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reminder_notification_channel_name">Reminders</string>
+    <string name="reminder_notification_default_title">Pending reminder</string>
+    <string name="reminder_notification_default_body">You have a pending Carbura reminder.</string>
+    <string name="reminder_notification_unknown_date">a date yet to be confirmed</string>
+    <string name="itv_reminder_notification_title">Upcoming vehicle inspection</string>
+    <string name="itv_reminder_notification_body">Your inspection expires on %1$s. Plan the inspection.</string>
+    <string name="insurance_reminder_notification_title">Insurance renewal</string>
+    <string name="insurance_reminder_notification_early_body">Your policy expires on %1$s. Review it now: the usual notice period is at least one month, but check your policy terms.</string>
+    <string name="insurance_reminder_notification_notice_body">Your policy expires on %1$s. About one week remains before the usual one-month notice threshold; check your policy terms.</string>
+    <string name="insurance_reminder_notification_final_body">Your policy expires on %1$s. Review the renewal and your policy\'s notice terms now.</string>
+</resources>

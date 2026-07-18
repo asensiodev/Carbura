@@ -5,6 +5,7 @@ import com.asensiodev.carbura.core.domain.SuspendUseCase
 import com.asensiodev.carbura.core.domain.ValidationFailure
 import com.asensiodev.carbura.core.domain.maintenance.repository.MaintenanceRecordRepository
 import com.asensiodev.carbura.core.model.MaintenanceRecord
+import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 
 class CreateMaintenanceRecordUseCase(
     private val repository: MaintenanceRecordRepository,
@@ -20,7 +21,15 @@ class CreateMaintenanceRecordUseCase(
             return DomainResult.ValidationError(ValidationFailure.NegativeMaintenanceCost)
         }
 
-        repository.saveMaintenanceRecord(params)
-        return DomainResult.Success(params)
+        val normalized =
+            params.copy(
+                nextDueDate =
+                    params.nextDueDate.takeIf {
+                        params.maintenanceTypeCode == MaintenanceTypeCode.Itv ||
+                            params.maintenanceTypeCode == MaintenanceTypeCode.Insurance
+                    },
+            )
+        repository.saveMaintenanceRecord(normalized)
+        return DomainResult.Success(normalized)
     }
 }

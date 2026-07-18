@@ -31,6 +31,7 @@ kotlin {
         implementation(project.dependencies.platform(libs.androidx.compose.bom))
         implementation(libs.androidx.compose.ui.test.junit4)
         implementation(libs.androidx.test.espresso.core)
+        implementation(libs.androidx.test.ext.junit)
         implementation(libs.androidx.test.runner)
     }
 }

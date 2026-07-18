@@ -1,6 +1,7 @@
 package com.asensiodev.carbura.feature.garage.presentation.overview
 
 import app.cash.turbine.test
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
@@ -151,7 +152,7 @@ private class EmptyReminderRepository : ReminderRepository {
 }
 
 private class EmptyScheduler : ReminderNotificationScheduler {
-    override suspend fun schedule(reminder: Reminder) = Unit
+    override suspend fun schedule(plan: ReminderNotificationPlan) = Unit
 
     override suspend fun cancel(reminderId: ReminderId) = Unit
 }

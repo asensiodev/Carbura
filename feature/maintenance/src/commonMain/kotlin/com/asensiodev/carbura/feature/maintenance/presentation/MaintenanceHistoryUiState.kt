@@ -2,14 +2,17 @@ package com.asensiodev.carbura.feature.maintenance.presentation
 
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
+import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.stringresources.CarburaString
 
 data class MaintenanceHistoryUiState(
     val vehicle: Vehicle? = null,
     val records: List<MaintenanceRecord> = emptyList(),
-    val type: String = "",
+    val maintenanceTypeCode: MaintenanceTypeCode = MaintenanceTypeCode.Itv,
+    val customTypeLabel: String = "",
     val performedOn: String,
+    val nextDueDate: String = "",
     val odometerKm: String = "0",
     val cost: String = "",
     val workshop: String = "",
@@ -22,6 +25,9 @@ data class MaintenanceHistoryUiState(
     val isEmpty: Boolean = records.isEmpty() && loadState == MaintenanceLoadState.Content
 
     val isSaving: Boolean = activeMutation == MaintenanceMutation.Saving
+
+    val supportsNextDueDate: Boolean =
+        maintenanceTypeCode == MaintenanceTypeCode.Itv || maintenanceTypeCode == MaintenanceTypeCode.Insurance
 }
 
 enum class MaintenanceLoadState {

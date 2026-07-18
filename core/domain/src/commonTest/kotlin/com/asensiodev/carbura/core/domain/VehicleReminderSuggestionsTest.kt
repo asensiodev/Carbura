@@ -1,5 +1,6 @@
 package com.asensiodev.carbura.core.domain
 
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderAlertKind
 import com.asensiodev.carbura.core.domain.reminder.usecase.DeriveVehicleReminderSuggestionsUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.SaveVehicleWithRemindersParams
 import com.asensiodev.carbura.core.domain.reminder.usecase.SaveVehicleWithRemindersUseCase
@@ -66,6 +67,7 @@ class VehicleReminderSuggestionsTest {
             assertEquals(2, reminderRepository.savedReminders.size)
             assertEquals(CalendarDate("2027-06-10"), reminderRepository.savedReminders.single { it.id != manual.id }.dueDate)
             assertEquals(2, scheduler.scheduledReminders.size)
+            assertTrue(scheduler.scheduledPlans.all { it.alerts.single().kind == ReminderAlertKind.Manual })
         }
 
     @Test

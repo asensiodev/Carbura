@@ -12,7 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
-import androidx.test.runner.AndroidJUnit4
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.asensiodev.carbura.core.designsystem.CarburaTheme
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
@@ -78,13 +78,37 @@ class MaintenanceHistoryScreenTest {
     @Test
     fun fieldValidationAndSaveRemainVisibleAtLargeText() {
         setScreen(
-            state = state(validationError = CarburaString.ValidationBlankMaintenanceType),
+            state =
+                state(validationError = CarburaString.ValidationBlankMaintenanceType).copy(
+                    maintenanceTypeCode = MaintenanceTypeCode.Custom,
+                ),
             fontScale = 2f,
         )
 
         composeRule.onAllNodesWithText("Añadir")[0].performClick()
-        composeRule.onNodeWithText("Introduce un tipo de mantenimiento.").assertIsDisplayed()
+        composeRule
+            .onNodeWithText("Introduce un nombre para el mantenimiento personalizado.")
+            .performScrollTo()
+            .assertIsDisplayed()
         composeRule.onNodeWithText("Guardar mantenimiento").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun canonicalTypeShowsOnlyItsConditionalFields() {
+        setScreen(state = state().copy(maintenanceTypeCode = MaintenanceTypeCode.Itv))
+
+        composeRule.onAllNodesWithText("Añadir")[0].performClick()
+        composeRule.onNodeWithText("Próxima fecha de ITV (opcional)").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Nombre del mantenimiento").assertCountEquals(0)
+    }
+
+    @Test
+    fun customTypeShowsLabelAndHidesNextDate() {
+        setScreen(state = state().copy(maintenanceTypeCode = MaintenanceTypeCode.Custom))
+
+        composeRule.onAllNodesWithText("Añadir")[0].performClick()
+        composeRule.onNodeWithText("Nombre del mantenimiento").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Próxima fecha de ITV (opcional)").assertCountEquals(0)
     }
 
     private fun setScreen(
@@ -103,8 +127,10 @@ class MaintenanceHistoryScreenTest {
                         maintenanceCreatedSignal = 0,
                         maintenanceSuccessSignal = 0,
                         onBack = {},
-                        onTypeChange = {},
+                        onTypeSelected = {},
+                        onCustomTypeLabelChange = {},
                         onPerformedOnChange = {},
+                        onNextDueDateChange = {},
                         onOdometerChange = {},
                         onCostChange = {},
                         onWorkshopChange = {},

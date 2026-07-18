@@ -1,5 +1,6 @@
 package com.asensiodev.carbura.core.domain
 
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderAlertKind
 import com.asensiodev.carbura.core.domain.reminder.usecase.CreateAutomaticReminderUseCase
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
@@ -11,68 +12,118 @@ import kotlin.test.assertNull
 
 class CreateAutomaticReminderUseCaseTest {
     @Test
-    fun itvRecordWithDueDateCreatesReminder() =
+    fun itvRecordWithDueDateCreatesDeterministicReminderAndPlan() =
         runTest {
             val repository = FakeReminderRepository()
-            val useCase = CreateAutomaticReminderUseCase(repository, FakeReminderNotificationScheduler()) { ReminderId("reminder-1") }
-            val record =
-                testMaintenanceRecord(
-                    code = MaintenanceTypeCode.Itv,
-                    nextDueDate = "2027-07-01",
-                )
+            val scheduler = FakeReminderNotificationScheduler()
+            val useCase = CreateAutomaticReminderUseCase(repository, scheduler)
+            val record = testMaintenanceRecord(code = MaintenanceTypeCode.Itv, nextDueDate = "2027-07-01")
 
-            val reminder = useCase(record)
+            val generated = useCase(record)
 
-            assertEquals(ReminderId("reminder-1"), reminder?.id)
-            assertEquals("Proxima ITV", reminder?.title)
-            assertEquals(CalendarDate("2027-07-01"), reminder?.dueDate)
-            assertEquals(30, reminder?.notifyDaysBefore)
-            assertEquals(listOf(reminder), repository.savedReminders)
+            assertEquals(ReminderId("maintenance-reminder:record-1"), generated?.reminder?.id)
+            assertEquals("Proxima ITV", generated?.reminder?.title)
+            assertEquals(CalendarDate("2027-07-01"), generated?.reminder?.dueDate)
+            assertEquals(60, generated?.reminder?.notifyDaysBefore)
+            assertEquals(listOf(generated?.reminder), repository.savedReminders)
+            assertEquals(listOf(generated?.notificationPlan), scheduler.scheduledPlans)
+            assertEquals(
+                listOf(ReminderAlertKind.Itv60Days, ReminderAlertKind.Itv30Days, ReminderAlertKind.Itv7Days),
+                generated?.notificationPlan?.alerts?.map { it.kind },
+            )
         }
 
     @Test
-    fun insuranceRecordWithDueDateCreatesReminder() =
+    fun insuranceRecordWithDueDateCreatesPrimary45DayReminder() =
         runTest {
             val repository = FakeReminderRepository()
-            val useCase = CreateAutomaticReminderUseCase(repository, FakeReminderNotificationScheduler()) { ReminderId("reminder-1") }
-            val record =
-                testMaintenanceRecord(
-                    code = MaintenanceTypeCode.Insurance,
-                    nextDueDate = "2027-07-01",
+            val generated =
+                CreateAutomaticReminderUseCase(repository, FakeReminderNotificationScheduler())(
+                    testMaintenanceRecord(code = MaintenanceTypeCode.Insurance, nextDueDate = "2027-07-01"),
                 )
 
-            val reminder = useCase(record)
+            assertEquals("Proximo seguro", generated?.reminder?.title)
+            assertEquals(45, generated?.reminder?.notifyDaysBefore)
+            assertEquals(listOf(generated?.reminder), repository.savedReminders)
+        }
 
-            assertEquals("Proximo seguro", reminder?.title)
-            assertEquals(listOf(reminder), repository.savedReminders)
+    @Test
+    fun retryUpsertsSameLogicalReminderAndAlertIdentities() =
+        runTest {
+            val repository = FakeReminderRepository()
+            val scheduler = FakeReminderNotificationScheduler()
+            val useCase = CreateAutomaticReminderUseCase(repository, scheduler)
+            val record = testMaintenanceRecord(code = MaintenanceTypeCode.Itv, nextDueDate = "2027-07-01")
+
+            val first = useCase(record)
+            val retry = useCase(record)
+
+            assertEquals(first?.reminder?.id, retry?.reminder?.id)
+            assertEquals(first?.notificationPlan, retry?.notificationPlan)
+            assertEquals(1, repository.savedReminders.size)
         }
 
     @Test
     fun recordWithoutDueDateSkipsReminder() =
         runTest {
             val repository = FakeReminderRepository()
-            val useCase = CreateAutomaticReminderUseCase(repository, FakeReminderNotificationScheduler()) { ReminderId("reminder-1") }
+            val scheduler = FakeReminderNotificationScheduler()
 
-            val reminder = useCase(testMaintenanceRecord(nextDueDate = null))
+            val generated = CreateAutomaticReminderUseCase(repository, scheduler)(testMaintenanceRecord())
 
-            assertNull(reminder)
+            assertNull(generated)
             assertEquals(emptyList(), repository.savedReminders)
+            assertEquals(listOf(ReminderId("maintenance-reminder:record-1")), repository.deletedReminderIds)
+            assertEquals(listOf("maintenance-reminder:record-1"), scheduler.cancelledReminderIds)
         }
 
     @Test
     fun nonReminderMaintenanceSkipsReminder() =
         runTest {
             val repository = FakeReminderRepository()
-            val useCase = CreateAutomaticReminderUseCase(repository, FakeReminderNotificationScheduler()) { ReminderId("reminder-1") }
-            val record =
-                testMaintenanceRecord(
-                    code = MaintenanceTypeCode.OilChange,
-                    nextDueDate = "2027-07-01",
+
+            val generated =
+                CreateAutomaticReminderUseCase(repository, FakeReminderNotificationScheduler())(
+                    testMaintenanceRecord(code = MaintenanceTypeCode.OilChange, nextDueDate = "2027-07-01"),
                 )
 
-            val reminder = useCase(record)
-
-            assertNull(reminder)
+            assertNull(generated)
             assertEquals(emptyList(), repository.savedReminders)
+        }
+
+    @Test
+    fun retryWithoutDateReconcilesReminderCreatedBeforePartialFailure() =
+        runTest {
+            val repository = FakeReminderRepository()
+            val scheduler = FakeReminderNotificationScheduler().apply { failSchedules = true }
+            val useCase = CreateAutomaticReminderUseCase(repository, scheduler)
+            val eligible = testMaintenanceRecord(code = MaintenanceTypeCode.Itv, nextDueDate = "2027-07-01")
+            runCatching { useCase(eligible) }
+            assertEquals(1, repository.savedReminders.size)
+
+            scheduler.failSchedules = false
+            val retry = useCase(eligible.copy(nextDueDate = null))
+
+            assertNull(retry)
+            assertEquals(emptyList(), repository.savedReminders)
+            assertEquals(listOf(ReminderId("maintenance-reminder:record-1")), repository.deletedReminderIds)
+            assertEquals(listOf("maintenance-reminder:record-1"), scheduler.cancelledReminderIds)
+        }
+
+    @Test
+    fun retryAsUnsupportedTypeReconcilesPriorGeneratedReminder() =
+        runTest {
+            val repository = FakeReminderRepository()
+            val scheduler = FakeReminderNotificationScheduler()
+            val useCase = CreateAutomaticReminderUseCase(repository, scheduler)
+            val eligible = testMaintenanceRecord(code = MaintenanceTypeCode.Insurance, nextDueDate = "2027-07-01")
+            useCase(eligible)
+
+            val retry = useCase(eligible.copy(maintenanceTypeCode = MaintenanceTypeCode.Repair))
+
+            assertNull(retry)
+            assertEquals(emptyList(), repository.savedReminders)
+            assertEquals(listOf(ReminderId("maintenance-reminder:record-1")), repository.deletedReminderIds)
+            assertEquals("maintenance-reminder:record-1", scheduler.cancelledReminderIds.last())
         }
 }

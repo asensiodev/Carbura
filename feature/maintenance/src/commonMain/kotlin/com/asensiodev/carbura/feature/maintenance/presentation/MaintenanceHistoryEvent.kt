@@ -1,6 +1,7 @@
 package com.asensiodev.carbura.feature.maintenance.presentation
 
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
+import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 
 sealed interface MaintenanceHistoryEvent {
     data object Started : MaintenanceHistoryEvent
@@ -9,11 +10,19 @@ sealed interface MaintenanceHistoryEvent {
 
     data object Refresh : MaintenanceHistoryEvent
 
-    data class TypeChanged(
+    data class TypeSelected(
+        val value: MaintenanceTypeCode,
+    ) : MaintenanceHistoryEvent
+
+    data class CustomTypeLabelChanged(
         val value: String,
     ) : MaintenanceHistoryEvent
 
     data class PerformedOnChanged(
+        val value: String,
+    ) : MaintenanceHistoryEvent
+
+    data class NextDueDateChanged(
         val value: String,
     ) : MaintenanceHistoryEvent
 

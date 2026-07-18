@@ -28,6 +28,14 @@ kotlin {
         implementation(libs.kotlinx.coroutines.test)
         implementation(libs.sqldelight.sqlite.driver)
     }
+
+    sourceSets.androidUnitTest.dependencies {
+        implementation(libs.robolectric)
+    }
+}
+
+android {
+    testOptions.unitTests.isIncludeAndroidResources = true
 }
 
 sqldelight {

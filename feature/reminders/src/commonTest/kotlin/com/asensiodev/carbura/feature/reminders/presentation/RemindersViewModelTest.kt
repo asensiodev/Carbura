@@ -1,7 +1,9 @@
 package com.asensiodev.carbura.feature.reminders.presentation
 
 import app.cash.turbine.test
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
+import com.asensiodev.carbura.core.domain.reminder.notification.maintenanceReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
 import com.asensiodev.carbura.core.domain.reminder.usecase.CompleteReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.CreateReminderUseCase
@@ -10,6 +12,7 @@ import com.asensiodev.carbura.core.domain.reminder.usecase.GetPendingRemindersUs
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
+import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.ReminderId
 import com.asensiodev.carbura.core.model.Vehicle
@@ -69,6 +72,24 @@ class RemindersViewModelTest {
             assertEquals(listOf(vehicle), state.vehicles)
             assertEquals(listOf("itv"), state.reminders.map { it.id.value })
             assertEquals(vehicle.id, state.selectedVehicleId)
+        }
+
+    @Test
+    fun generatedReminderWithThreeAlertInstancesIsOnePendingItem() =
+        runTest {
+            val generatedReminder = reminder("maintenance-reminder:record-1")
+            val plan = maintenanceReminderNotificationPlan(generatedReminder, MaintenanceTypeCode.Itv)
+            val viewModel =
+                remindersViewModel(
+                    vehicleRepository = FakeVehicleRepository(listOf(vehicle)),
+                    reminderRepository = FakeReminderRepository(listOf(generatedReminder)),
+                )
+
+            viewModel.onEvent(RemindersEvent.Started)
+            advanceUntilIdle()
+
+            assertEquals(3, plan?.alerts?.size)
+            assertEquals(listOf(generatedReminder), viewModel.uiState.value.reminders)
         }
 
     @Test
@@ -352,6 +373,7 @@ private class FakeReminderRepository(
         saveCalls += 1
         saveGate?.await()
         if (failSaves) error("reminder save failed")
+        savedReminders.removeAll { it.id == reminder.id }
         savedReminders += reminder
     }
 
@@ -368,7 +390,7 @@ private class FakeReminderRepository(
 }
 
 private class FakeReminderNotificationScheduler : ReminderNotificationScheduler {
-    override suspend fun schedule(reminder: Reminder) = Unit
+    override suspend fun schedule(plan: ReminderNotificationPlan) = Unit
 
     override suspend fun cancel(reminderId: ReminderId) = Unit
 }

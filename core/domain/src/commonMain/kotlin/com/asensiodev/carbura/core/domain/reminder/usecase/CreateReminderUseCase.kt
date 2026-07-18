@@ -4,6 +4,7 @@ import com.asensiodev.carbura.core.domain.DomainResult
 import com.asensiodev.carbura.core.domain.SuspendUseCase
 import com.asensiodev.carbura.core.domain.ValidationFailure
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
+import com.asensiodev.carbura.core.domain.reminder.notification.manualReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
 import com.asensiodev.carbura.core.model.Reminder
 
@@ -31,7 +32,7 @@ class CreateReminderUseCase(
 
         repository.saveReminder(params)
         if (params.dueDate != null && !params.isCompleted) {
-            notificationScheduler.schedule(params)
+            notificationScheduler.schedule(manualReminderNotificationPlan(params))
         } else {
             notificationScheduler.cancel(params.id)
         }

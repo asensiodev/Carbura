@@ -49,6 +49,8 @@ dependencies {
 
     debugImplementation(libs.bundles.compose.debug)
     testImplementation(kotlin("test"))
+    testImplementation(projects.core.model)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
 
 tasks.named("preBuild") {

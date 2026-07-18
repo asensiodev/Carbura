@@ -103,6 +103,37 @@ class LocalRepositoriesTest {
         }
 
     @Test
+    fun maintenanceRepositoryRoundTripsCanonicalTypesAndNextDueDates() =
+        runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
+            val repository = LocalMaintenanceRecordRepository(firstDatabase)
+            val itv = record("itv", "2026-07-01", MaintenanceTypeCode.Itv, "2027-07-01")
+            val insurance = record("insurance", "2026-07-02", MaintenanceTypeCode.Insurance, "2027-07-02")
+
+            repository.saveMaintenanceRecord(itv)
+            repository.saveMaintenanceRecord(insurance)
+
+            val records = LocalMaintenanceRecordRepository(recreatedDatabase).getVehicleHistory(vehicleId)
+            assertEquals(listOf(insurance, itv), records)
+        }
+
+    @Test
+    fun generatedRecordAndReminderAreBothPendingSync() =
+        runTestWithRecreatedDatabase { database, _ ->
+            val record = record("record-1", "2026-07-01", MaintenanceTypeCode.Itv, "2027-07-01")
+            val generatedReminder = reminder("maintenance-reminder:record-1", dueDate = "2027-07-01")
+            LocalMaintenanceRecordRepository(database).saveMaintenanceRecord(record)
+            LocalReminderRepository(database).saveReminder(generatedReminder)
+
+            val syncDataSource = SqlDelightLocalSyncDataSource(database)
+
+            assertEquals(true, syncDataSource.getPendingMaintenanceRecords().single().pendingSync)
+            assertEquals("Itv", syncDataSource.getPendingMaintenanceRecords().single().maintenanceTypeCode)
+            assertEquals("2027-07-01", syncDataSource.getPendingMaintenanceRecords().single().nextDueDate)
+            assertEquals(true, syncDataSource.getPendingReminders().single().pendingSync)
+            assertEquals("maintenance-reminder:record-1", syncDataSource.getPendingReminders().single().id)
+        }
+
+    @Test
     fun maintenanceRepositoryDeletesRecordFromRecreatedDatabase() =
         runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
             val repository = LocalMaintenanceRecordRepository(firstDatabase)
@@ -224,15 +255,18 @@ class LocalRepositoriesTest {
     private fun record(
         id: String,
         performedOn: String,
+        code: MaintenanceTypeCode = MaintenanceTypeCode.Custom,
+        nextDueDate: String? = null,
     ): MaintenanceRecord =
         MaintenanceRecord(
             id = MaintenanceRecordId(id),
             familyId = familyId,
             vehicleId = vehicleId,
             maintenanceTypeId = MaintenanceTypeId("type-$id"),
-            maintenanceTypeCode = MaintenanceTypeCode.Custom,
+            maintenanceTypeCode = code,
             performedOn = CalendarDate(performedOn),
             odometerKm = 1,
+            nextDueDate = nextDueDate?.let(::CalendarDate),
         )
 
     private fun reminder(

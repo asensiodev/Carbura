@@ -11,36 +11,58 @@ import com.asensiodev.carbura.core.model.MaintenanceTypeId
 class CreateMaintenanceRecordFromInputUseCase(
     private val createMaintenanceRecordUseCase: CreateMaintenanceRecordUseCase,
 ) : SuspendUseCase<CreateMaintenanceRecordInput, DomainResult<MaintenanceRecord>> {
-    override suspend fun invoke(params: CreateMaintenanceRecordInput): DomainResult<MaintenanceRecord> {
-        val type = params.type.trim()
-        if (type.isBlank()) {
-            return DomainResult.ValidationError(ValidationFailure.BlankMaintenanceType)
+    override suspend fun invoke(params: CreateMaintenanceRecordInput): DomainResult<MaintenanceRecord> =
+        when (val result = params.toMaintenanceRecord()) {
+            is DomainResult.Success -> createMaintenanceRecordUseCase(result.value)
+            is DomainResult.ValidationError -> result
         }
+}
 
-        val performedOn =
-            runCatching { CalendarDate(params.performedOn.trim()) }.getOrNull()
-                ?: return DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceDate)
-        val odometerKm = params.odometerKm.toIntOrNull() ?: -1
-        val costCents =
-            params.cost.toCostCentsOrNull()
-                ?: if (params.cost.isBlank()) null else return DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceCost)
-        val maintenanceTypeId = MaintenanceTypeId("type-${type.lowercase().replace(' ', '-')}")
-
-        val record =
-            MaintenanceRecord(
-                id = params.id,
-                familyId = params.familyId,
-                vehicleId = params.vehicleId,
-                maintenanceTypeId = maintenanceTypeId,
-                maintenanceTypeCode = MaintenanceTypeCode.Custom,
-                performedOn = performedOn,
-                odometerKm = odometerKm,
-                costCents = costCents,
-                workshop = params.workshop.trim().ifBlank { null },
-                notes = params.notes.trim().ifBlank { null },
-            )
-        return createMaintenanceRecordUseCase(record)
+internal fun CreateMaintenanceRecordInput.toMaintenanceRecord(): DomainResult<MaintenanceRecord> {
+    val customTypeLabel = customTypeLabel?.trim() ?: type.trim()
+    if (maintenanceTypeCode == MaintenanceTypeCode.Custom && customTypeLabel.isBlank()) {
+        return DomainResult.ValidationError(ValidationFailure.BlankMaintenanceType)
     }
+
+    val performedOn =
+        runCatching { CalendarDate(this.performedOn.trim()) }.getOrNull()
+            ?: return DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceDate)
+    val odometerKm = this.odometerKm.toIntOrNull() ?: -1
+    val costCents =
+        this.cost.toCostCentsOrNull()
+            ?: if (this.cost.isBlank()) null else return DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceCost)
+    val nextDueDate =
+        if (maintenanceTypeCode == MaintenanceTypeCode.Itv || maintenanceTypeCode == MaintenanceTypeCode.Insurance) {
+            this.nextDueDate.trim().ifBlank { null }?.let {
+                runCatching { CalendarDate(it) }.getOrNull()
+                    ?: return DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceDate)
+            }
+        } else {
+            null
+        }
+    val maintenanceTypeId =
+        MaintenanceTypeId(
+            if (maintenanceTypeCode == MaintenanceTypeCode.Custom) {
+                "type-${customTypeLabel.lowercase().replace(' ', '-')}"
+            } else {
+                "type-${maintenanceTypeCode.name.lowercase()}"
+            },
+        )
+    return DomainResult.Success(
+        MaintenanceRecord(
+            id = id,
+            familyId = familyId,
+            vehicleId = vehicleId,
+            maintenanceTypeId = maintenanceTypeId,
+            maintenanceTypeCode = maintenanceTypeCode,
+            performedOn = performedOn,
+            odometerKm = odometerKm,
+            costCents = costCents,
+            workshop = workshop.trim().ifBlank { null },
+            notes = notes.trim().ifBlank { null },
+            nextDueDate = nextDueDate,
+        ),
+    )
 }
 
 private fun String.toCostCentsOrNull(): Int? {

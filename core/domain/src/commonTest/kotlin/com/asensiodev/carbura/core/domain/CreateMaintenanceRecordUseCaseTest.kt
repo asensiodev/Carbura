@@ -1,6 +1,7 @@
 package com.asensiodev.carbura.core.domain
 
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceRecordUseCase
+import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -48,5 +49,19 @@ class CreateMaintenanceRecordUseCaseTest {
                 result,
             )
             assertTrue(repository.savedRecords.isEmpty())
+        }
+
+    @Test
+    fun unsupportedTypeNormalizesNextDueDateBeforePersistence() =
+        runTest {
+            val repository = FakeMaintenanceRecordRepository()
+            val useCase = CreateMaintenanceRecordUseCase(repository)
+            val input = testMaintenanceRecord(code = MaintenanceTypeCode.Repair, nextDueDate = "2027-07-01")
+
+            val result = useCase(input)
+
+            val expected = input.copy(nextDueDate = null)
+            assertEquals(DomainResult.Success(expected), result)
+            assertEquals(listOf(expected), repository.savedRecords)
         }
 }

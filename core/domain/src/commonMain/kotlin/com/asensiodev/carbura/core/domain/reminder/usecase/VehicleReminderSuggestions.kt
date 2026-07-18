@@ -1,6 +1,7 @@
 package com.asensiodev.carbura.core.domain.reminder.usecase
 
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
+import com.asensiodev.carbura.core.domain.reminder.notification.manualReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.model.Reminder
@@ -84,7 +85,7 @@ class SaveVehicleWithRemindersUseCase(
             } else {
                 reminderRepository.saveReminder(suggestion.reminder)
                 if (suggestion.reminder.dueDate != null) {
-                    notificationScheduler.schedule(suggestion.reminder)
+                    notificationScheduler.schedule(manualReminderNotificationPlan(suggestion.reminder))
                 } else {
                     notificationScheduler.cancel(id)
                 }

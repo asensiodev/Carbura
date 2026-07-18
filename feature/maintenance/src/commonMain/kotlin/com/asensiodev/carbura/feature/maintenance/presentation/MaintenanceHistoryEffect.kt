@@ -1,10 +1,13 @@
 package com.asensiodev.carbura.feature.maintenance.presentation
 
+import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.stringresources.CarburaString
 
 sealed interface MaintenanceHistoryEffect {
     data class MaintenanceCreated(
-        val type: String,
+        val typeCode: MaintenanceTypeCode,
+        val customTypeLabel: String,
+        val reminderCreated: Boolean,
     ) : MaintenanceHistoryEffect
 
     data class MaintenanceDeleted(

@@ -7,8 +7,10 @@ import com.asensiodev.carbura.core.model.VehicleId
 
 internal class FakeMaintenanceRecordRepository : MaintenanceRecordRepository {
     val savedRecords = mutableListOf<MaintenanceRecord>()
+    var failDeletes = false
 
     override suspend fun saveMaintenanceRecord(record: MaintenanceRecord) {
+        savedRecords.removeAll { it.id == record.id }
         savedRecords += record
     }
 
@@ -16,6 +18,7 @@ internal class FakeMaintenanceRecordRepository : MaintenanceRecordRepository {
         savedRecords.filter { it.vehicleId == vehicleId }
 
     override suspend fun deleteMaintenanceRecord(recordId: MaintenanceRecordId) {
+        if (failDeletes) error("maintenance delete failed")
         savedRecords.removeAll { it.id == recordId }
     }
 }
