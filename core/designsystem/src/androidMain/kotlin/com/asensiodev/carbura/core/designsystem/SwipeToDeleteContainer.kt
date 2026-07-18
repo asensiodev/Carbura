@@ -6,17 +6,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import kotlin.math.abs
 
 @Composable
 fun SwipeToDeleteContainer(
@@ -27,15 +32,18 @@ fun SwipeToDeleteContainer(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    val dismissState =
+    val rowWidthPx = remember { mutableIntStateOf(0) }
+    lateinit var dismissState: SwipeToDismissBoxState
+    dismissState =
         rememberSwipeToDismissBoxState(
             confirmValueChange = { value ->
-                if (enabled && value == SwipeToDismissBoxValue.EndToStart) {
+                val draggedFarEnough = abs(dismissState.requireOffset()) >= rowWidthPx.intValue * 0.6f
+                if (enabled && value == SwipeToDismissBoxValue.EndToStart && draggedFarEnough) {
                     onDeleteRequest()
                 }
                 false
             },
-            positionalThreshold = { distance -> distance * 0.35f },
+            positionalThreshold = { distance -> distance * 0.6f },
         )
     SwipeToDismissBox(
         state = dismissState,
@@ -58,6 +66,7 @@ fun SwipeToDeleteContainer(
         },
         modifier =
             modifier
+                .onSizeChanged { rowWidthPx.intValue = it.width }
                 .clip(MaterialTheme.shapes.medium)
                 .semantics {
                     if (enabled) {

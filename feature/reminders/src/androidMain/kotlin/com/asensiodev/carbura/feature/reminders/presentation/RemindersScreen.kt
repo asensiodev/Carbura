@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -47,6 +46,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -56,6 +56,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -67,6 +68,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -257,9 +259,33 @@ internal fun RemindersScreen(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val showAddReminderAction = !state.isLoading && !state.hasLoadError && !state.hasNoVehicles && !state.isEmpty
         val useCompactAddAction = maxWidth < 600.dp
+        val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
             containerColor = MaterialTheme.colorScheme.background,
+            topBar = {
+                MediumTopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(R.string.reminders_title),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    },
+                    actions = {
+                        if (showAddReminderAction && !useCompactAddAction) {
+                            TextButton(onClick = { showReminderSheet = true }) {
+                                Text(stringResource(R.string.add_reminder_button))
+                            }
+                        }
+                    },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background,
+                            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        ),
+                    scrollBehavior = scrollBehavior,
+                )
+            },
             floatingActionButton = {
                 if (showAddReminderAction && useCompactAddAction) {
                     ExtendedFloatingActionButton(
@@ -275,9 +301,9 @@ internal fun RemindersScreen(
                     )
                 }
             },
-        ) { _ ->
+        ) { innerPadding ->
             Box(
-                modifier = Modifier.fillMaxSize().statusBarsPadding(),
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentAlignment = Alignment.TopCenter,
             ) {
                 LazyColumn(
@@ -296,12 +322,6 @@ internal fun RemindersScreen(
                         ),
                     verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
                 ) {
-                    item {
-                        RemindersHeader(
-                            showAddReminderAction = showAddReminderAction && !useCompactAddAction,
-                            onAddReminder = { showReminderSheet = true },
-                        )
-                    }
                     if (notificationPermissionState != NotificationPermissionState.Granted) {
                         item {
                             NotificationPermissionCard(
@@ -521,30 +541,6 @@ private fun NoVehiclesCard(onNavigateToGarage: () -> Unit) {
                 Text(stringResource(R.string.go_to_garage_button))
             }
         }
-    }
-}
-
-@Composable
-private fun RemindersHeader(
-    showAddReminderAction: Boolean,
-    onAddReminder: () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
-        Text(
-            text = stringResource(R.string.reminders_title),
-            style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.semantics { heading() },
-        )
-        if (showAddReminderAction) {
-            Button(onClick = onAddReminder) {
-                Text(stringResource(R.string.add_reminder_button))
-            }
-        }
-        Text(
-            text = stringResource(R.string.reminders_subtitle),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 

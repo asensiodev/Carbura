@@ -7,7 +7,6 @@
     <string name="sync_failure_message">No se pudo sincronizar. Tus cambios siguen guardados en este dispositivo.</string>
     <string name="sync_retry_action">Reintentar</string>
     <string name="user_title">Usuario</string>
-    <string name="user_subtitle">Tu cuenta y tu espacio familiar en Carbura.</string>
     <string name="user_profile_title">Perfil</string>
     <string name="user_profile_fallback_name">Usuario</string>
     <string name="user_family_title">Familia</string>

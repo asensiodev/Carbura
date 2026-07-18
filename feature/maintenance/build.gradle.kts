@@ -20,6 +20,7 @@ kotlin {
 
     sourceSets.androidMain.dependencies {
         implementation(projects.core.designsystem)
+        implementation(libs.androidx.activity.compose)
         implementation(project.dependencies.platform(libs.androidx.compose.bom))
         implementation(libs.androidx.compose.material.icons.core)
         implementation(libs.androidx.compose.material3)

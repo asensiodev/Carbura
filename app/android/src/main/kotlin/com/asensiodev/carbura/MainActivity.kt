@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -32,6 +31,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -41,6 +41,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -53,8 +54,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -403,177 +406,189 @@ private fun UserRoute(
 ) {
     val resolvedDisplayName = displayName.cleanUserText() ?: stringResource(R.string.user_profile_fallback_name)
     val resolvedFamilyName = familyName.cleanUserText() ?: stringResource(R.string.user_family_fallback_name)
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(Spacings.spacing24),
-            verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
+    Scaffold(
+        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            MediumTopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.user_title),
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                },
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
+                scrollBehavior = scrollBehavior,
+            )
+        },
+    ) { innerPadding ->
+        Surface(
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            color = MaterialTheme.colorScheme.background,
         ) {
-            Text(
-                text = stringResource(R.string.user_title),
-                style = MaterialTheme.typography.headlineLarge,
-            )
-            Text(
-                text = stringResource(R.string.user_subtitle),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(Spacings.spacing16),
-                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
-                ) {
-                    Text(
-                        text = stringResource(R.string.user_profile_title),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        text = resolvedDisplayName,
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                    if (email != null) {
-                        Text(
-                            text = email,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(Spacings.spacing16),
-                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(Spacings.spacing24),
+                verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
+            ) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(Spacings.spacing16),
+                        verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
                     ) {
                         Text(
-                            text = stringResource(R.string.user_sync_title),
+                            text = stringResource(R.string.user_profile_title),
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
-                            text =
-                                when {
-                                    syncStatus.isSyncing -> stringResource(R.string.user_syncing_status)
-                                    syncStatus.lastErrorMessage != null -> stringResource(R.string.user_sync_pending)
-                                    syncStatus.lastSyncedAtMillis != null -> stringResource(R.string.user_sync_ready)
-                                    else -> stringResource(R.string.user_sync_pending)
-                                },
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = resolvedDisplayName,
+                            style = MaterialTheme.typography.titleLarge,
                         )
-                    }
-                    if (syncStatus.isSyncing) {
-                        LinearProgressIndicator(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        )
-                    }
-                    Text(
-                        text = stringResource(R.string.user_sync_description),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text =
-                            syncStatus.lastSyncedAtMillis?.let {
-                                stringResource(R.string.user_sync_last, it.formatSyncTime())
-                            } ?: stringResource(R.string.user_sync_never),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    syncStatus.lastErrorMessage?.let { error ->
-                        Column(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = Spacings.spacing4),
-                            verticalArrangement = Arrangement.spacedBy(Spacings.spacing4),
-                        ) {
+                        if (email != null) {
                             Text(
-                                text = stringResource(R.string.user_sync_error_title),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                            Text(
-                                text = stringResource(R.string.user_sync_error_description),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                text = stringResource(R.string.user_sync_error_detail, error),
-                                style = MaterialTheme.typography.labelSmall,
+                                text = email,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
-                    Button(
-                        onClick = onSyncNow,
-                        enabled = !syncStatus.isSyncing,
-                        modifier = Modifier.fillMaxWidth(),
+                }
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(Spacings.spacing16),
+                        verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
                     ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.user_sync_title),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                text =
+                                    when {
+                                        syncStatus.isSyncing -> stringResource(R.string.user_syncing_status)
+                                        syncStatus.lastErrorMessage != null -> stringResource(R.string.user_sync_pending)
+                                        syncStatus.lastSyncedAtMillis != null -> stringResource(R.string.user_sync_ready)
+                                        else -> stringResource(R.string.user_sync_pending)
+                                    },
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (syncStatus.isSyncing) {
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            )
+                        }
+                        Text(
+                            text = stringResource(R.string.user_sync_description),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Text(
                             text =
-                                if (syncStatus.isSyncing) {
-                                    stringResource(R.string.user_syncing_button)
-                                } else {
-                                    stringResource(R.string.user_sync_now_button)
-                                },
+                                syncStatus.lastSyncedAtMillis?.let {
+                                    stringResource(R.string.user_sync_last, it.formatSyncTime())
+                                } ?: stringResource(R.string.user_sync_never),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        syncStatus.lastErrorMessage?.let { error ->
+                            Column(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = Spacings.spacing4),
+                                verticalArrangement = Arrangement.spacedBy(Spacings.spacing4),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.user_sync_error_title),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                                Text(
+                                    text = stringResource(R.string.user_sync_error_description),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    text = stringResource(R.string.user_sync_error_detail, error),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        Button(
+                            onClick = onSyncNow,
+                            enabled = !syncStatus.isSyncing,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                text =
+                                    if (syncStatus.isSyncing) {
+                                        stringResource(R.string.user_syncing_button)
+                                    } else {
+                                        stringResource(R.string.user_sync_now_button)
+                                    },
+                            )
+                        }
+                    }
+                }
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(Spacings.spacing16),
+                        verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.user_family_title),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            text = resolvedFamilyName,
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        Text(
+                            text = stringResource(R.string.user_family_description),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = stringResource(R.string.user_family_deferred_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
-            }
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(Spacings.spacing16),
-                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
-                ) {
-                    Text(
-                        text = stringResource(R.string.user_family_title),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        text = resolvedFamilyName,
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.user_family_description),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = stringResource(R.string.user_family_deferred_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(Spacings.spacing16),
-                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
-                ) {
-                    Text(
-                        text = stringResource(R.string.user_session_title),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Button(
-                        onClick = onSignOut,
-                        modifier = Modifier.fillMaxWidth(),
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(Spacings.spacing16),
+                        verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
                     ) {
-                        Text(stringResource(R.string.user_sign_out_button))
+                        Text(
+                            text = stringResource(R.string.user_session_title),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Button(
+                            onClick = onSignOut,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.user_sign_out_button))
+                        }
                     }
                 }
             }

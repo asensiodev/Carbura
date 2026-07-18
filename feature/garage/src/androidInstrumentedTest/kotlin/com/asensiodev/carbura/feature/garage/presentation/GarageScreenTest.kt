@@ -18,6 +18,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -171,8 +172,11 @@ class GarageScreenTest {
         composeRule.onNodeWithTag("full_screen_vehicle_editor").assertIsDisplayed()
         composeRule.onNodeWithText("Editar vehículo").assertIsDisplayed()
         composeRule.onNodeWithText("Datos del vehículo").assertIsDisplayed()
-        composeRule.onNodeWithText("Próxima revisión en km (opcional)").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithTag("full_screen_vehicle_save").assertIsDisplayed().performClick()
+        val serviceOdometer = composeRule.onNodeWithTag("vehicle_edit_next_service_odometer")
+        serviceOdometer.performScrollTo().performClick().performTextReplacement("130000")
+        serviceOdometer.assertIsFocused().assertIsDisplayed()
+        val save = composeRule.onNodeWithTag("full_screen_vehicle_save").assertIsDisplayed()
+        save.performClick()
         composeRule.runOnIdle { assert(submitted) }
     }
 
@@ -236,8 +240,9 @@ class GarageScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("garage_vehicle_list").performScrollToIndex(9)
+        composeRule.onNodeWithTag("garage_vehicle_list").performScrollToIndex(8)
         val finalCard = composeRule.onNodeWithTag("vehicle_card_vehicle-8").assertIsDisplayed()
+        composeRule.onNodeWithText("Garaje").assertIsDisplayed()
         val fab = composeRule.onNodeWithTag("garage_add_vehicle_fab").assertIsDisplayed().assertHasClickAction()
         fab.assertContentDescriptionEquals("Añadir vehículo")
         composeRule.onNodeWithTag("garage_vehicle_list").performTouchInput { swipeUp() }

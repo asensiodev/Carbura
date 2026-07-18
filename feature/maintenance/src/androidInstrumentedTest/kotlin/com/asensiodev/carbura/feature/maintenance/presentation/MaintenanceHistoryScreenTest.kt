@@ -5,15 +5,19 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.asensiodev.carbura.core.designsystem.CarburaTheme
 import com.asensiodev.carbura.core.model.CalendarDate
@@ -83,36 +87,68 @@ class MaintenanceHistoryScreenTest {
             fontScale = 2f,
         )
 
-        composeRule.onAllNodesWithText("Añadir")[0].performClick()
+        composeRule.onNodeWithTag("add_maintenance_fab").performClick()
+        composeRule.onNodeWithTag("full_screen_maintenance_form").assertIsDisplayed()
         composeRule
             .onNodeWithText("Introduce un nombre para el mantenimiento personalizado.")
             .performScrollTo()
             .assertIsDisplayed()
-        composeRule.onNodeWithText("Guardar mantenimiento").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithTag("save_maintenance_button").assertIsDisplayed()
     }
 
     @Test
     fun canonicalTypeShowsOnlyItsConditionalFields() {
         setScreen(state = state().copy(maintenanceTypeCode = MaintenanceTypeCode.Itv))
 
-        composeRule.onAllNodesWithText("Añadir")[0].performClick()
+        composeRule.onNodeWithTag("add_maintenance_fab").performClick()
         composeRule.onNodeWithText("Próxima fecha de ITV (opcional)").assertIsDisplayed()
-        composeRule.onAllNodesWithText("Nombre del mantenimiento").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Especifica el mantenimiento").assertCountEquals(0)
     }
 
     @Test
     fun customTypeShowsLabelAndHidesNextDate() {
         setScreen(state = state().copy(maintenanceTypeCode = MaintenanceTypeCode.Custom))
 
-        composeRule.onAllNodesWithText("Añadir")[0].performClick()
-        composeRule.onNodeWithText("Nombre del mantenimiento").assertIsDisplayed()
+        composeRule.onNodeWithTag("add_maintenance_fab").performClick()
+        composeRule.onNodeWithText("Especifica el mantenimiento").assertIsDisplayed()
         composeRule.onAllNodesWithText("Próxima fecha de ITV (opcional)").assertCountEquals(0)
+    }
+
+    @Test
+    fun typeDropdownRespectsFormPaddingAndDispatchesCustomSelection() {
+        var selectedType: MaintenanceTypeCode? = null
+        setScreen(
+            state = state(),
+            onTypeSelected = { selectedType = it },
+        )
+
+        composeRule.onNodeWithTag("add_maintenance_fab").performClick()
+        val dropdown = composeRule.onNodeWithTag("maintenance_type_dropdown").assertIsDisplayed()
+        val dropdownBounds = dropdown.getBoundsInRoot()
+        check(dropdownBounds.left >= 24.dp)
+
+        composeRule.onAllNodesWithText("Otro").assertCountEquals(0)
+        dropdown.performClick()
+        composeRule.onNodeWithText("Otro").assertIsDisplayed().performClick()
+        composeRule.runOnIdle { check(selectedType == MaintenanceTypeCode.Custom) }
+    }
+
+    @Test
+    fun keyboardKeepsFocusedFieldAndSaveActionVisible() {
+        setScreen(state = state())
+
+        composeRule.onNodeWithTag("add_maintenance_fab").performClick()
+        val workshop = composeRule.onNodeWithTag("maintenance_workshop_input")
+        workshop.performScrollTo().performClick().performTextInput("Taller")
+        workshop.assertIsFocused().assertIsDisplayed()
+        composeRule.onNodeWithTag("save_maintenance_button").assertIsDisplayed()
     }
 
     private fun setScreen(
         state: MaintenanceHistoryUiState,
         onRetry: () -> Unit = {},
         onDeleteMaintenance: (MaintenanceRecord) -> Unit = {},
+        onTypeSelected: (MaintenanceTypeCode) -> Unit = {},
         fontScale: Float = 1f,
     ) {
         composeRule.setContent {
@@ -125,7 +161,7 @@ class MaintenanceHistoryScreenTest {
                         maintenanceCreatedSignal = 0,
                         maintenanceSuccessSignal = 0,
                         onBack = {},
-                        onTypeSelected = {},
+                        onTypeSelected = onTypeSelected,
                         onCustomTypeLabelChange = {},
                         onPerformedOnChange = {},
                         onNextDueDateChange = {},

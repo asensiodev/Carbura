@@ -1,13 +1,15 @@
 package com.asensiodev.carbura.feature.maintenance.presentation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -18,12 +20,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -31,23 +32,27 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,10 +61,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -211,14 +217,15 @@ internal fun MaintenanceHistoryScreen(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showMaintenanceSheet by remember { mutableStateOf(false) }
+    var showMaintenanceForm by remember { mutableStateOf(false) }
     var recordPendingDeletion by remember { mutableStateOf<MaintenanceRecord?>(null) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val snackbarHostState = remember { SnackbarHostState() }
+    val isCompact = LocalConfiguration.current.screenWidthDp < 600
+    val canAddMaintenance = state.vehicle != null
 
     LaunchedEffect(maintenanceCreatedSignal) {
         if (maintenanceCreatedSignal > 0) {
-            showMaintenanceSheet = false
+            showMaintenanceForm = false
         }
     }
 
@@ -234,7 +241,12 @@ internal fun MaintenanceHistoryScreen(
             containerColor = MaterialTheme.colorScheme.background,
             topBar = {
                 TopAppBar(
-                    title = { Text(stringResource(R.string.maintenance_title)) },
+                    title = {
+                        Text(
+                            text = stringResource(R.string.maintenance_title),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(
@@ -243,7 +255,33 @@ internal fun MaintenanceHistoryScreen(
                             )
                         }
                     },
+                    actions = {
+                        if (!isCompact && canAddMaintenance) {
+                            TextButton(onClick = { showMaintenanceForm = true }) {
+                                Text(stringResource(R.string.add_maintenance_fab))
+                            }
+                        }
+                    },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
                 )
+            },
+            floatingActionButton = {
+                if (isCompact && canAddMaintenance) {
+                    ExtendedFloatingActionButton(
+                        onClick = { showMaintenanceForm = true },
+                        modifier = Modifier.testTag("add_maintenance_fab"),
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                            )
+                        },
+                        text = { Text(stringResource(R.string.add_maintenance_fab)) },
+                    )
+                }
             },
         ) { innerPadding ->
             Box(
@@ -258,15 +296,17 @@ internal fun MaintenanceHistoryScreen(
                         Modifier
                             .fillMaxSize()
                             .widthIn(max = 720.dp),
-                    contentPadding = PaddingValues(Spacings.spacing24),
+                    contentPadding =
+                        PaddingValues(
+                            start = Spacings.spacing24,
+                            top = Spacings.spacing24,
+                            end = Spacings.spacing24,
+                            bottom = if (isCompact && canAddMaintenance) 104.dp else Spacings.spacing24,
+                        ),
                     verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
                 ) {
                     state.vehicle?.let { vehicle ->
                         item { VehicleContextCard(vehicle) }
-                    }
-
-                    item {
-                        MaintenanceHeader(onAddMaintenance = { showMaintenanceSheet = true })
                     }
 
                     item {
@@ -300,7 +340,7 @@ internal fun MaintenanceHistoryScreen(
                         MaintenanceLoadState.Error -> item { LoadErrorCard(onRetry) }
                         MaintenanceLoadState.Content -> {
                             if (state.isEmpty) {
-                                item { EmptyHistoryCard(onAddMaintenance = { showMaintenanceSheet = true }) }
+                                item { EmptyHistoryCard(onAddMaintenance = { showMaintenanceForm = true }) }
                             } else {
                                 items(state.records, key = { it.id.value }) { record ->
                                     MaintenanceRecordCard(
@@ -327,35 +367,20 @@ internal fun MaintenanceHistoryScreen(
         )
     }
 
-    if (showMaintenanceSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showMaintenanceSheet = false },
-            sheetState = sheetState,
-        ) {
-            MaintenanceForm(
-                state = state,
-                onTypeSelected = onTypeSelected,
-                onCustomTypeLabelChange = onCustomTypeLabelChange,
-                onPerformedOnChange = onPerformedOnChange,
-                onNextDueDateChange = onNextDueDateChange,
-                onOdometerChange = onOdometerChange,
-                onCostChange = onCostChange,
-                onWorkshopChange = onWorkshopChange,
-                onNotesChange = onNotesChange,
-                onSubmitMaintenance = onSubmitMaintenance,
-                modifier =
-                    Modifier
-                        .fillMaxHeight()
-                        .widthIn(max = 720.dp)
-                        .navigationBarsPadding()
-                        .imePadding()
-                        .padding(
-                            start = Spacings.spacing24,
-                            end = Spacings.spacing24,
-                            bottom = Spacings.spacing24,
-                        ),
-            )
-        }
+    if (showMaintenanceForm) {
+        FullScreenMaintenanceForm(
+            state = state,
+            onDismissRequest = { if (state.activeMutation == null) showMaintenanceForm = false },
+            onTypeSelected = onTypeSelected,
+            onCustomTypeLabelChange = onCustomTypeLabelChange,
+            onPerformedOnChange = onPerformedOnChange,
+            onNextDueDateChange = onNextDueDateChange,
+            onOdometerChange = onOdometerChange,
+            onCostChange = onCostChange,
+            onWorkshopChange = onWorkshopChange,
+            onNotesChange = onNotesChange,
+            onSubmitMaintenance = onSubmitMaintenance,
+        )
     }
 
     recordPendingDeletion?.let { record ->
@@ -410,23 +435,103 @@ private fun LoadingStateCard(message: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MaintenanceHeader(onAddMaintenance: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
+private fun FullScreenMaintenanceForm(
+    state: MaintenanceHistoryUiState,
+    onDismissRequest: () -> Unit,
+    onTypeSelected: (MaintenanceTypeCode) -> Unit,
+    onCustomTypeLabelChange: (String) -> Unit,
+    onPerformedOnChange: (String) -> Unit,
+    onNextDueDateChange: (String) -> Unit,
+    onOdometerChange: (String) -> Unit,
+    onCostChange: (String) -> Unit,
+    onWorkshopChange: (String) -> Unit,
+    onNotesChange: (String) -> Unit,
+    onSubmitMaintenance: () -> Unit,
+) {
+    BackHandler(onBack = onDismissRequest)
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    Surface(
+        modifier = Modifier.fillMaxSize().testTag("full_screen_maintenance_form"),
+        color = MaterialTheme.colorScheme.background,
     ) {
-        Text(
-            text = stringResource(R.string.maintenance_subtitle),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Button(onClick = onAddMaintenance) {
-            Text(stringResource(R.string.add_maintenance_button))
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(R.string.maintenance_form_title),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(
+                            onClick = onDismissRequest,
+                            enabled = state.activeMutation == null,
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.close_maintenance_form),
+                            )
+                        }
+                    },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                )
+            },
+            bottomBar = {
+                if (!imeVisible) {
+                    Surface(shadowElevation = 8.dp) {
+                        Button(
+                            onClick = onSubmitMaintenance,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .navigationBarsPadding()
+                                    .padding(Spacings.spacing16)
+                                    .testTag("save_maintenance_button"),
+                            enabled = state.activeMutation == null,
+                        ) {
+                            Text(
+                                if (state.isSaving) {
+                                    stringResource(R.string.maintenance_saving_status)
+                                } else {
+                                    stringResource(R.string.save_maintenance_button)
+                                },
+                            )
+                        }
+                    }
+                }
+            },
+        ) { contentPadding ->
+            Box(
+                modifier = Modifier.fillMaxSize().padding(contentPadding).imePadding(),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                MaintenanceForm(
+                    state = state,
+                    onTypeSelected = onTypeSelected,
+                    onCustomTypeLabelChange = onCustomTypeLabelChange,
+                    onPerformedOnChange = onPerformedOnChange,
+                    onNextDueDateChange = onNextDueDateChange,
+                    onOdometerChange = onOdometerChange,
+                    onCostChange = onCostChange,
+                    onWorkshopChange = onWorkshopChange,
+                    onNotesChange = onNotesChange,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .widthIn(max = 720.dp),
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MaintenanceForm(
     state: MaintenanceHistoryUiState,
@@ -438,10 +543,10 @@ private fun MaintenanceForm(
     onCostChange: (String) -> Unit,
     onWorkshopChange: (String) -> Unit,
     onNotesChange: (String) -> Unit,
-    onSubmitMaintenance: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val customTypeErrorRequester = remember { BringIntoViewRequester() }
+    var typeMenuExpanded by remember { mutableStateOf(false) }
     LaunchedEffect(state.validationError) {
         if (state.validationError == CarburaString.ValidationBlankMaintenanceType) {
             customTypeErrorRequester.bringIntoView()
@@ -451,33 +556,44 @@ private fun MaintenanceForm(
         modifier =
             modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    start = Spacings.spacing24,
+                    top = Spacings.spacing8,
+                    end = Spacings.spacing24,
+                    bottom = Spacings.spacing24,
+                ),
         verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
     ) {
-        Text(
-            text = stringResource(R.string.maintenance_form_title),
-            modifier = Modifier.semantics { heading() },
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(stringResource(R.string.maintenance_type_label), style = MaterialTheme.typography.labelLarge)
-        Column(Modifier.selectableGroup()) {
-            MaintenanceTypeCode.entries.forEach { type ->
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .selectable(
-                                selected = state.maintenanceTypeCode == type,
-                                onClick = { onTypeSelected(type) },
-                                role = Role.RadioButton,
-                            ).padding(vertical = Spacings.spacing4),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(
-                        selected = state.maintenanceTypeCode == type,
-                        onClick = null,
+        ExposedDropdownMenuBox(
+            expanded = typeMenuExpanded,
+            onExpandedChange = { typeMenuExpanded = it },
+        ) {
+            OutlinedTextField(
+                value = state.maintenanceTypeCode.localizedLabel(),
+                onValueChange = {},
+                modifier =
+                    Modifier
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                        .fillMaxWidth()
+                        .testTag("maintenance_type_dropdown"),
+                readOnly = true,
+                label = { Text(stringResource(R.string.maintenance_type_label)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeMenuExpanded) },
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            )
+            ExposedDropdownMenu(
+                expanded = typeMenuExpanded,
+                onDismissRequest = { typeMenuExpanded = false },
+            ) {
+                MaintenanceTypeCode.entries.forEach { type ->
+                    DropdownMenuItem(
+                        text = { Text(type.localizedLabel()) },
+                        onClick = {
+                            onTypeSelected(type)
+                            typeMenuExpanded = false
+                        },
                     )
-                    Text(type.localizedLabel(), style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }
@@ -554,7 +670,7 @@ private fun MaintenanceForm(
         OutlinedTextField(
             value = state.workshop,
             onValueChange = onWorkshopChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("maintenance_workshop_input"),
             label = { Text(stringResource(R.string.maintenance_workshop_label)) },
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
             singleLine = true,
@@ -581,19 +697,6 @@ private fun MaintenanceForm(
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-        Button(
-            onClick = onSubmitMaintenance,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = state.activeMutation == null,
-        ) {
-            Text(
-                if (state.isSaving) {
-                    stringResource(R.string.maintenance_saving_status)
-                } else {
-                    stringResource(R.string.save_maintenance_button)
-                },
             )
         }
     }

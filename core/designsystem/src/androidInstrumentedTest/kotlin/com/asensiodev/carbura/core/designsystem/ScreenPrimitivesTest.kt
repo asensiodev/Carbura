@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -21,6 +22,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -133,6 +135,14 @@ class ScreenPrimitivesTest {
         }
 
         composeRule.onNodeWithTag("swipe-row").assert(SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions))
+        composeRule.onNodeWithTag("swipe-row").performTouchInput {
+            swipe(
+                start = Offset(width * 0.9f, height / 2f),
+                end = Offset(width * 0.45f, height / 2f),
+                durationMillis = 1_000,
+            )
+        }
+        composeRule.runOnIdle { assertEquals(0, deleteRequests) }
         composeRule.onNodeWithTag("swipe-row").performTouchInput { swipeLeft() }
         composeRule.runOnIdle { assertEquals(1, deleteRequests) }
     }

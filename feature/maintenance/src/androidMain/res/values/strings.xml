@@ -2,9 +2,10 @@
 <resources>
     <string name="maintenance_back_button">Volver</string>
     <string name="maintenance_title">Mantenimiento</string>
-    <string name="maintenance_subtitle">Registra trabajos y consulta el historial del vehículo.</string>
     <string name="maintenance_form_title">Nuevo mantenimiento</string>
+    <string name="close_maintenance_form">Cerrar nuevo mantenimiento</string>
     <string name="add_maintenance_button">Añadir</string>
+    <string name="add_maintenance_fab">Añadir mantenimiento</string>
     <string name="maintenance_type_label">Tipo de mantenimiento</string>
     <string name="maintenance_type_itv">ITV</string>
     <string name="maintenance_type_insurance">Seguro</string>
@@ -12,8 +13,8 @@
     <string name="maintenance_type_tires">Neumáticos</string>
     <string name="maintenance_type_general_review">Revisión general</string>
     <string name="maintenance_type_repair">Reparación</string>
-    <string name="maintenance_type_custom">Personalizado</string>
-    <string name="maintenance_custom_type_label">Nombre del mantenimiento</string>
+    <string name="maintenance_type_custom">Otro</string>
+    <string name="maintenance_custom_type_label">Especifica el mantenimiento</string>
     <string name="maintenance_date_label">Fecha realizada</string>
     <string name="maintenance_next_itv_date_label">Próxima fecha de ITV (opcional)</string>
     <string name="maintenance_next_insurance_date_label">Próxima fecha de renovación del seguro (opcional)</string>

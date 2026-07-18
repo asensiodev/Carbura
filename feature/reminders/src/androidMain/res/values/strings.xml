@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="reminders_title">Recordatorios</string>
-    <string name="reminders_subtitle">Planifica próximas revisiones por fecha o kilometraje.</string>
     <string name="reminders_form_title">Nuevo recordatorio</string>
     <string name="reminder_title_label">Título</string>
     <string name="reminder_due_date_label">Fecha objetivo (opcional)</string>

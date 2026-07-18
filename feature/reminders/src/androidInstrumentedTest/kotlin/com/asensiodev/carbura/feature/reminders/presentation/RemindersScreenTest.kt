@@ -102,8 +102,9 @@ class RemindersScreenTest {
         val reminders = (1..8).map { reminder(id = "reminder-$it", title = "Recordatorio $it") }
         composeRule.setRemindersContent(state = loadedState(reminders = reminders))
 
-        composeRule.onNodeWithTag("reminders_content").performScrollToIndex(9)
+        composeRule.onNodeWithTag("reminders_content").performScrollToIndex(8)
         composeRule.onNodeWithTag("reminder_card_reminder-8").assertIsDisplayed()
+        composeRule.onNodeWithText("Recordatorios").assertIsDisplayed()
         val finalItemBounds = composeRule.onNodeWithTag("reminder_card_reminder-8").getBoundsInRoot()
         val fabBounds = composeRule.onNodeWithTag("add_reminder_fab").getBoundsInRoot()
         assertTrue(finalItemBounds.bottom <= fabBounds.top)

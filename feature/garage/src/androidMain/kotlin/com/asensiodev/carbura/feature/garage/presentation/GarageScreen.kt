@@ -6,15 +6,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -39,6 +40,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -61,7 +63,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -266,6 +270,9 @@ internal fun GarageScreen(
     val isCompact = LocalConfiguration.current.screenWidthDp < 600
     val showCompactAddAction =
         isCompact && overviewState.loadState == GarageLoadState.Loaded && !overviewState.isEmpty
+    val showExpandedAddAction =
+        !isCompact && overviewState.loadState == GarageLoadState.Loaded && !overviewState.isEmpty
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     LaunchedEffect(vehicleCreatedSignal) {
         if (vehicleCreatedSignal > 0) {
@@ -281,8 +288,31 @@ internal fun GarageScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
             containerColor = MaterialTheme.colorScheme.background,
+            topBar = {
+                MediumTopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(R.string.garage_title),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    },
+                    actions = {
+                        if (showExpandedAddAction) {
+                            TextButton(onClick = { showVehicleSheet = true }) {
+                                Text(stringResource(R.string.add_vehicle_button))
+                            }
+                        }
+                    },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background,
+                            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        ),
+                    scrollBehavior = scrollBehavior,
+                )
+            },
             floatingActionButton = {
                 if (showCompactAddAction) {
                     val addVehicleLabel = stringResource(R.string.add_vehicle_fab)
@@ -302,8 +332,8 @@ internal fun GarageScreen(
                     )
                 }
             },
-        ) { _ ->
-            ConstrainedScreen(modifier = Modifier.statusBarsPadding()) {
+        ) { innerPadding ->
+            ConstrainedScreen(modifier = Modifier.padding(innerPadding)) {
                 LazyColumn(
                     modifier =
                         Modifier
@@ -316,16 +346,6 @@ internal fun GarageScreen(
                         ),
                     verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
                 ) {
-                    item {
-                        GarageHeader(
-                            showAddVehicleAction =
-                                !isCompact &&
-                                    overviewState.loadState == GarageLoadState.Loaded &&
-                                    !overviewState.isEmpty,
-                            onAddVehicle = { showVehicleSheet = true },
-                        )
-                    }
-
                     when (overviewState.loadState) {
                         GarageLoadState.Loading -> {
                             item {
@@ -576,6 +596,7 @@ private fun FullScreenVehicleEditor(
     onSubmit: () -> Unit,
 ) {
     BackHandler(onBack = onDismissRequest)
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Surface(
         modifier = Modifier.fillMaxSize().testTag("full_screen_vehicle_editor"),
         color = MaterialTheme.colorScheme.background,
@@ -609,19 +630,20 @@ private fun FullScreenVehicleEditor(
                 )
             },
             bottomBar = {
-                Surface(shadowElevation = 8.dp) {
-                    Button(
-                        onClick = onSubmit,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .navigationBarsPadding()
-                                .imePadding()
-                                .padding(Spacings.spacing16)
-                                .testTag("full_screen_vehicle_save"),
-                        enabled = !isSaving,
-                    ) {
-                        Text(stringResource(if (isSaving) R.string.saving_vehicle else R.string.save_changes_button))
+                if (!imeVisible) {
+                    Surface(shadowElevation = 8.dp) {
+                        Button(
+                            onClick = onSubmit,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .navigationBarsPadding()
+                                    .padding(Spacings.spacing16)
+                                    .testTag("full_screen_vehicle_save"),
+                            enabled = !isSaving,
+                        ) {
+                            Text(stringResource(if (isSaving) R.string.saving_vehicle else R.string.save_changes_button))
+                        }
                     }
                 }
             },
@@ -756,7 +778,7 @@ private fun VehicleEditFields(
         OutlinedTextField(
             value = state.editNextServiceOdometerKm,
             onValueChange = onNextServiceOdometerChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("vehicle_edit_next_service_odometer"),
             label = { Text(stringResource(R.string.next_service_odometer_label)) },
             isError =
                 state.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
@@ -895,25 +917,6 @@ private fun PersistenceErrorText(message: String) {
         color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodyMedium,
     )
-}
-
-@Composable
-private fun GarageHeader(
-    showAddVehicleAction: Boolean,
-    onAddVehicle: () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
-        Text(
-            text = stringResource(R.string.garage_title),
-            modifier = Modifier.semantics { heading() },
-            style = MaterialTheme.typography.headlineLarge,
-        )
-        if (showAddVehicleAction) {
-            Button(onClick = onAddVehicle) {
-                Text(stringResource(R.string.add_vehicle_button))
-            }
-        }
-    }
 }
 
 @Composable
