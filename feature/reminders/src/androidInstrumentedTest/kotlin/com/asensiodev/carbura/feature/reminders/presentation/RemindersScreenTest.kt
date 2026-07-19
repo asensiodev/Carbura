@@ -4,9 +4,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.getBoundsInRoot
@@ -151,12 +155,100 @@ class RemindersScreenTest {
         composeRule.onNodeWithTag("reminders_content").assertWidthIsEqualTo(720.dp)
     }
 
+    @Test
+    fun remindersTitleAlignsWithFilterContent() {
+        val vehicle = vehicle("vehicle-1", "Coche familiar")
+        composeRule.setRemindersContent(
+            state = loadedState(reminders = listOf(reminder(vehicleId = vehicle.id)), vehicles = listOf(vehicle)),
+        )
+
+        val titleLeft = composeRule.onNodeWithTag("reminders_title").getBoundsInRoot().left
+        val filtersLeft = composeRule.onNodeWithTag("reminder_vehicle_filters").getBoundsInRoot().left
+
+        assertTrue(kotlin.math.abs((titleLeft - filtersLeft).value) < 1f)
+    }
+
+    @Test
+    fun vehicleFiltersAllowMultipleSelectionAndAllClearsThem() {
+        val firstVehicle = vehicle("vehicle-1", "Coche familiar")
+        val secondVehicle = vehicle("vehicle-2", "Moto")
+        var state by
+            mutableStateOf(
+                loadedState(
+                    reminders = listOf(reminder(vehicleId = firstVehicle.id), reminder("reminder-2", vehicleId = secondVehicle.id)),
+                    vehicles = listOf(firstVehicle, secondVehicle),
+                ),
+            )
+        composeRule.setContent {
+            CarburaTheme {
+                remindersScreen(
+                    state = state,
+                    onVehicleFilterToggled = { selectedVehicle ->
+                        state =
+                            state.copy(
+                                selectedFilterVehicleIds =
+                                    if (selectedVehicle.id in state.selectedFilterVehicleIds) {
+                                        state.selectedFilterVehicleIds - selectedVehicle.id
+                                    } else {
+                                        state.selectedFilterVehicleIds + selectedVehicle.id
+                                    },
+                            )
+                    },
+                    onVehicleFiltersCleared = { state = state.copy(selectedFilterVehicleIds = emptySet()) },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("reminder_filter_all").assertIsSelected()
+        composeRule.onNodeWithTag("reminder_filter_vehicle_vehicle-1").performClick()
+        composeRule.onNodeWithTag("reminder_filter_vehicle_vehicle-2").performClick()
+
+        composeRule.onNodeWithTag("reminder_filter_all").assertIsNotSelected()
+        composeRule.onNodeWithTag("reminder_filter_vehicle_vehicle-1").assertIsSelected()
+        composeRule.onNodeWithTag("reminder_filter_vehicle_vehicle-2").assertIsSelected()
+
+        composeRule.onNodeWithTag("reminder_filter_all").performClick().assertIsSelected()
+        composeRule.onNodeWithTag("reminder_filter_vehicle_vehicle-1").assertIsNotSelected()
+        composeRule.onNodeWithTag("reminder_filter_vehicle_vehicle-2").assertIsNotSelected()
+    }
+
+    @Test
+    fun vehicleFiltersScrollHorizontallyToLastVehicle() {
+        val vehicles = (1..20).map { vehicle("vehicle-$it", "Vehículo $it") }
+        composeRule.setRemindersContent(
+            state = loadedState(reminders = listOf(reminder(vehicleId = vehicles.first().id)), vehicles = vehicles),
+        )
+
+        composeRule.onNodeWithTag("reminder_vehicle_filters").assertIsDisplayed()
+        composeRule.onNodeWithTag("reminder_vehicle_filters").performScrollToIndex(20)
+        composeRule.onNodeWithText("Vehículo 20").assertIsDisplayed()
+    }
+
+    @Test
+    fun filteredEmptyStateDiffersFromFamilyEmptyState() {
+        val firstVehicle = vehicle("vehicle-1", "Coche familiar")
+        val secondVehicle = vehicle("vehicle-2", "Moto")
+        composeRule.setRemindersContent(
+            state =
+                loadedState(
+                    reminders = listOf(reminder(vehicleId = firstVehicle.id)),
+                    vehicles = listOf(firstVehicle, secondVehicle),
+                ).copy(selectedFilterVehicleIds = setOf(secondVehicle.id)),
+        )
+
+        composeRule.onNodeWithTag("no_matching_reminders").assertIsDisplayed()
+        composeRule.onNodeWithText("No hay recordatorios para estos vehículos").assertIsDisplayed()
+        composeRule.onNodeWithTag("reminder_card_reminder-1").assertDoesNotExist()
+    }
+
     private fun ComposeContentTestRule.setRemindersContent(
         state: RemindersUiState,
         notificationPermissionState: NotificationPermissionState = NotificationPermissionState.Granted,
         onRetry: () -> Unit = {},
         onNavigateToGarage: () -> Unit = {},
         onDeleteReminder: (Reminder) -> Unit = {},
+        onVehicleFilterToggled: (Vehicle) -> Unit = {},
+        onVehicleFiltersCleared: () -> Unit = {},
     ) {
         setContent {
             CarburaTheme {
@@ -166,6 +258,8 @@ class RemindersScreenTest {
                     onRetry = onRetry,
                     onNavigateToGarage = onNavigateToGarage,
                     onDeleteReminder = onDeleteReminder,
+                    onVehicleFilterToggled = onVehicleFilterToggled,
+                    onVehicleFiltersCleared = onVehicleFiltersCleared,
                 )
             }
         }
@@ -178,6 +272,8 @@ class RemindersScreenTest {
         onRetry: () -> Unit = {},
         onNavigateToGarage: () -> Unit = {},
         onDeleteReminder: (Reminder) -> Unit = {},
+        onVehicleFilterToggled: (Vehicle) -> Unit = {},
+        onVehicleFiltersCleared: () -> Unit = {},
     ) {
         RemindersScreen(
             state = state,
@@ -186,6 +282,8 @@ class RemindersScreenTest {
             reminderSuccessSignal = 0,
             onTitleChange = {},
             onVehicleSelected = {},
+            onVehicleFilterToggled = onVehicleFilterToggled,
+            onVehicleFiltersCleared = onVehicleFiltersCleared,
             onDueDateChange = {},
             onDueOdometerChange = {},
             onSubmitReminder = {},
@@ -212,10 +310,11 @@ class RemindersScreenTest {
     private fun reminder(
         id: String = "reminder-1",
         title: String = "Pasar ITV",
+        vehicleId: VehicleId = VehicleId("missing-vehicle"),
     ) = Reminder(
         id = ReminderId(id),
         familyId = FamilyId("family-1"),
-        vehicleId = VehicleId("missing-vehicle"),
+        vehicleId = vehicleId,
         maintenanceTypeId = null,
         title = title,
         dueDate = CalendarDate("2026-08-01"),

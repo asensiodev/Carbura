@@ -269,6 +269,14 @@ internal fun GarageScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val snackbarHostState = remember { SnackbarHostState() }
     val isCompact = LocalConfiguration.current.screenWidthDp < 600
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val contentStart =
+        if (isCompact) {
+            Spacings.spacing24
+        } else {
+            maxOf(Spacings.spacing48, (screenWidth - 840.dp) / 2)
+        }
+    val titleStartPadding = contentStart - Spacings.spacing16
     val showCompactAddAction =
         isCompact && overviewState.loadState == GarageLoadState.Loaded && !overviewState.isEmpty
     val showExpandedAddAction =
@@ -297,6 +305,7 @@ internal fun GarageScreen(
                         Text(
                             text = stringResource(R.string.garage_title),
                             fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(start = titleStartPadding).testTag("garage_title"),
                         )
                     },
                     actions = {
@@ -342,7 +351,7 @@ internal fun GarageScreen(
                             .testTag("garage_vehicle_list"),
                     contentPadding =
                         PaddingValues(
-                            top = Spacings.spacing24,
+                            top = Spacings.spacing16,
                             bottom = if (showCompactAddAction) 112.dp else Spacings.spacing24,
                         ),
                     verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
@@ -375,13 +384,6 @@ internal fun GarageScreen(
                                     )
                                 }
                             } else {
-                                item {
-                                    Text(
-                                        text = stringResource(R.string.vehicle_list_title),
-                                        modifier = Modifier.semantics { heading() },
-                                        style = MaterialTheme.typography.titleLarge,
-                                    )
-                                }
                                 items(overviewState.vehicles) { vehicle ->
                                     VehicleCard(
                                         vehicle = vehicle,

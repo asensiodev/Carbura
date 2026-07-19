@@ -15,7 +15,6 @@
     <string name="add_vehicle_fab">Añadir vehículo</string>
     <string name="add_first_vehicle_button">Añadir vehículo</string>
     <string name="save_vehicle_button">Guardar vehículo</string>
-    <string name="vehicle_list_title">Tus vehículos</string>
     <string name="garage_loading_message">Cargando tu garaje...</string>
     <string name="garage_load_error_title">No se ha podido cargar el garaje</string>
     <string name="garage_load_error_description">Comprueba el almacenamiento del dispositivo e inténtalo de nuevo.</string>

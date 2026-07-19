@@ -9,7 +9,7 @@
     <string name="add_reminder_button">Añadir recordatorio</string>
     <string name="add_first_reminder_button">Añadir recordatorio</string>
     <string name="save_reminder_button">Guardar recordatorio</string>
-    <string name="pending_reminders_title">Pendientes</string>
+    <string name="all_vehicles_filter">Todos</string>
     <string name="notification_permission_title">Avisos en el móvil</string>
     <string name="notification_permission_description">Activa las notificaciones para recibir recordatorios con fecha aunque no tengas Carbura abierta.</string>
     <string name="notification_permission_action">Activar avisos</string>
@@ -26,6 +26,8 @@
     <string name="empty_reminders_title">Tu agenda está despejada</string>
     <string name="empty_reminders_description">Crea un aviso por fecha o kilometraje para ITV, seguro, aceite o cualquier revisión importante.</string>
     <string name="empty_reminders_hint">Los avisos con fecha podrán aparecer como notificación en tu móvil.</string>
+    <string name="no_matching_reminders_title">No hay recordatorios para estos vehículos</string>
+    <string name="no_matching_reminders_description">Prueba con otros vehículos o selecciona Todos.</string>
     <string name="select_vehicle_title">Vehículo</string>
     <string name="no_vehicles_title">Primero añade un vehículo</string>
     <string name="no_vehicles_description">Necesitas un vehículo para crear recordatorios.</string>

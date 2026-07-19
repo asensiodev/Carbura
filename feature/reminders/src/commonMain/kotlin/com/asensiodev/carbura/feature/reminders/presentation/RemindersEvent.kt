@@ -20,6 +20,12 @@ sealed interface RemindersEvent {
         val vehicleId: VehicleId,
     ) : RemindersEvent
 
+    data class VehicleFilterToggled(
+        val vehicleId: VehicleId,
+    ) : RemindersEvent
+
+    data object VehicleFiltersCleared : RemindersEvent
+
     data class DueDateChanged(
         val value: String,
     ) : RemindersEvent

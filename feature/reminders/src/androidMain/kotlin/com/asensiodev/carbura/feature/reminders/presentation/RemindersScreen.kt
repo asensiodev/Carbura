@@ -26,10 +26,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -44,6 +46,8 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
@@ -93,6 +97,7 @@ import com.asensiodev.carbura.core.designsystem.SwipeToDeleteContainer
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.Vehicle
+import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.featurereminders.R
 import org.koin.core.context.GlobalContext
@@ -197,6 +202,8 @@ fun RemindersRoute(
         reminderSuccessSignal = reminderSuccessSignal,
         onTitleChange = { viewModel.onEvent(RemindersEvent.TitleChanged(it)) },
         onVehicleSelected = { viewModel.onEvent(RemindersEvent.VehicleSelected(it.id)) },
+        onVehicleFilterToggled = { viewModel.onEvent(RemindersEvent.VehicleFilterToggled(it.id)) },
+        onVehicleFiltersCleared = { viewModel.onEvent(RemindersEvent.VehicleFiltersCleared) },
         onDueDateChange = { viewModel.onEvent(RemindersEvent.DueDateChanged(it)) },
         onDueOdometerChange = { viewModel.onEvent(RemindersEvent.DueOdometerChanged(it)) },
         onSubmitReminder = { viewModel.onEvent(RemindersEvent.SubmitReminder) },
@@ -229,6 +236,8 @@ internal fun RemindersScreen(
     reminderSuccessSignal: Int,
     onTitleChange: (String) -> Unit,
     onVehicleSelected: (Vehicle) -> Unit,
+    onVehicleFilterToggled: (Vehicle) -> Unit,
+    onVehicleFiltersCleared: () -> Unit,
     onDueDateChange: (String) -> Unit,
     onDueOdometerChange: (String) -> Unit,
     onSubmitReminder: () -> Unit,
@@ -260,6 +269,12 @@ internal fun RemindersScreen(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val showAddReminderAction = !state.isLoading && !state.hasLoadError && !state.hasNoVehicles && !state.isEmpty
         val useCompactAddAction = maxWidth < 600.dp
+        val titleStartPadding =
+            if (maxWidth <= 720.dp) {
+                Spacings.spacing8
+            } else {
+                (maxWidth - 720.dp) / 2 + Spacings.spacing8
+            }
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
         Scaffold(
             modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -270,6 +285,7 @@ internal fun RemindersScreen(
                         Text(
                             text = stringResource(R.string.reminders_title),
                             fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(start = titleStartPadding).testTag("reminders_title"),
                         )
                     },
                     actions = {
@@ -317,7 +333,7 @@ internal fun RemindersScreen(
                     contentPadding =
                         PaddingValues(
                             start = Spacings.spacing24,
-                            top = Spacings.spacing24,
+                            top = Spacings.spacing8,
                             end = Spacings.spacing24,
                             bottom = if (showAddReminderAction && useCompactAddAction) 104.dp else Spacings.spacing24,
                         ),
@@ -342,12 +358,17 @@ internal fun RemindersScreen(
                     if (state.hasNoVehicles) {
                         item { NoVehiclesCard(onNavigateToGarage = onNavigateToGarage) }
                     }
-                    item {
-                        Text(
-                            text = stringResource(R.string.pending_reminders_title),
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.semantics { heading() },
-                        )
+                    if (!state.isLoading && !state.hasLoadError) {
+                        if (state.reminders.isNotEmpty() && state.vehicles.isNotEmpty()) {
+                            item {
+                                ReminderVehicleFilters(
+                                    vehicles = state.vehicles,
+                                    selectedVehicleIds = state.selectedFilterVehicleIds,
+                                    onVehicleFilterToggled = onVehicleFilterToggled,
+                                    onVehicleFiltersCleared = onVehicleFiltersCleared,
+                                )
+                            }
+                        }
                     }
                     if (state.isLoading) {
                         item {
@@ -363,8 +384,10 @@ internal fun RemindersScreen(
                                 onAddReminder = { showReminderSheet = true },
                             )
                         }
+                    } else if (state.hasNoMatchingReminders) {
+                        item { NoMatchingRemindersCard() }
                     } else {
-                        items(state.reminders) { reminder ->
+                        items(state.visibleReminders, key = { it.id.value }) { reminder ->
                             ReminderCard(
                                 reminder = reminder,
                                 vehicleName =
@@ -442,6 +465,47 @@ internal fun RemindersScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun ReminderVehicleFilters(
+    vehicles: List<Vehicle>,
+    selectedVehicleIds: Set<VehicleId>,
+    onVehicleFilterToggled: (Vehicle) -> Unit,
+    onVehicleFiltersCleared: () -> Unit,
+) {
+    val chipColors =
+        FilterChipDefaults.filterChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+        )
+    LazyRow(
+        modifier = Modifier.fillMaxWidth().testTag("reminder_vehicle_filters"),
+        horizontalArrangement = Arrangement.spacedBy(Spacings.spacing8),
+    ) {
+        item {
+            FilterChip(
+                selected = selectedVehicleIds.isEmpty(),
+                onClick = onVehicleFiltersCleared,
+                label = { Text(stringResource(R.string.all_vehicles_filter)) },
+                shape = RoundedCornerShape(percent = 50),
+                colors = chipColors,
+                modifier = Modifier.testTag("reminder_filter_all"),
+            )
+        }
+        items(vehicles, key = { it.id.value }) { vehicle ->
+            FilterChip(
+                selected = vehicle.id in selectedVehicleIds,
+                onClick = { onVehicleFilterToggled(vehicle) },
+                label = { Text(vehicle.name, maxLines = 1) },
+                shape = RoundedCornerShape(percent = 50),
+                colors = chipColors,
+                modifier = Modifier.testTag("reminder_filter_vehicle_${vehicle.id.value}"),
+            )
+        }
     }
 }
 
@@ -809,6 +873,33 @@ private fun EmptyRemindersCard(onAddReminder: () -> Unit) {
             Button(onClick = onAddReminder) {
                 Text(stringResource(R.string.add_first_reminder_button))
             }
+        }
+    }
+}
+
+@Composable
+private fun NoMatchingRemindersCard() {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().testTag("no_matching_reminders"),
+        colors =
+            CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            ),
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacings.spacing24),
+            verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
+        ) {
+            Text(
+                text = stringResource(R.string.no_matching_reminders_title),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Text(
+                text = stringResource(R.string.no_matching_reminders_description),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
         }
     }
 }

@@ -10,6 +10,7 @@ data class RemindersUiState(
     val hasLoadError: Boolean = false,
     val reminders: List<Reminder> = emptyList(),
     val vehicles: List<Vehicle> = emptyList(),
+    val selectedFilterVehicleIds: Set<VehicleId> = emptySet(),
     val title: String = "",
     val selectedVehicleId: VehicleId? = null,
     val dueDate: String = "",
@@ -20,6 +21,13 @@ data class RemindersUiState(
 ) {
     val hasNoVehicles: Boolean = !isLoading && !hasLoadError && vehicles.isEmpty()
     val isEmpty: Boolean = !isLoading && !hasLoadError && reminders.isEmpty()
+    val visibleReminders: List<Reminder> =
+        if (selectedFilterVehicleIds.isEmpty()) {
+            reminders
+        } else {
+            reminders.filter { it.vehicleId in selectedFilterVehicleIds }
+        }
+    val hasNoMatchingReminders: Boolean = !isLoading && !hasLoadError && reminders.isNotEmpty() && visibleReminders.isEmpty()
 }
 
 sealed interface ReminderAction {

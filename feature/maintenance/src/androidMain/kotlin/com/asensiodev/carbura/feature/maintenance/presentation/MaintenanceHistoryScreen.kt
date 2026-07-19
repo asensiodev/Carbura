@@ -307,7 +307,7 @@ internal fun MaintenanceHistoryScreen(
                     contentPadding =
                         PaddingValues(
                             start = Spacings.spacing24,
-                            top = Spacings.spacing24,
+                            top = Spacings.spacing16,
                             end = Spacings.spacing24,
                             bottom = if (isCompact && canAddMaintenance) 104.dp else Spacings.spacing24,
                         ),

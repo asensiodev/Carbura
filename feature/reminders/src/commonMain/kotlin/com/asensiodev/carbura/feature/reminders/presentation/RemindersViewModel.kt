@@ -14,6 +14,7 @@ import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.ReminderId
+import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -59,6 +60,8 @@ class RemindersViewModel(
             is RemindersEvent.TitleChanged -> updateForm { it.copy(title = event.value, errorMessage = null, hasPersistenceError = false) }
             is RemindersEvent.VehicleSelected ->
                 updateForm { it.copy(selectedVehicleId = event.vehicleId, errorMessage = null, hasPersistenceError = false) }
+            is RemindersEvent.VehicleFilterToggled -> toggleVehicleFilter(event.vehicleId)
+            RemindersEvent.VehicleFiltersCleared -> _uiState.update { it.copy(selectedFilterVehicleIds = emptySet()) }
             is RemindersEvent.DueDateChanged ->
                 updateForm { it.copy(dueDate = event.value, errorMessage = null, hasPersistenceError = false) }
             is RemindersEvent.DueOdometerChanged ->
@@ -89,12 +92,14 @@ class RemindersViewModel(
         try {
             val vehicles = withContext(dispatchers.io) { vehicleRepository.observeVehicles(familyId) }
             val reminders = withContext(dispatchers.io) { getPendingRemindersUseCase(familyId) }
+            val availableVehicleIds = vehicles.mapTo(mutableSetOf()) { it.id }
             _uiState.update {
                 it.copy(
                     isLoading = false,
                     hasLoadError = false,
                     vehicles = vehicles,
                     reminders = reminders,
+                    selectedFilterVehicleIds = it.selectedFilterVehicleIds.intersect(availableVehicleIds),
                     selectedVehicleId =
                         it.selectedVehicleId?.takeIf { id -> vehicles.any { vehicle -> vehicle.id == id } }
                             ?: vehicles.firstOrNull()?.id,
@@ -107,6 +112,23 @@ class RemindersViewModel(
         } finally {
             isLoadInProgress = false
             _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    private fun toggleVehicleFilter(vehicleId: VehicleId) {
+        _uiState.update { state ->
+            val selectedIds = state.selectedFilterVehicleIds
+            if (state.vehicles.none { it.id == vehicleId }) {
+                return@update state.copy(selectedFilterVehicleIds = selectedIds - vehicleId)
+            }
+            state.copy(
+                selectedFilterVehicleIds =
+                    if (vehicleId in selectedIds) {
+                        selectedIds - vehicleId
+                    } else {
+                        selectedIds + vehicleId
+                    },
+            )
         }
     }
 

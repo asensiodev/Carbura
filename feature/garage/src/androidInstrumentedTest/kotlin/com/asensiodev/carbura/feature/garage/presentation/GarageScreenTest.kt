@@ -240,13 +240,30 @@ class GarageScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("garage_vehicle_list").performScrollToIndex(8)
+        composeRule.onNodeWithTag("garage_vehicle_list").performScrollToIndex(7)
         val finalCard = composeRule.onNodeWithTag("vehicle_card_vehicle-8").assertIsDisplayed()
         composeRule.onNodeWithText("Garaje").assertIsDisplayed()
         val fab = composeRule.onNodeWithTag("garage_add_vehicle_fab").assertIsDisplayed().assertHasClickAction()
         fab.assertContentDescriptionEquals("Añadir vehículo")
         composeRule.onNodeWithTag("garage_vehicle_list").performTouchInput { swipeUp() }
         assert(finalCard.getUnclippedBoundsInRoot().bottom <= fab.getUnclippedBoundsInRoot().top)
+    }
+
+    @Test
+    fun compactGarageTitleAlignsWithVehicleContent() {
+        val vehicle = vehicle("Coche familiar", "vehicle-1")
+        composeRule.setContent {
+            CompactGarage {
+                TestGarageScreen(
+                    overviewState = GarageOverviewUiState(listOf(vehicle), GarageLoadState.Loaded),
+                )
+            }
+        }
+
+        val titleLeft = composeRule.onNodeWithTag("garage_title").getUnclippedBoundsInRoot().left
+        val cardLeft = composeRule.onNodeWithTag("vehicle_card_vehicle-1").getUnclippedBoundsInRoot().left
+
+        assert(kotlin.math.abs((titleLeft - cardLeft).value) < 1f)
     }
 
     private fun vehicle(
