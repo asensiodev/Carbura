@@ -144,7 +144,7 @@ private fun CarburaApp(
                 }
 
                 OnboardingEffect.NavigateToLogin -> {
-                    backStack.clearProtectedDestinations()
+                    backStack.resetAfterSignOut()
                 }
             }
         }
@@ -299,7 +299,6 @@ private fun CarburaApp(
                                 syncStatus = syncStatus,
                                 onSyncNow = { syncScope.launch { syncManager.syncNow() } },
                                 onSignOut = {
-                                    backStack.clearProtectedDestinations()
                                     onboardingViewModel.onEvent(OnboardingEvent.SignOutClicked)
                                 },
                             )

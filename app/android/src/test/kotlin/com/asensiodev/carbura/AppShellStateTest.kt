@@ -38,12 +38,12 @@ class AppShellStateTest {
     }
 
     @Test
-    fun signOutClearsProtectedDestinations() {
+    fun successfulSignOutResetsToNonEmptyRootDestination() {
         val stack = mutableListOf<NavKey>(CarburaRoute.Garage, CarburaRoute.Reminders)
 
-        stack.clearProtectedDestinations()
+        stack.resetAfterSignOut()
 
-        assertEquals(emptyList<NavKey>(), stack)
+        assertEquals(listOf<NavKey>(CarburaRoute.Garage), stack)
     }
 
     @Test

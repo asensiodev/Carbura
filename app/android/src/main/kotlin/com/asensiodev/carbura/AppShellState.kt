@@ -14,7 +14,7 @@ internal fun MutableList<NavKey>.navigateToTopLevel(destination: CarburaRoute) {
     if (destination != CarburaRoute.Garage) add(destination)
 }
 
-internal fun MutableList<NavKey>.clearProtectedDestinations() = clear()
+internal fun MutableList<NavKey>.resetAfterSignOut() = navigateToTopLevel(CarburaRoute.Garage)
 
 internal sealed interface SyncFeedbackEvent {
     data object None : SyncFeedbackEvent
