@@ -3,6 +3,7 @@ package com.asensiodev.carbura.feature.onboarding.presentation
 data class OnboardingUiState(
     val isInitializing: Boolean = true,
     val isLoading: Boolean = false,
+    val isDeletingAccount: Boolean = false,
     val isAuthenticated: Boolean = false,
     val displayName: String? = null,
     val email: String? = null,

@@ -24,8 +24,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -34,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -41,6 +45,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -56,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.Lifecycle
@@ -297,9 +303,13 @@ private fun CarburaApp(
                                 email = onboardingState.email,
                                 familyName = onboardingState.familyName,
                                 syncStatus = syncStatus,
+                                isDeletingAccount = onboardingState.isDeletingAccount,
                                 onSyncNow = { syncScope.launch { syncManager.syncNow() } },
                                 onSignOut = {
                                     onboardingViewModel.onEvent(OnboardingEvent.SignOutClicked)
+                                },
+                                onDeleteAccount = {
+                                    onboardingViewModel.onEvent(OnboardingEvent.DeleteAccountConfirmed)
                                 },
                             )
                         }
@@ -418,17 +428,20 @@ private fun CarburaMainScaffold(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun UserRoute(
+internal fun UserRoute(
     displayName: String?,
     email: String?,
     familyName: String?,
     syncStatus: SyncStatus,
+    isDeletingAccount: Boolean,
     onSyncNow: () -> Unit,
     onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
 ) {
     val resolvedDisplayName = displayName.cleanUserText() ?: stringResource(R.string.user_profile_fallback_name)
     val resolvedFamilyName = familyName.cleanUserText() ?: stringResource(R.string.user_family_fallback_name)
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    var showDeleteAccountConfirmation by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -614,13 +627,81 @@ private fun UserRoute(
                         Button(
                             onClick = onSignOut,
                             modifier = Modifier.fillMaxWidth(),
+                            enabled = !isDeletingAccount,
                         ) {
                             Text(stringResource(R.string.user_sign_out_button))
                         }
                     }
                 }
+                Card(
+                    modifier = Modifier.fillMaxWidth().testTag("account_deletion_section"),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(Spacings.spacing16),
+                        verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.user_account_deletion_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        Text(
+                            text = stringResource(R.string.user_account_deletion_description),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        if (isDeletingAccount) {
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth().testTag("account_deletion_progress"),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { showDeleteAccountConfirmation = true },
+                            modifier = Modifier.fillMaxWidth().testTag("delete_account_button"),
+                            enabled = !isDeletingAccount,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        ) {
+                            Text(
+                                stringResource(
+                                    if (isDeletingAccount) {
+                                        R.string.user_account_deleting_button
+                                    } else {
+                                        R.string.user_account_delete_button
+                                    },
+                                ),
+                            )
+                        }
+                    }
+                }
             }
         }
+    }
+
+    if (showDeleteAccountConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAccountConfirmation = false },
+            title = { Text(stringResource(R.string.user_account_delete_dialog_title)) },
+            text = { Text(stringResource(R.string.user_account_delete_dialog_description)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteAccountConfirmation = false
+                        onDeleteAccount()
+                    },
+                    modifier = Modifier.testTag("confirm_delete_account_button"),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) {
+                    Text(stringResource(R.string.user_account_delete_confirm_button))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAccountConfirmation = false }) {
+                    Text(stringResource(R.string.user_account_delete_cancel_button))
+                }
+            },
+        )
     }
 }
 

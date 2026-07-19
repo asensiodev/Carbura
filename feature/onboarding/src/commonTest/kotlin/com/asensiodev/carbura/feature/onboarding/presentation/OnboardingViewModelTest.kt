@@ -1,6 +1,7 @@
 package com.asensiodev.carbura.feature.onboarding.presentation
 
 import app.cash.turbine.test
+import com.asensiodev.carbura.core.domain.auth.AccountLocalDataCleaner
 import com.asensiodev.carbura.core.domain.auth.AuthGateway
 import com.asensiodev.carbura.core.domain.auth.AuthSession
 import com.asensiodev.carbura.core.domain.auth.AuthUser
@@ -494,15 +495,128 @@ class OnboardingViewModelTest {
             assertFalse(viewModel.uiState.value.isLoading)
         }
 
+    @Test
+    fun accountDeletionRunsOnceCleansLocalDataAndReturnsToLogin() =
+        runTest {
+            val deletionGate = CompletableDeferred<Unit>()
+            val authGateway = FakeAuthGateway(currentSession = authSession(), deleteAccountGate = deletionGate)
+            val cleaner = FakeAccountLocalDataCleaner()
+            val viewModel = onboardingViewModel(authGateway = authGateway, accountLocalDataCleaner = cleaner)
+            viewModel.onEvent(OnboardingEvent.Started)
+            advanceUntilIdle()
+
+            viewModel.effects.test {
+                viewModel.onEvent(OnboardingEvent.DeleteAccountConfirmed)
+                viewModel.onEvent(OnboardingEvent.DeleteAccountConfirmed)
+                runCurrent()
+
+                assertTrue(viewModel.uiState.value.isDeletingAccount)
+                assertEquals(1, authGateway.deleteAccountAttempts)
+                deletionGate.complete(Unit)
+                advanceUntilIdle()
+
+                assertIs<OnboardingEffect.NavigateToLogin>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(listOf(FamilyId("family-1")), cleaner.clearedFamilies)
+            assertFalse(viewModel.uiState.value.isAuthenticated)
+            assertFalse(viewModel.uiState.value.isDeletingAccount)
+        }
+
+    @Test
+    fun unconfirmedAccountDeletionReturnsToCleanLoginState() =
+        runTest {
+            val cleaner = FakeAccountLocalDataCleaner()
+            val viewModel =
+                onboardingViewModel(
+                    authGateway =
+                        FakeAuthGateway(
+                            currentSession = authSession(),
+                            deleteAccountError = IllegalStateException("RPC unavailable"),
+                        ),
+                    accountLocalDataCleaner = cleaner,
+                )
+            viewModel.onEvent(OnboardingEvent.Started)
+            advanceUntilIdle()
+
+            viewModel.effects.test {
+                viewModel.onEvent(OnboardingEvent.DeleteAccountConfirmed)
+                advanceUntilIdle()
+
+                assertIs<OnboardingEffect.NavigateToLogin>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertFalse(viewModel.uiState.value.isAuthenticated)
+            assertNull(viewModel.uiState.value.error)
+            assertNull(viewModel.uiState.value.errorDiagnostic)
+            assertFalse(viewModel.uiState.value.isDeletingAccount)
+            assertEquals(listOf(FamilyId("family-1")), cleaner.clearedFamilies)
+        }
+
+    @Test
+    fun accountDeletionCancellationDoesNotBecomeFailure() =
+        runTest {
+            val cleaner = FakeAccountLocalDataCleaner()
+            val viewModel =
+                onboardingViewModel(
+                    authGateway =
+                        FakeAuthGateway(
+                            currentSession = authSession(),
+                            deleteAccountError = CancellationException("Deletion cancelled"),
+                        ),
+                    accountLocalDataCleaner = cleaner,
+                )
+            viewModel.onEvent(OnboardingEvent.Started)
+            advanceUntilIdle()
+
+            viewModel.onEvent(OnboardingEvent.DeleteAccountConfirmed)
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.isAuthenticated)
+            assertNull(viewModel.uiState.value.error)
+            assertFalse(viewModel.uiState.value.isDeletingAccount)
+            assertTrue(cleaner.clearedFamilies.isEmpty())
+        }
+
+    @Test
+    fun committedAccountDeletionStillReturnsToLoginWhenLocalCleanupIsCancelled() =
+        runTest {
+            val viewModel =
+                onboardingViewModel(
+                    authGateway = FakeAuthGateway(currentSession = authSession()),
+                    accountLocalDataCleaner =
+                        FakeAccountLocalDataCleaner(
+                            error = CancellationException("Local cleanup cancelled"),
+                        ),
+                )
+            viewModel.onEvent(OnboardingEvent.Started)
+            advanceUntilIdle()
+
+            viewModel.effects.test {
+                viewModel.onEvent(OnboardingEvent.DeleteAccountConfirmed)
+                advanceUntilIdle()
+
+                assertIs<OnboardingEffect.NavigateToLogin>(awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertFalse(viewModel.uiState.value.isAuthenticated)
+            assertNull(viewModel.uiState.value.error)
+        }
+
     private fun TestScope.onboardingViewModel(
         authGateway: AuthGateway = FakeAuthGateway(),
         remoteUserProfileGateway: RemoteUserProfileGateway = FakeRemoteUserProfileGateway(remoteProfile()),
+        accountLocalDataCleaner: AccountLocalDataCleaner = FakeAccountLocalDataCleaner(),
         coroutineScope: CoroutineScope = this,
     ): OnboardingViewModel {
         val dispatcher = StandardTestDispatcher(testScheduler)
         return OnboardingViewModel(
             authGateway = authGateway,
             remoteUserProfileGateway = remoteUserProfileGateway,
+            accountLocalDataCleaner = accountLocalDataCleaner,
             dispatchers =
                 TestDispatcherProvider(
                     io = dispatcher,
@@ -545,8 +659,11 @@ private class FakeAuthGateway(
     var signInError: Throwable? = null,
     private val signInGate: CompletableDeferred<Unit>? = null,
     private val signOutError: Throwable? = null,
+    private val deleteAccountError: Throwable? = null,
+    private val deleteAccountGate: CompletableDeferred<Unit>? = null,
 ) : AuthGateway {
     var signInAttempts: Int = 0
+    var deleteAccountAttempts: Int = 0
 
     override suspend fun currentSession(): AuthSession? {
         currentSessionError?.let { throw it }
@@ -569,6 +686,23 @@ private class FakeAuthGateway(
 
     override suspend fun signOut() {
         signOutError?.let { throw it }
+    }
+
+    override suspend fun deleteAccount() {
+        deleteAccountAttempts += 1
+        deleteAccountGate?.await()
+        deleteAccountError?.let { throw it }
+    }
+}
+
+private class FakeAccountLocalDataCleaner(
+    private val error: Throwable? = null,
+) : AccountLocalDataCleaner {
+    val clearedFamilies = mutableListOf<FamilyId>()
+
+    override suspend fun clear(familyId: FamilyId) {
+        error?.let { throw it }
+        clearedFamilies += familyId
     }
 }
 

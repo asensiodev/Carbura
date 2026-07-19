@@ -20,6 +20,7 @@ android {
     }
 
     defaultConfig {
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SUPABASE_URL", "\"${localProperty("SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperty("SUPABASE_ANON_KEY")}\"")
         buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${localProperty("GOOGLE_CLIENT_ID")}\"")
@@ -51,6 +52,10 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(projects.core.model)
     testImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
 tasks.named("preBuild") {

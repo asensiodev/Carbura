@@ -32,6 +32,10 @@ SELECT *
 FROM vehicles
 WHERE familyId = ?;
 
+deleteVehiclesByFamilyImmediately:
+DELETE FROM vehicles
+WHERE familyId = ?;
+
 upsertVehicle:
 INSERT OR REPLACE INTO vehicles(
     id,
@@ -102,6 +106,10 @@ WHERE pendingSync = 1;
 selectSyncMaintenanceRecordsByFamily:
 SELECT *
 FROM maintenanceRecords
+WHERE familyId = ?;
+
+deleteMaintenanceRecordsByFamilyImmediately:
+DELETE FROM maintenanceRecords
 WHERE familyId = ?;
 
 upsertMaintenanceRecord:
@@ -183,6 +191,15 @@ WHERE pendingSync = 1;
 selectSyncRemindersByFamily:
 SELECT *
 FROM reminders
+WHERE familyId = ?;
+
+selectReminderIdsByFamilyForAccountCleanup:
+SELECT id
+FROM reminders
+WHERE familyId = ?;
+
+deleteRemindersByFamilyImmediately:
+DELETE FROM reminders
 WHERE familyId = ?;
 
 selectSyncRemindersByVehicle:

@@ -11,7 +11,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 internal class LocalFirstSyncManager(
@@ -19,15 +18,15 @@ internal class LocalFirstSyncManager(
     private val profileGateway: RemoteUserProfileGateway,
     private val local: LocalSyncDataSource,
     private val remote: RemoteSyncDataSource,
+    private val operationLock: SyncOperationLock = SyncOperationLock(),
 ) : SyncManager {
-    private val mutex = Mutex()
     private val _status = MutableStateFlow(SyncStatus())
     private var nextFailureId = 0L
 
     override val status: StateFlow<SyncStatus> = _status
 
     override suspend fun syncNow(): SyncResult =
-        mutex.withLock {
+        operationLock.mutex.withLock {
             _status.update { it.copy(isSyncing = true) }
             try {
                 val syncedAt = syncActiveFamily()

@@ -3,13 +3,16 @@ package com.asensiodev.carbura.feature.onboarding.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.asensiodev.carbura.core.domain.DispatcherProvider
+import com.asensiodev.carbura.core.domain.auth.AccountLocalDataCleaner
 import com.asensiodev.carbura.core.domain.auth.AuthGateway
 import com.asensiodev.carbura.core.domain.auth.AuthSession
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfile
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
+import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +26,7 @@ import kotlinx.coroutines.withContext
 class OnboardingViewModel(
     private val authGateway: AuthGateway,
     private val remoteUserProfileGateway: RemoteUserProfileGateway,
+    private val accountLocalDataCleaner: AccountLocalDataCleaner,
     private val dispatchers: DispatcherProvider,
     private val coroutineScope: CoroutineScope? = null,
 ) : ViewModel() {
@@ -62,6 +66,8 @@ class OnboardingViewModel(
                     }
                 }
             OnboardingEvent.SignOutClicked -> launchAuthOperation(AuthOperation.SignOut) { signOut() }
+            OnboardingEvent.DeleteAccountConfirmed ->
+                launchAuthOperation(AuthOperation.DeleteAccount) { deleteAccount() }
         }
     }
 
@@ -71,7 +77,14 @@ class OnboardingViewModel(
     ) {
         if (activeAuthOperation != null) return
         activeAuthOperation = operation
-        _uiState.update { it.copy(isLoading = true, error = null, errorDiagnostic = null) }
+        _uiState.update {
+            it.copy(
+                isLoading = true,
+                isDeletingAccount = operation == AuthOperation.DeleteAccount,
+                error = null,
+                errorDiagnostic = null,
+            )
+        }
         scope
             .launch {
                 try {
@@ -108,7 +121,7 @@ class OnboardingViewModel(
     private fun finishAuthOperation(operation: AuthOperation) {
         if (activeAuthOperation != operation) return
         activeAuthOperation = null
-        _uiState.update { it.copy(isLoading = false) }
+        _uiState.update { it.copy(isLoading = false, isDeletingAccount = false) }
     }
 
     private suspend fun loadCurrentSession() {
@@ -309,12 +322,38 @@ class OnboardingViewModel(
             }
         }
     }
+
+    private suspend fun deleteAccount() {
+        val familyId = _uiState.value.familyId?.let(::FamilyId)
+        try {
+            withContext(NonCancellable + dispatchers.io) { authGateway.deleteAccount() }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            // Dispatch is irreversible and may have committed despite a lost response.
+        }
+
+        withContext(NonCancellable) {
+            if (familyId != null) {
+                try {
+                    withContext(dispatchers.io) { accountLocalDataCleaner.clear(familyId) }
+                } catch (_: CancellationException) {
+                    // Remote deletion committed; finish the terminal unauthenticated transition.
+                } catch (_: Exception) {
+                    // Remote deletion committed; do not leave a deleted identity in authenticated UI state.
+                }
+            }
+            _uiState.value = OnboardingUiState(isInitializing = false, isLoading = false)
+            _effects.send(OnboardingEffect.NavigateToLogin)
+        }
+    }
 }
 
 private enum class AuthOperation {
     DirectSignIn,
     CredentialSignIn,
     SignOut,
+    DeleteAccount,
 }
 
 private val AuthSession.displayName: String?

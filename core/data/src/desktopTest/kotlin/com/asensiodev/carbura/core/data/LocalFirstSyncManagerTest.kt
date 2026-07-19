@@ -436,6 +436,8 @@ private class FakeAuthGateway : AuthGateway {
     override suspend fun signInWithGoogle(idToken: String): AuthSession = currentSession()
 
     override suspend fun signOut() = Unit
+
+    override suspend fun deleteAccount() = Unit
 }
 
 private class FakeRemoteUserProfileGateway(

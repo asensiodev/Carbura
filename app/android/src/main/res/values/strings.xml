@@ -27,4 +27,12 @@
     <string name="user_sync_error_detail">Detalle técnico: %1$s</string>
     <string name="user_session_title">Sesión</string>
     <string name="user_sign_out_button">Cerrar sesión</string>
+    <string name="user_account_deletion_title">Eliminar cuenta</string>
+    <string name="user_account_deletion_description">Elimina permanentemente tu cuenta. Si eres el último miembro, también se eliminarán los vehículos, mantenimientos y recordatorios de la familia.</string>
+    <string name="user_account_delete_button">Eliminar mi cuenta</string>
+    <string name="user_account_deleting_button">Eliminando cuenta...</string>
+    <string name="user_account_delete_dialog_title">¿Eliminar tu cuenta?</string>
+    <string name="user_account_delete_dialog_description">Esta acción es permanente y no se puede deshacer. Si compartes una familia, sus datos se conservarán para los demás miembros.</string>
+    <string name="user_account_delete_confirm_button">Eliminar definitivamente</string>
+    <string name="user_account_delete_cancel_button">Cancelar</string>
 </resources>

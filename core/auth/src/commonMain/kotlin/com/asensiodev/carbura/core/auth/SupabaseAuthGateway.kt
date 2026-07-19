@@ -7,6 +7,9 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.IDToken
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -34,7 +37,8 @@ class SupabaseAuthGateway(
 
     override suspend fun signInWithGoogle(): AuthSession {
         client.auth.signInWith(Google)
-        return currentSession() ?: error("Google sign-in completed without an active Supabase session.")
+        return currentSession()
+            ?: error("Google sign-in completed without an active Supabase session.")
     }
 
     override suspend fun signInWithGoogle(idToken: String): AuthSession {
@@ -42,10 +46,21 @@ class SupabaseAuthGateway(
             this.idToken = idToken
             provider = Google
         }
-        return currentSession() ?: error("Google ID token sign-in completed without an active Supabase session.")
+        return currentSession()
+            ?: error("Google ID token sign-in completed without an active Supabase session.")
     }
 
     override suspend fun signOut() {
         client.auth.signOut()
+    }
+
+    override suspend fun deleteAccount() {
+        withContext(NonCancellable) {
+            try {
+                client.postgrest.rpc(function = "delete_current_user_account")
+            } finally {
+                client.auth.clearSession()
+            }
+        }
     }
 }

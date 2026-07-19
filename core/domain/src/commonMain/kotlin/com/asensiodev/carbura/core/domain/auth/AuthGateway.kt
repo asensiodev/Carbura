@@ -8,4 +8,6 @@ interface AuthGateway {
     suspend fun signInWithGoogle(idToken: String): AuthSession
 
     suspend fun signOut()
+
+    suspend fun deleteAccount()
 }

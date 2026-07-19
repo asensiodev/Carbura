@@ -18,4 +18,6 @@ sealed interface OnboardingEvent {
     ) : OnboardingEvent
 
     data object SignOutClicked : OnboardingEvent
+
+    data object DeleteAccountConfirmed : OnboardingEvent
 }
