@@ -2,15 +2,41 @@ package com.asensiodev.carbura.core.data
 
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.domain.maintenance.repository.MaintenanceRecordRepository
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
+import com.asensiodev.carbura.core.domain.reminder.notification.NoOpNotificationOutboxRecovery
+import com.asensiodev.carbura.core.domain.reminder.notification.NotificationOutboxRecovery
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
+import com.asensiodev.carbura.core.model.ReminderId
 import com.asensiodev.carbura.core.model.VehicleId
 
 class LocalMaintenanceRecordRepository(
     private val database: CarburaDatabase,
+    private val notificationRecovery: NotificationOutboxRecovery = NoOpNotificationOutboxRecovery,
 ) : MaintenanceRecordRepository {
+    private val notificationOutbox = SqlDelightNotificationOutbox(database)
+    private val reminderMutations = SqlDelightReminderMutations(database, notificationOutbox)
     override suspend fun saveMaintenanceRecord(record: MaintenanceRecord) {
         val now = currentTimeMillis()
+        saveMaintenanceRecord(record, now)
+    }
+
+    override suspend fun saveMaintenanceRecordWithNotification(
+        record: MaintenanceRecord,
+        mutation: ReminderNotificationMutation,
+    ) {
+        val now = currentTimeMillis()
+        database.carburaDatabaseQueries.transaction {
+            saveMaintenanceRecord(record, now)
+            reminderMutations.apply(mutation, now)
+        }
+        notificationRecovery.request()
+    }
+
+    private fun saveMaintenanceRecord(
+        record: MaintenanceRecord,
+        now: Long,
+    ) {
         database.carburaDatabaseQueries.upsertMaintenanceRecord(
             id = record.id.value,
             familyId = record.familyId.value,
@@ -43,5 +69,28 @@ class LocalMaintenanceRecordRepository(
             updatedAt = now,
             id = recordId.value,
         )
+    }
+
+    override suspend fun deleteMaintenanceRecordWithNotifications(
+        recordId: MaintenanceRecordId,
+        reminderIds: List<ReminderId>,
+    ) {
+        val now = currentTimeMillis()
+        database.carburaDatabaseQueries.transaction {
+            reminderIds.forEach { reminderId ->
+                database.carburaDatabaseQueries.deleteReminder(
+                    deletedAt = now,
+                    updatedAt = now,
+                    id = reminderId.value,
+                )
+                notificationOutbox.recordCancel(reminderId)
+            }
+            database.carburaDatabaseQueries.deleteMaintenanceRecord(
+                deletedAt = now,
+                updatedAt = now,
+                id = recordId.value,
+            )
+        }
+        notificationRecovery.request()
     }
 }

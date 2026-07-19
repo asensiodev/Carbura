@@ -1,5 +1,7 @@
 package com.asensiodev.carbura.core.domain
 
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
@@ -9,6 +11,7 @@ import com.asensiodev.carbura.core.model.VehicleId
 internal class FakeReminderRepository : ReminderRepository {
     val savedReminders = mutableListOf<Reminder>()
     val deletedReminderIds = mutableListOf<ReminderId>()
+    val notificationMutations = mutableListOf<ReminderNotificationMutation>()
     var failDeletes = false
 
     override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> =
@@ -28,9 +31,27 @@ internal class FakeReminderRepository : ReminderRepository {
         }
     }
 
+    override suspend fun saveReminderWithNotification(
+        reminder: Reminder,
+        notificationPlan: ReminderNotificationPlan?,
+    ) {
+        saveReminder(reminder)
+        notificationMutations += ReminderNotificationMutation.Upsert(reminder, notificationPlan)
+    }
+
+    override suspend fun markReminderCompletedWithNotification(reminderId: ReminderId) {
+        markReminderCompleted(reminderId)
+        notificationMutations += ReminderNotificationMutation.Delete(reminderId)
+    }
+
     override suspend fun deleteReminder(reminderId: ReminderId) {
         if (failDeletes) error("reminder delete failed")
         deletedReminderIds += reminderId
         savedReminders.removeAll { it.id == reminderId }
+    }
+
+    override suspend fun deleteReminderWithNotification(reminderId: ReminderId) {
+        deleteReminder(reminderId)
+        notificationMutations += ReminderNotificationMutation.Delete(reminderId)
     }
 }

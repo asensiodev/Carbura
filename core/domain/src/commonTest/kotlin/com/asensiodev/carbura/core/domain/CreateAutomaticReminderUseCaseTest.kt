@@ -1,6 +1,7 @@
 package com.asensiodev.carbura.core.domain
 
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderAlertKind
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
 import com.asensiodev.carbura.core.domain.reminder.usecase.CreateAutomaticReminderUseCase
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
@@ -8,7 +9,6 @@ import com.asensiodev.carbura.core.model.ReminderId
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class CreateAutomaticReminderUseCaseTest {
@@ -27,7 +27,11 @@ class CreateAutomaticReminderUseCaseTest {
             assertEquals(CalendarDate("2027-07-01"), generated?.reminder?.dueDate)
             assertEquals(60, generated?.reminder?.notifyDaysBefore)
             assertEquals(listOf(generated?.reminder), repository.savedReminders)
-            assertEquals(listOf(generated?.notificationPlan), scheduler.scheduledPlans)
+            assertEquals(
+                generated?.notificationPlan,
+                (repository.notificationMutations.single() as ReminderNotificationMutation.Upsert).notificationPlan,
+            )
+            assertEquals(emptyList(), scheduler.scheduledPlans)
             assertEquals(
                 listOf(ReminderAlertKind.Itv60Days, ReminderAlertKind.Itv30Days, ReminderAlertKind.Itv7Days),
                 generated?.notificationPlan?.alerts?.map { it.kind },
@@ -75,7 +79,11 @@ class CreateAutomaticReminderUseCaseTest {
             assertNull(generated)
             assertEquals(emptyList(), repository.savedReminders)
             assertEquals(listOf(ReminderId("maintenance-reminder:record-1")), repository.deletedReminderIds)
-            assertEquals(listOf("maintenance-reminder:record-1"), scheduler.cancelledReminderIds)
+            assertEquals(
+                ReminderNotificationMutation.Delete(ReminderId("maintenance-reminder:record-1")),
+                repository.notificationMutations.single(),
+            )
+            assertEquals(emptyList(), scheduler.cancelledReminderIds)
         }
 
     @Test
@@ -93,13 +101,13 @@ class CreateAutomaticReminderUseCaseTest {
         }
 
     @Test
-    fun retryWithoutDateReconcilesReminderCreatedBeforePartialFailure() =
+    fun schedulerFailureCannotInterruptDurableReminderIntent() =
         runTest {
             val repository = FakeReminderRepository()
             val scheduler = FakeReminderNotificationScheduler().apply { failSchedules = true }
             val useCase = CreateAutomaticReminderUseCase(repository, scheduler)
             val eligible = testMaintenanceRecord(code = MaintenanceTypeCode.Itv, nextDueDate = "2027-07-01")
-            assertFailsWith<IllegalStateException> { useCase(eligible) }
+            useCase(eligible)
             assertEquals(1, repository.savedReminders.size)
 
             scheduler.failSchedules = false
@@ -108,7 +116,7 @@ class CreateAutomaticReminderUseCaseTest {
             assertNull(retry)
             assertEquals(emptyList(), repository.savedReminders)
             assertEquals(listOf(ReminderId("maintenance-reminder:record-1")), repository.deletedReminderIds)
-            assertEquals(listOf("maintenance-reminder:record-1"), scheduler.cancelledReminderIds)
+            assertEquals(emptyList(), scheduler.cancelledReminderIds)
         }
 
     @Test
@@ -125,6 +133,10 @@ class CreateAutomaticReminderUseCaseTest {
             assertNull(retry)
             assertEquals(emptyList(), repository.savedReminders)
             assertEquals(listOf(ReminderId("maintenance-reminder:record-1")), repository.deletedReminderIds)
-            assertEquals("maintenance-reminder:record-1", scheduler.cancelledReminderIds.last())
+            assertEquals(
+                ReminderNotificationMutation.Delete(ReminderId("maintenance-reminder:record-1")),
+                repository.notificationMutations.last(),
+            )
+            assertEquals(emptyList(), scheduler.cancelledReminderIds)
         }
 }

@@ -1,7 +1,15 @@
 package com.asensiodev.carbura.core.data
 
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
+import com.asensiodev.carbura.core.domain.reminder.notification.manualReminderNotificationPlan
+import com.asensiodev.carbura.core.domain.reminder.notification.NoOpNotificationOutboxRecovery
+import com.asensiodev.carbura.core.domain.reminder.notification.NotificationOutboxRecovery
+import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
+import com.asensiodev.carbura.core.model.MaintenanceTypeId
+import com.asensiodev.carbura.core.model.Reminder
+import com.asensiodev.carbura.core.model.ReminderId
+import com.asensiodev.carbura.core.model.VehicleId
 
 internal interface LocalSyncDataSource {
     suspend fun getPendingVehicles(): List<SyncVehicle>
@@ -33,7 +41,9 @@ internal interface LocalSyncDataSource {
 
 internal class SqlDelightLocalSyncDataSource(
     private val database: CarburaDatabase,
+    private val notificationRecovery: NotificationOutboxRecovery = NoOpNotificationOutboxRecovery,
 ) : LocalSyncDataSource {
+    private val notificationOutbox = SqlDelightNotificationOutbox(database)
     override suspend fun getPendingVehicles(): List<SyncVehicle> =
         database.carburaDatabaseQueries
             .selectPendingSyncVehicles()
@@ -111,20 +121,29 @@ internal class SqlDelightLocalSyncDataSource(
     }
 
     override suspend fun upsertSyncedReminder(reminder: SyncReminder) {
-        database.carburaDatabaseQueries.upsertReminder(
-            id = reminder.id,
-            familyId = reminder.familyId,
-            vehicleId = reminder.vehicleId,
-            maintenanceTypeId = reminder.maintenanceTypeId,
-            title = reminder.title,
-            dueDate = reminder.dueDate,
-            dueOdometerKm = reminder.dueOdometerKm?.toLong(),
-            notifyDaysBefore = reminder.notifyDaysBefore.toLong(),
-            isCompleted = if (reminder.isCompleted) 1 else 0,
-            updatedAt = reminder.updatedAt,
-            pendingSync = 0,
-            deletedAt = reminder.deletedAt,
-        )
+        database.carburaDatabaseQueries.transaction {
+            database.carburaDatabaseQueries.upsertReminder(
+                id = reminder.id,
+                familyId = reminder.familyId,
+                vehicleId = reminder.vehicleId,
+                maintenanceTypeId = reminder.maintenanceTypeId,
+                title = reminder.title,
+                dueDate = reminder.dueDate,
+                dueOdometerKm = reminder.dueOdometerKm?.toLong(),
+                notifyDaysBefore = reminder.notifyDaysBefore.toLong(),
+                isCompleted = if (reminder.isCompleted) 1 else 0,
+                updatedAt = reminder.updatedAt,
+                pendingSync = 0,
+                deletedAt = reminder.deletedAt,
+            )
+            val domainReminder = reminder.toReminder()
+            if (reminder.deletedAt == null && !reminder.isCompleted && reminder.dueDate != null) {
+                notificationOutbox.recordSchedule(manualReminderNotificationPlan(domainReminder))
+            } else {
+                notificationOutbox.recordCancel(domainReminder.id)
+            }
+        }
+        notificationRecovery.request()
     }
 
     override suspend fun markVehicleSynced(id: String) {
@@ -148,3 +167,16 @@ internal class SqlDelightLocalSyncDataSource(
         }
     }
 }
+
+private fun SyncReminder.toReminder(): Reminder =
+    Reminder(
+        id = ReminderId(id),
+        familyId = FamilyId(familyId),
+        vehicleId = VehicleId(vehicleId),
+        maintenanceTypeId = maintenanceTypeId?.let(::MaintenanceTypeId),
+        title = title,
+        dueDate = dueDate?.let(::CalendarDate),
+        dueOdometerKm = dueOdometerKm,
+        notifyDaysBefore = notifyDaysBefore,
+        isCompleted = isCompleted,
+    )

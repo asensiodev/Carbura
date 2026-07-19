@@ -17,7 +17,7 @@ class VehicleUseCasesTest {
     private val vehicleId = VehicleId("vehicle-test")
 
     @Test
-    fun deleteVehicleCancelsAssociatedReminderNotifications() =
+    fun deleteVehicleDelegatesAtomicNotificationCleanup() =
         runTest {
             val vehicleRepository = FakeVehicleRepository()
             val reminderRepository = FakeReminderRepository()
@@ -37,7 +37,8 @@ class VehicleUseCasesTest {
             DeleteVehicleUseCase(vehicleRepository, reminderRepository, scheduler)(vehicleId)
 
             assertEquals(emptyList(), vehicleRepository.savedVehicles)
-            assertEquals(listOf("itv"), scheduler.cancelledReminderIds)
+            assertEquals(listOf(vehicleId), vehicleRepository.notificationDeletionIds)
+            assertEquals(emptyList(), scheduler.cancelledReminderIds)
         }
 
     private fun reminder(

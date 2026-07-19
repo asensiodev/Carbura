@@ -10,8 +10,13 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderAlertKind
 import com.asensiodev.carbura.coredata.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import org.koin.core.context.GlobalContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -20,6 +25,29 @@ import java.util.Locale
 
 class AndroidReminderNotificationReceiver : BroadcastReceiver() {
     override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
+        val pendingResult = goAsync()
+        val koin = GlobalContext.get()
+        koin.get<CoroutineScope>().launch {
+            try {
+                val isCurrent =
+                    withTimeoutOrNull(RECEIVER_VALIDATION_TIMEOUT_MILLIS) {
+                        isCurrentReminderAlarm(
+                            database = koin.get(),
+                            reminderId = intent.getStringExtra(EXTRA_REMINDER_ID),
+                            revision = intent.getLongExtra(EXTRA_REVISION, MISSING_REVISION),
+                        )
+                    } == true
+                if (isCurrent) showNotification(context, intent)
+            } finally {
+                pendingResult.finish()
+            }
+        }
+    }
+
+    private fun showNotification(
         context: Context,
         intent: Intent,
     ) {
@@ -70,9 +98,25 @@ class AndroidReminderNotificationReceiver : BroadcastReceiver() {
         const val EXTRA_REMINDER_TITLE = "extra_reminder_title"
         const val EXTRA_ALERT_KIND = "extra_alert_kind"
         const val EXTRA_DUE_DATE = "extra_due_date"
+        const val EXTRA_REVISION = "extra_notification_revision"
         private const val EXTRA_START_ROUTE = "com.asensiodev.carbura.START_ROUTE"
         private const val START_ROUTE_REMINDERS = "reminders"
+        private const val MISSING_REVISION = -1L
+        private const val RECEIVER_VALIDATION_TIMEOUT_MILLIS = 5_000L
     }
+}
+
+internal fun isCurrentReminderAlarm(
+    database: CarburaDatabase,
+    reminderId: String?,
+    revision: Long,
+): Boolean {
+    if (reminderId.isNullOrBlank() || revision < 1L) return false
+    val reminder = database.carburaDatabaseQueries.selectReminderById(reminderId).executeAsOneOrNull() ?: return false
+    if (reminder.deletedAt != null || reminder.isCompleted != 0L) return false
+    return database.carburaDatabaseQueries
+        .selectNotificationRevision(reminderId)
+        .executeAsOneOrNull() == revision
 }
 
 internal fun notificationCopy(

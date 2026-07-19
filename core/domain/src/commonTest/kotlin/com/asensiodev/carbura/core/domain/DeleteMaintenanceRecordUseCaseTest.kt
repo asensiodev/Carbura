@@ -11,7 +11,7 @@ import kotlin.test.assertFailsWith
 
 class DeleteMaintenanceRecordUseCaseTest {
     @Test
-    fun sourceDeletionDeletesBothDeterministicRemindersAndCancelsTheirPlans() =
+    fun sourceDeletionDelegatesBothDeterministicCancelsAtomically() =
         runTest {
             val maintenanceRepository = FakeMaintenanceRecordRepository()
             val reminderRepository = FakeReminderRepository()
@@ -29,32 +29,28 @@ class DeleteMaintenanceRecordUseCaseTest {
                     ReminderId("maintenance-reminder:record-1"),
                     ReminderId("planned-maintenance-reminder:record-1"),
                 ),
-                reminderRepository.deletedReminderIds,
+                maintenanceRepository.notificationCancellationIds,
             )
-            assertEquals(listOf("manual-reminder"), reminderRepository.savedReminders.map { it.id.value })
-            assertEquals(
-                listOf("maintenance-reminder:record-1", "planned-maintenance-reminder:record-1"),
-                scheduler.cancelledReminderIds,
-            )
+            assertEquals(3, reminderRepository.savedReminders.size)
+            assertEquals(emptyList(), scheduler.cancelledReminderIds)
         }
 
     @Test
-    fun cancellationFailureLeavesReminderAndSourceRetryable() =
+    fun schedulerFailureCannotRollBackAtomicSourceDeletion() =
         runTest {
             val maintenanceRepository = sourceRepository()
             val reminderRepository = FakeReminderRepository().apply { saveReminder(reminder("maintenance-reminder:record-1")) }
             val scheduler = FakeReminderNotificationScheduler().apply { failCancels = true }
 
-            assertFailsWith<IllegalStateException> {
-                DeleteMaintenanceRecordUseCase(maintenanceRepository, reminderRepository, scheduler)(MaintenanceRecordId("record-1"))
-            }
+            DeleteMaintenanceRecordUseCase(maintenanceRepository, reminderRepository, scheduler)(MaintenanceRecordId("record-1"))
 
-            assertEquals(1, maintenanceRepository.savedRecords.size)
+            assertEquals(0, maintenanceRepository.savedRecords.size)
             assertEquals(1, reminderRepository.savedReminders.size)
+            assertEquals(2, maintenanceRepository.notificationCancellationIds.size)
         }
 
     @Test
-    fun reminderDeletionFailureLeavesSourceRetryable() =
+    fun legacyReminderRepositoryFailureCannotRollBackAtomicSourceDeletion() =
         runTest {
             val maintenanceRepository = sourceRepository()
             val reminderRepository =
@@ -64,17 +60,15 @@ class DeleteMaintenanceRecordUseCaseTest {
                 }
             val scheduler = FakeReminderNotificationScheduler()
 
-            assertFailsWith<IllegalStateException> {
-                DeleteMaintenanceRecordUseCase(maintenanceRepository, reminderRepository, scheduler)(MaintenanceRecordId("record-1"))
-            }
+            DeleteMaintenanceRecordUseCase(maintenanceRepository, reminderRepository, scheduler)(MaintenanceRecordId("record-1"))
 
-            assertEquals(1, maintenanceRepository.savedRecords.size)
+            assertEquals(0, maintenanceRepository.savedRecords.size)
             assertEquals(1, reminderRepository.savedReminders.size)
-            assertEquals(listOf("maintenance-reminder:record-1"), scheduler.cancelledReminderIds)
+            assertEquals(emptyList(), scheduler.cancelledReminderIds)
         }
 
     @Test
-    fun sourceDeletionFailureCanRetryAfterReminderWasTombstoned() =
+    fun atomicSourceDeletionFailureCanRetryWithoutPartialReminderWork() =
         runTest {
             val maintenanceRepository = sourceRepository().apply { failDeletes = true }
             val reminderRepository = FakeReminderRepository().apply { saveReminder(reminder("maintenance-reminder:record-1")) }
@@ -83,14 +77,16 @@ class DeleteMaintenanceRecordUseCaseTest {
 
             assertFailsWith<IllegalStateException> { useCase(MaintenanceRecordId("record-1")) }
             assertEquals(1, maintenanceRepository.savedRecords.size)
-            assertEquals(emptyList(), reminderRepository.savedReminders)
+            assertEquals(1, reminderRepository.savedReminders.size)
+            assertEquals(emptyList(), maintenanceRepository.notificationCancellationIds)
 
             maintenanceRepository.failDeletes = false
             useCase(MaintenanceRecordId("record-1"))
 
             assertEquals(emptyList(), maintenanceRepository.savedRecords)
-            assertEquals(4, scheduler.cancelledReminderIds.size)
-            assertEquals(4, reminderRepository.deletedReminderIds.size)
+            assertEquals(2, maintenanceRepository.notificationCancellationIds.size)
+            assertEquals(emptyList(), scheduler.cancelledReminderIds)
+            assertEquals(emptyList(), reminderRepository.deletedReminderIds)
         }
 
     private suspend fun sourceRepository(): FakeMaintenanceRecordRepository =

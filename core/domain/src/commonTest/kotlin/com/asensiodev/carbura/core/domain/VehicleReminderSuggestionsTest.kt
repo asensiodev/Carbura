@@ -1,6 +1,7 @@
 package com.asensiodev.carbura.core.domain
 
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderAlertKind
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
 import com.asensiodev.carbura.core.domain.reminder.usecase.DeriveVehicleReminderSuggestionsUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.SaveVehicleWithRemindersParams
 import com.asensiodev.carbura.core.domain.reminder.usecase.SaveVehicleWithRemindersUseCase
@@ -64,10 +65,19 @@ class VehicleReminderSuggestionsTest {
                 ),
             )
 
-            assertEquals(2, reminderRepository.savedReminders.size)
-            assertEquals(CalendarDate("2027-06-10"), reminderRepository.savedReminders.single { it.id != manual.id }.dueDate)
-            assertEquals(2, scheduler.scheduledReminders.size)
-            assertTrue(scheduler.scheduledPlans.all { it.alerts.single().kind == ReminderAlertKind.Manual })
+            val upserts = vehicleRepository.notificationMutations.filterIsInstance<ReminderNotificationMutation.Upsert>()
+            assertEquals(2, upserts.size)
+            assertEquals(CalendarDate("2027-06-10"), upserts.last().reminder.dueDate)
+            assertTrue(
+                upserts.all {
+                    it.notificationPlan
+                        ?.alerts
+                        ?.single()
+                        ?.kind == ReminderAlertKind.Manual
+                },
+            )
+            assertEquals(listOf(manual), reminderRepository.savedReminders)
+            assertTrue(scheduler.scheduledReminders.isEmpty())
         }
 
     @Test
@@ -82,8 +92,14 @@ class VehicleReminderSuggestionsTest {
 
             useCase(SaveVehicleWithRemindersParams(vehicle.copy(nextItvDate = null), true))
 
+            val latestDeletes = vehicleRepository.notificationMutations.takeLast(VehicleReminderKind.entries.size)
+            assertTrue(
+                latestDeletes.any {
+                    it == ReminderNotificationMutation.Delete(vehicleReminderId(vehicle.id, VehicleReminderKind.Itv))
+                },
+            )
             assertTrue(reminderRepository.savedReminders.isEmpty())
-            assertTrue(vehicleReminderId(vehicle.id, VehicleReminderKind.Itv).value in scheduler.cancelledReminderIds)
+            assertTrue(scheduler.cancelledReminderIds.isEmpty())
         }
 
     @Test
@@ -99,6 +115,7 @@ class VehicleReminderSuggestionsTest {
             )
 
             assertEquals(listOf(vehicle), vehicleRepository.savedVehicles)
+            assertTrue(vehicleRepository.notificationMutations.isEmpty())
             assertTrue(reminderRepository.savedReminders.isEmpty())
             assertTrue(scheduler.scheduledReminders.isEmpty())
         }

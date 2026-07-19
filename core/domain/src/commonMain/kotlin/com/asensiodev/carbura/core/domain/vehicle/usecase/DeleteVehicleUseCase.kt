@@ -8,15 +8,10 @@ import com.asensiodev.carbura.core.model.VehicleId
 
 class DeleteVehicleUseCase(
     private val repository: VehicleRepository,
-    private val reminderRepository: ReminderRepository,
-    private val notificationScheduler: ReminderNotificationScheduler,
+    @Suppress("UNUSED_PARAMETER") reminderRepository: ReminderRepository,
+    @Suppress("UNUSED_PARAMETER") notificationScheduler: ReminderNotificationScheduler,
 ) : SuspendUseCase<VehicleId, Unit> {
     override suspend fun invoke(params: VehicleId) {
-        val reminderIds =
-            reminderRepository
-                .getRemindersByVehicle(params)
-                .map { it.id }
-        repository.deleteVehicle(params)
-        reminderIds.forEach { notificationScheduler.cancel(it) }
+        repository.deleteVehicleWithNotifications(params)
     }
 }

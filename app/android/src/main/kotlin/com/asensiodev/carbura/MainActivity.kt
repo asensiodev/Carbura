@@ -75,6 +75,8 @@ import com.asensiodev.carbura.app.shared.CarburaRoute
 import com.asensiodev.carbura.core.designsystem.CarburaTheme
 import com.asensiodev.carbura.core.designsystem.Size
 import com.asensiodev.carbura.core.designsystem.Spacings
+import com.asensiodev.carbura.core.domain.reminder.notification.NotificationOutboxRecovery
+import com.asensiodev.carbura.core.domain.reminder.notification.NotificationRecoveryTrigger
 import com.asensiodev.carbura.core.domain.sync.SyncManager
 import com.asensiodev.carbura.core.domain.sync.SyncStatus
 import com.asensiodev.carbura.feature.garage.presentation.GarageRoute
@@ -135,6 +137,11 @@ private fun CarburaApp(
     val backStack = rememberNavBackStack(CarburaRoute.Garage)
     val onboardingViewModel = rememberOnboardingViewModel()
     val syncManager = rememberSyncManager()
+    val notificationRecovery = rememberNotificationOutboxRecovery()
+    val notificationRecoveryTrigger =
+        remember(notificationRecovery) {
+            NotificationRecoveryTrigger(notificationRecovery, FOREGROUND_SYNC_THROTTLE_MILLIS)
+        }
     val onboardingState by onboardingViewModel.uiState.collectAsStateWithLifecycle()
     val syncStatus by syncManager.status.collectAsStateWithLifecycle()
     val syncScope = rememberCoroutineScope()
@@ -175,6 +182,7 @@ private fun CarburaApp(
     var initialSyncCompleted by remember(familyId) { mutableStateOf(false) }
 
     LaunchedEffect(familyId) {
+        notificationRecoveryTrigger.onAuthenticatedStartup(System.currentTimeMillis())
         try {
             syncManager.syncNow()
         } finally {
@@ -205,6 +213,7 @@ private fun CarburaApp(
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_START && onboardingState.isAuthenticated) {
                     val now = System.currentTimeMillis()
+                    notificationRecoveryTrigger.onForeground(now)
                     if (now - lastForegroundSyncAttempt.longValue >= FOREGROUND_SYNC_THROTTLE_MILLIS) {
                         lastForegroundSyncAttempt.longValue = now
                         syncScope.launch { syncManager.syncNow() }
@@ -720,6 +729,12 @@ private fun rememberOnboardingViewModel(): OnboardingViewModel =
 
 @Composable
 private fun rememberSyncManager(): SyncManager =
+    remember {
+        GlobalContext.get().get()
+    }
+
+@Composable
+private fun rememberNotificationOutboxRecovery(): NotificationOutboxRecovery =
     remember {
         GlobalContext.get().get()
     }

@@ -39,6 +39,7 @@ internal class AndroidReminderNotificationScheduler(
                     title = plan.reminder.title,
                     dueDate = plan.reminder.dueDate?.iso8601,
                     alertKind = instance.alert.kind,
+                    revision = plan.revision?.value,
                 ),
             )
         }
@@ -53,6 +54,7 @@ internal class AndroidReminderNotificationScheduler(
                     title = null,
                     dueDate = null,
                     alertKind = alertKind,
+                    revision = null,
                 ),
             )
         }
@@ -71,6 +73,7 @@ internal class AndroidReminderNotificationScheduler(
         title: String?,
         dueDate: String?,
         alertKind: ReminderAlertKind,
+        revision: Long?,
     ): PendingIntent {
         val identity = reminderAlertIdentity(reminderId, alertKind)
         val intent =
@@ -78,6 +81,7 @@ internal class AndroidReminderNotificationScheduler(
                 data = Uri.parse("carbura://reminder-alert/${Uri.encode(identity)}")
                 putExtra(AndroidReminderNotificationReceiver.EXTRA_REMINDER_ID, reminderId.value)
                 putExtra(AndroidReminderNotificationReceiver.EXTRA_ALERT_KIND, alertKind.name)
+                if (revision != null) putExtra(AndroidReminderNotificationReceiver.EXTRA_REVISION, revision)
                 if (title != null) putExtra(AndroidReminderNotificationReceiver.EXTRA_REMINDER_TITLE, title)
                 if (dueDate != null) putExtra(AndroidReminderNotificationReceiver.EXTRA_DUE_DATE, dueDate)
             }

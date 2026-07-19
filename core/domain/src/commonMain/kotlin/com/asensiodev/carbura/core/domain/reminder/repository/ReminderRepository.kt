@@ -1,5 +1,6 @@
 package com.asensiodev.carbura.core.domain.reminder.repository
 
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.ReminderId
@@ -12,7 +13,22 @@ interface ReminderRepository {
 
     suspend fun saveReminder(reminder: Reminder)
 
+    suspend fun saveReminderWithNotification(
+        reminder: Reminder,
+        notificationPlan: ReminderNotificationPlan?,
+    ) {
+        saveReminder(reminder)
+    }
+
     suspend fun markReminderCompleted(reminderId: ReminderId)
 
+    suspend fun markReminderCompletedWithNotification(reminderId: ReminderId) {
+        markReminderCompleted(reminderId)
+    }
+
     suspend fun deleteReminder(reminderId: ReminderId)
+
+    suspend fun deleteReminderWithNotification(reminderId: ReminderId) {
+        deleteReminder(reminderId)
+    }
 }

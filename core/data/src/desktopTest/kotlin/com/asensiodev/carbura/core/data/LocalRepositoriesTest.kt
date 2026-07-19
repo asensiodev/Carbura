@@ -2,8 +2,12 @@ package com.asensiodev.carbura.core.data
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
+import com.asensiodev.carbura.core.domain.reminder.notification.maintenanceReminderId
+import com.asensiodev.carbura.core.domain.reminder.notification.manualReminderNotificationPlan
+import com.asensiodev.carbura.core.domain.reminder.notification.plannedMaintenanceReminderId
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
@@ -21,7 +25,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
+@Suppress("TooManyFunctions")
 class LocalRepositoriesTest {
     private val familyId = FamilyId("family-test")
     private val vehicleId = VehicleId("vehicle-test")
@@ -270,6 +276,13 @@ class LocalRepositoriesTest {
             cleaner.clear(familyId)
 
             assertEquals(listOf(ReminderId("itv")), scheduler.cancelledReminderIds)
+            assertEquals(
+                "Cancel",
+                recreatedDatabase.carburaDatabaseQueries
+                    .selectDesiredNotifications()
+                    .executeAsOne()
+                    .action,
+            )
             assertEquals(emptyList(), LocalVehicleRepository(recreatedDatabase).observeVehicles(familyId))
             assertEquals(emptyList(), LocalMaintenanceRecordRepository(recreatedDatabase).getVehicleHistory(vehicleId))
             assertEquals(emptyList(), LocalReminderRepository(recreatedDatabase).getPendingReminders(familyId))
@@ -300,6 +313,206 @@ class LocalRepositoriesTest {
 
             assertEquals(emptyList(), LocalVehicleRepository(recreatedDatabase).observeVehicles(familyId))
             assertEquals(emptyList(), LocalReminderRepository(recreatedDatabase).getPendingReminders(familyId))
+        }
+
+    @Test
+    fun savingReminderAtomicallyRecordsLatestScheduleAction() =
+        runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
+            val repository = LocalReminderRepository(firstDatabase)
+            val reminder = reminder("itv", dueDate = "2026-08-01")
+
+            repository.saveReminderWithNotification(reminder, manualReminderNotificationPlan(reminder))
+
+            val desired = recreatedDatabase.carburaDatabaseQueries.selectDesiredNotifications().executeAsOne()
+            assertEquals(reminder.id.value, desired.reminderId)
+            assertEquals("Schedule", desired.action)
+            assertNotNull(desired.payload)
+            assertEquals(1L, desired.revision)
+            assertEquals(
+                1L,
+                recreatedDatabase.carburaDatabaseQueries
+                    .selectSyncRemindersByFamily(familyId.value)
+                    .executeAsOne()
+                    .pendingSync,
+            )
+        }
+
+    @Test
+    fun completingAndDeletingReminderAtomicallyRecordCancelAction() =
+        runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
+            val repository = LocalReminderRepository(firstDatabase)
+            val reminder = reminder("itv", dueDate = "2026-08-01")
+            repository.saveReminderWithNotification(reminder, manualReminderNotificationPlan(reminder))
+
+            repository.markReminderCompletedWithNotification(reminder.id)
+
+            var persisted = recreatedDatabase.carburaDatabaseQueries.selectSyncRemindersByFamily(familyId.value).executeAsOne()
+            var desired = recreatedDatabase.carburaDatabaseQueries.selectDesiredNotifications().executeAsOne()
+            assertEquals(1L, persisted.isCompleted)
+            assertEquals(1L, persisted.pendingSync)
+            assertEquals("Cancel", desired.action)
+            assertEquals(2L, desired.revision)
+
+            repository.deleteReminderWithNotification(reminder.id)
+
+            persisted = recreatedDatabase.carburaDatabaseQueries.selectSyncRemindersByFamily(familyId.value).executeAsOne()
+            desired = recreatedDatabase.carburaDatabaseQueries.selectDesiredNotifications().executeAsOne()
+            assertNotNull(persisted.deletedAt)
+            assertEquals(1L, persisted.pendingSync)
+            assertEquals("Cancel", desired.action)
+            assertEquals(2L, desired.revision)
+        }
+
+    @Test
+    fun maintenanceDeletionAtomicallyRecordsCancelsForGeneratedReminders() =
+        runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
+            val maintenanceRepository = LocalMaintenanceRecordRepository(firstDatabase)
+            val reminderRepository = LocalReminderRepository(firstDatabase)
+            val maintenance = record("oil", "2026-07-01")
+            val reminderIds = listOf(maintenanceReminderId(maintenance.id), plannedMaintenanceReminderId(maintenance.id))
+            maintenanceRepository.saveMaintenanceRecord(maintenance)
+            reminderIds.forEach { id ->
+                reminderRepository.saveReminder(reminder(id.value, dueDate = "2026-08-01"))
+            }
+
+            maintenanceRepository.deleteMaintenanceRecordWithNotifications(maintenance.id, reminderIds)
+
+            assertEquals(
+                reminderIds.map { it.value }.sorted(),
+                recreatedDatabase.carburaDatabaseQueries
+                    .selectDesiredNotifications()
+                    .executeAsList()
+                    .onEach { assertEquals("Cancel", it.action) }
+                    .map { it.reminderId },
+            )
+            assertTrue(LocalMaintenanceRecordRepository(recreatedDatabase).getVehicleHistory(vehicleId).isEmpty())
+            assertTrue(LocalReminderRepository(recreatedDatabase).getPendingReminders(familyId).isEmpty())
+        }
+
+    @Test
+    fun maintenanceCreationAtomicallyPersistsGeneratedReminderAndSchedule() =
+        runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
+            val repository = LocalMaintenanceRecordRepository(firstDatabase)
+            val maintenance = record("oil", "2026-07-01")
+            val generatedReminder = reminder("maintenance-reminder:oil", dueDate = "2026-08-01")
+
+            repository.saveMaintenanceRecordWithNotification(
+                maintenance,
+                ReminderNotificationMutation.Upsert(
+                    generatedReminder,
+                    manualReminderNotificationPlan(generatedReminder),
+                ),
+            )
+
+            assertEquals(1, LocalMaintenanceRecordRepository(recreatedDatabase).getVehicleHistory(vehicleId).size)
+            assertEquals(listOf(generatedReminder), LocalReminderRepository(recreatedDatabase).getPendingReminders(familyId))
+            assertEquals(
+                "Schedule",
+                recreatedDatabase.carburaDatabaseQueries
+                    .selectDesiredNotifications()
+                    .executeAsOne()
+                    .action,
+            )
+        }
+
+    @Test
+    fun vehicleDeletionAtomicallyRecordsCancelsForEveryAffectedReminder() =
+        runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
+            val vehicleRepository = LocalVehicleRepository(firstDatabase)
+            val reminderRepository = LocalReminderRepository(firstDatabase)
+            vehicleRepository.saveVehicle(
+                Vehicle(
+                    id = vehicleId,
+                    familyId = familyId,
+                    name = "Moto",
+                    type = VehicleType.Motorcycle,
+                    currentOdometerKm = 3000,
+                ),
+            )
+            listOf("itv", "insurance").forEach { id ->
+                reminderRepository.saveReminder(reminder(id, dueDate = "2026-08-01"))
+            }
+
+            vehicleRepository.deleteVehicleWithNotifications(vehicleId)
+
+            val desired = recreatedDatabase.carburaDatabaseQueries.selectDesiredNotifications().executeAsList()
+            assertEquals(listOf("insurance", "itv"), desired.map { it.reminderId })
+            assertTrue(desired.all { it.action == "Cancel" })
+            assertTrue(LocalVehicleRepository(recreatedDatabase).observeVehicles(familyId).isEmpty())
+            assertTrue(LocalReminderRepository(recreatedDatabase).getPendingReminders(familyId).isEmpty())
+        }
+
+    @Test
+    fun vehicleSaveAtomicallyReconcilesAllGeneratedReminderIntents() =
+        runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
+            val repository = LocalVehicleRepository(firstDatabase)
+            val vehicle =
+                Vehicle(
+                    id = vehicleId,
+                    familyId = familyId,
+                    name = "Moto",
+                    type = VehicleType.Motorcycle,
+                    currentOdometerKm = 3000,
+                )
+            val scheduledReminder = reminder("itv", dueDate = "2026-08-01")
+
+            repository.saveVehicleWithNotifications(
+                vehicle,
+                listOf(
+                    ReminderNotificationMutation.Upsert(
+                        scheduledReminder,
+                        manualReminderNotificationPlan(scheduledReminder),
+                    ),
+                    ReminderNotificationMutation.Delete(ReminderId("insurance")),
+                ),
+            )
+
+            assertEquals(listOf(vehicle), LocalVehicleRepository(recreatedDatabase).observeVehicles(familyId))
+            assertEquals(listOf(scheduledReminder), LocalReminderRepository(recreatedDatabase).getPendingReminders(familyId))
+            assertEquals(
+                listOf("Cancel", "Schedule"),
+                recreatedDatabase.carburaDatabaseQueries
+                    .selectDesiredNotifications()
+                    .executeAsList()
+                    .map { it.action },
+            )
+        }
+
+    @Test
+    fun syncedReminderKeepsRemoteSyncStateAndNotificationIntentAtomic() =
+        runTestWithRecreatedDatabase { firstDatabase, recreatedDatabase ->
+            val syncDataSource = SqlDelightLocalSyncDataSource(firstDatabase)
+            val reminder =
+                SyncReminder(
+                    id = "remote-reminder",
+                    familyId = familyId.value,
+                    vehicleId = vehicleId.value,
+                    maintenanceTypeId = null,
+                    title = "ITV",
+                    dueDate = "2026-08-01",
+                    dueOdometerKm = null,
+                    notifyDaysBefore = 30,
+                    isCompleted = false,
+                    updatedAt = 100,
+                    pendingSync = false,
+                    deletedAt = null,
+                )
+
+            syncDataSource.upsertSyncedReminder(reminder)
+
+            var persisted = recreatedDatabase.carburaDatabaseQueries.selectSyncRemindersByFamily(familyId.value).executeAsOne()
+            var desired = recreatedDatabase.carburaDatabaseQueries.selectDesiredNotifications().executeAsOne()
+            assertEquals(0L, persisted.pendingSync)
+            assertEquals("Schedule", desired.action)
+
+            syncDataSource.upsertSyncedReminder(reminder.copy(isCompleted = true, updatedAt = 200))
+
+            persisted = recreatedDatabase.carburaDatabaseQueries.selectSyncRemindersByFamily(familyId.value).executeAsOne()
+            desired = recreatedDatabase.carburaDatabaseQueries.selectDesiredNotifications().executeAsOne()
+            assertEquals(0L, persisted.pendingSync)
+            assertEquals(1L, persisted.isCompleted)
+            assertEquals("Cancel", desired.action)
+            assertEquals(2L, desired.revision)
         }
 
     private fun runTestWithRecreatedDatabase(block: suspend (CarburaDatabase, CarburaDatabase) -> Unit) =

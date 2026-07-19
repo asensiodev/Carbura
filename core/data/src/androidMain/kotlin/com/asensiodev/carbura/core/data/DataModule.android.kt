@@ -7,6 +7,9 @@ import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.auth.AccountLocalDataCleaner
 import com.asensiodev.carbura.core.domain.maintenance.repository.MaintenanceRecordRepository
+import com.asensiodev.carbura.core.domain.reminder.notification.NotificationOutbox
+import com.asensiodev.carbura.core.domain.reminder.notification.NotificationOutboxProcessor
+import com.asensiodev.carbura.core.domain.reminder.notification.NotificationOutboxRecovery
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
 import com.asensiodev.carbura.core.domain.sync.SyncManager
@@ -28,12 +31,16 @@ actual val dataModule: Module =
         single { CarburaDatabase(get()) }
         single { SyncOperationLock() }
         single<ReminderNotificationScheduler> { AndroidReminderNotificationScheduler(get()) }
-        single<AccountLocalDataCleaner> { SqlDelightAccountLocalDataCleaner(get(), get(), get()) }
-        single<VehicleRepository> { LocalVehicleRepository(get()) }
-        single<MaintenanceRecordRepository> { LocalMaintenanceRecordRepository(get()) }
-        single<ReminderRepository> { LocalReminderRepository(get()) }
+        single<NotificationOutbox> { SqlDelightNotificationOutbox(get()) }
+        single { NotificationOutboxProcessor(get(), get()) }
+        single { NotificationOutboxReconciler(get()) }
+        single<NotificationOutboxRecovery> { AndroidNotificationOutboxRecovery(get(), get(), get(), get()) }
+        single<AccountLocalDataCleaner> { SqlDelightAccountLocalDataCleaner(get(), get(), get(), get()) }
+        single<VehicleRepository> { LocalVehicleRepository(get(), get()) }
+        single<MaintenanceRecordRepository> { LocalMaintenanceRecordRepository(get(), get()) }
+        single<ReminderRepository> { LocalReminderRepository(get(), get()) }
         single<RemoteUserProfileGateway> { SupabaseUserProfileGateway(get()) }
-        single<LocalSyncDataSource> { SqlDelightLocalSyncDataSource(get()) }
+        single<LocalSyncDataSource> { SqlDelightLocalSyncDataSource(get(), get()) }
         single<RemoteSyncDataSource> { SupabaseSyncDataSource(get()) }
         single<SyncManager> { LocalFirstSyncManager(get(), get(), get(), get(), get()) }
     }

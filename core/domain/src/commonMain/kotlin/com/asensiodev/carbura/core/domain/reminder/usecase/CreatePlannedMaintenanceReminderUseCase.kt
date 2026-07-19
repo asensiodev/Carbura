@@ -10,7 +10,7 @@ import com.asensiodev.carbura.core.model.Reminder
 
 class CreatePlannedMaintenanceReminderUseCase(
     private val repository: ReminderRepository,
-    private val notificationScheduler: ReminderNotificationScheduler,
+    @Suppress("UNUSED_PARAMETER") notificationScheduler: ReminderNotificationScheduler,
 ) : SuspendUseCase<MaintenanceRecord, Reminder> {
     override suspend fun invoke(params: MaintenanceRecord): Reminder {
         val reminder =
@@ -23,8 +23,8 @@ class CreatePlannedMaintenanceReminderUseCase(
                 dueDate = params.performedOn,
                 notifyDaysBefore = 0,
             )
-        repository.saveReminder(reminder)
-        notificationScheduler.schedule(manualReminderNotificationPlan(reminder))
+        val notificationPlan = manualReminderNotificationPlan(reminder)
+        repository.saveReminderWithNotification(reminder, notificationPlan)
         return reminder
     }
 }

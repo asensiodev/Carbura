@@ -10,7 +10,7 @@ import com.asensiodev.carbura.core.model.Reminder
 
 class CreateReminderUseCase(
     private val repository: ReminderRepository,
-    private val notificationScheduler: ReminderNotificationScheduler,
+    @Suppress("UNUSED_PARAMETER") notificationScheduler: ReminderNotificationScheduler,
 ) : SuspendUseCase<Reminder, DomainResult<Reminder>> {
     override suspend fun invoke(params: Reminder): DomainResult<Reminder> {
         if (params.title.isBlank()) {
@@ -30,12 +30,13 @@ class CreateReminderUseCase(
             return DomainResult.ValidationError(ValidationFailure.NegativeReminderDueOdometer)
         }
 
-        repository.saveReminder(params)
-        if (params.dueDate != null && !params.isCompleted) {
-            notificationScheduler.schedule(manualReminderNotificationPlan(params))
-        } else {
-            notificationScheduler.cancel(params.id)
-        }
+        val notificationPlan =
+            if (params.dueDate != null && !params.isCompleted) {
+                manualReminderNotificationPlan(params)
+            } else {
+                null
+            }
+        repository.saveReminderWithNotification(params, notificationPlan)
         return DomainResult.Success(params)
     }
 }

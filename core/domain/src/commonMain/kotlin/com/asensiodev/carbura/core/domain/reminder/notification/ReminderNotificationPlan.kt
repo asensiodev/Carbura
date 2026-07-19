@@ -23,6 +23,7 @@ data class ReminderAlert(
 data class ReminderNotificationPlan(
     val reminder: Reminder,
     val alerts: List<ReminderAlert>,
+    val revision: NotificationRevision? = null,
 ) {
     init {
         require(alerts.map(ReminderAlert::kind).distinct().size == alerts.size) {

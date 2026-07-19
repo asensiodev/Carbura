@@ -1,5 +1,6 @@
 package com.asensiodev.carbura.core.domain.reminder.usecase
 
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
 import com.asensiodev.carbura.core.domain.reminder.notification.manualReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
@@ -67,29 +68,31 @@ data class SaveVehicleWithRemindersParams(
 
 class SaveVehicleWithRemindersUseCase(
     private val vehicleRepository: VehicleRepository,
-    private val reminderRepository: ReminderRepository,
-    private val notificationScheduler: ReminderNotificationScheduler,
+    @Suppress("UNUSED_PARAMETER") reminderRepository: ReminderRepository,
+    @Suppress("UNUSED_PARAMETER") notificationScheduler: ReminderNotificationScheduler,
     private val deriveSuggestions: DeriveVehicleReminderSuggestionsUseCase = DeriveVehicleReminderSuggestionsUseCase(),
 ) {
     suspend operator fun invoke(params: SaveVehicleWithRemindersParams) {
-        vehicleRepository.saveVehicle(params.vehicle)
-        if (!params.reconcileGeneratedReminders) return
-
-        val suggestions = deriveSuggestions(params.vehicle).associateBy { it.kind }
-        VehicleReminderKind.entries.forEach { kind ->
-            val id = vehicleReminderId(params.vehicle.id, kind)
-            val suggestion = suggestions[kind]
-            if (suggestion == null) {
-                reminderRepository.deleteReminder(id)
-                notificationScheduler.cancel(id)
-            } else {
-                reminderRepository.saveReminder(suggestion.reminder)
-                if (suggestion.reminder.dueDate != null) {
-                    notificationScheduler.schedule(manualReminderNotificationPlan(suggestion.reminder))
-                } else {
-                    notificationScheduler.cancel(id)
+        val mutations =
+            if (params.reconcileGeneratedReminders) {
+                val suggestions = deriveSuggestions(params.vehicle).associateBy { it.kind }
+                VehicleReminderKind.entries.map { kind ->
+                    val suggestion = suggestions[kind]
+                    if (suggestion == null) {
+                        ReminderNotificationMutation.Delete(vehicleReminderId(params.vehicle.id, kind))
+                    } else {
+                        ReminderNotificationMutation.Upsert(
+                            reminder = suggestion.reminder,
+                            notificationPlan =
+                                suggestion.reminder.dueDate?.let {
+                                    manualReminderNotificationPlan(suggestion.reminder)
+                                },
+                        )
+                    }
                 }
+            } else {
+                emptyList()
             }
-        }
+        vehicleRepository.saveVehicleWithNotifications(params.vehicle, mutations)
     }
 }

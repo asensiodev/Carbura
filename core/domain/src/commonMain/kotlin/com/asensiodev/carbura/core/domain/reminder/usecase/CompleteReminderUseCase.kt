@@ -7,10 +7,9 @@ import com.asensiodev.carbura.core.model.ReminderId
 
 class CompleteReminderUseCase(
     private val repository: ReminderRepository,
-    private val notificationScheduler: ReminderNotificationScheduler,
+    @Suppress("UNUSED_PARAMETER") notificationScheduler: ReminderNotificationScheduler,
 ) : SuspendUseCase<ReminderId, Unit> {
     override suspend fun invoke(params: ReminderId) {
-        repository.markReminderCompleted(params)
-        notificationScheduler.cancel(params)
+        repository.markReminderCompletedWithNotification(params)
     }
 }

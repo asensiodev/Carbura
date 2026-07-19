@@ -1,5 +1,6 @@
 package com.asensiodev.carbura.core.domain
 
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
 import com.asensiodev.carbura.core.domain.reminder.usecase.CompleteReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.CreateReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.DeleteReminderUseCase
@@ -32,27 +33,37 @@ class ReminderUseCasesTest {
         }
 
     @Test
-    fun dateReminderSchedulesNotificationAfterSave() =
+    fun dateReminderRecordsScheduleIntentAfterSave() =
         runTest {
             val scheduler = FakeReminderNotificationScheduler()
             val reminder = reminder(id = "itv", dueDate = "2026-07-10")
 
-            CreateReminderUseCase(FakeReminderRepository(), scheduler)(reminder)
+            val repository = FakeReminderRepository()
+            CreateReminderUseCase(repository, scheduler)(reminder)
 
-            assertEquals(listOf("itv"), scheduler.scheduledReminderIds)
-            assertEquals(emptyList(), scheduler.cancelledReminderIds)
+            val mutation = repository.notificationMutations.single() as ReminderNotificationMutation.Upsert
+            assertEquals(reminder, mutation.reminder)
+            assertEquals(
+                "itv",
+                mutation.notificationPlan
+                    ?.reminder
+                    ?.id
+                    ?.value,
+            )
+            assertEquals(emptyList(), scheduler.scheduledReminderIds)
         }
 
     @Test
-    fun odometerOnlyReminderDoesNotScheduleDateNotification() =
+    fun odometerOnlyReminderRecordsCancelIntent() =
         runTest {
             val scheduler = FakeReminderNotificationScheduler()
             val reminder = reminder(id = "oil", dueOdometerKm = 20000)
 
-            CreateReminderUseCase(FakeReminderRepository(), scheduler)(reminder)
+            val repository = FakeReminderRepository()
+            CreateReminderUseCase(repository, scheduler)(reminder)
 
             assertEquals(emptyList(), scheduler.scheduledReminderIds)
-            assertEquals(listOf("oil"), scheduler.cancelledReminderIds)
+            assertEquals(null, (repository.notificationMutations.single() as ReminderNotificationMutation.Upsert).notificationPlan)
         }
 
     @Test
@@ -113,23 +124,33 @@ class ReminderUseCasesTest {
         }
 
     @Test
-    fun completeReminderCancelsNotification() =
+    fun completeReminderRecordsCancelIntent() =
         runTest {
             val scheduler = FakeReminderNotificationScheduler()
 
-            CompleteReminderUseCase(FakeReminderRepository(), scheduler)(ReminderId("reminder-1"))
+            val repository = FakeReminderRepository()
+            CompleteReminderUseCase(repository, scheduler)(ReminderId("reminder-1"))
 
-            assertEquals(listOf("reminder-1"), scheduler.cancelledReminderIds)
+            assertEquals(
+                ReminderNotificationMutation.Delete(ReminderId("reminder-1")),
+                repository.notificationMutations.single(),
+            )
+            assertEquals(emptyList(), scheduler.cancelledReminderIds)
         }
 
     @Test
-    fun deleteReminderCancelsNotification() =
+    fun deleteReminderRecordsCancelIntent() =
         runTest {
             val scheduler = FakeReminderNotificationScheduler()
 
-            DeleteReminderUseCase(FakeReminderRepository(), scheduler)(ReminderId("reminder-1"))
+            val repository = FakeReminderRepository()
+            DeleteReminderUseCase(repository, scheduler)(ReminderId("reminder-1"))
 
-            assertEquals(listOf("reminder-1"), scheduler.cancelledReminderIds)
+            assertEquals(
+                ReminderNotificationMutation.Delete(ReminderId("reminder-1")),
+                repository.notificationMutations.single(),
+            )
+            assertEquals(emptyList(), scheduler.cancelledReminderIds)
         }
 
     private fun reminder(

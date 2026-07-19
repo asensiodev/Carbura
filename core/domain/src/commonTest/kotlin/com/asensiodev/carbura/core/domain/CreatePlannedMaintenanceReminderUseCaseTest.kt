@@ -1,6 +1,7 @@
 package com.asensiodev.carbura.core.domain
 
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderAlertKind
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
 import com.asensiodev.carbura.core.domain.reminder.usecase.CreatePlannedMaintenanceReminderUseCase
 import com.asensiodev.carbura.core.model.CalendarDate
 import kotlinx.coroutines.test.runTest
@@ -25,16 +26,18 @@ class CreatePlannedMaintenanceReminderUseCaseTest {
             assertEquals(listOf(reminder), repository.savedReminders)
             assertEquals(
                 listOf(ReminderAlertKind.Manual),
-                scheduler.scheduledPlans
-                    .single()
-                    .alerts
+                (repository.notificationMutations.single() as ReminderNotificationMutation.Upsert)
+                    .notificationPlan
+                    ?.alerts
+                    .orEmpty()
                     .map { it.kind },
             )
             assertEquals(
                 listOf(0),
-                scheduler.scheduledPlans
-                    .single()
-                    .alerts
+                (repository.notificationMutations.single() as ReminderNotificationMutation.Upsert)
+                    .notificationPlan
+                    ?.alerts
+                    .orEmpty()
                     .map { it.daysBefore },
             )
         }
@@ -51,6 +54,7 @@ class CreatePlannedMaintenanceReminderUseCaseTest {
             useCase(record)
 
             assertEquals(1, repository.savedReminders.size)
-            assertEquals(scheduler.scheduledPlans[0], scheduler.scheduledPlans[1])
+            assertEquals(repository.notificationMutations[0], repository.notificationMutations[1])
+            assertEquals(emptyList(), scheduler.scheduledPlans)
         }
 }

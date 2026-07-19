@@ -173,6 +173,46 @@ CREATE TABLE reminders (
     deletedAt INTEGER
 );
 
+CREATE TABLE desiredNotificationOutbox (
+    reminderId TEXT NOT NULL PRIMARY KEY,
+    action TEXT NOT NULL,
+    payload TEXT,
+    revision INTEGER NOT NULL
+);
+
+CREATE TABLE notificationRevisions (
+    reminderId TEXT NOT NULL PRIMARY KEY,
+    revision INTEGER NOT NULL
+);
+
+selectNotificationRevision:
+SELECT revision
+FROM notificationRevisions
+WHERE reminderId = ?;
+
+replaceNotificationRevision:
+INSERT OR REPLACE INTO notificationRevisions(reminderId, revision)
+VALUES (?, ?);
+
+replaceDesiredNotification:
+INSERT OR REPLACE INTO desiredNotificationOutbox(reminderId, action, payload, revision)
+VALUES (?, ?, ?, ?);
+
+selectDesiredNotificationById:
+SELECT *
+FROM desiredNotificationOutbox
+WHERE reminderId = ?;
+
+selectDesiredNotifications:
+SELECT *
+FROM desiredNotificationOutbox
+ORDER BY reminderId ASC;
+
+acknowledgeDesiredNotification:
+DELETE FROM desiredNotificationOutbox
+WHERE reminderId = ?
+AND revision = ?;
+
 selectPendingRemindersByFamily:
 SELECT *
 FROM reminders
@@ -192,6 +232,16 @@ selectSyncRemindersByFamily:
 SELECT *
 FROM reminders
 WHERE familyId = ?;
+
+selectReminderById:
+SELECT *
+FROM reminders
+WHERE id = ?;
+
+selectAllReminders:
+SELECT *
+FROM reminders
+ORDER BY id;
 
 selectReminderIdsByFamilyForAccountCleanup:
 SELECT id

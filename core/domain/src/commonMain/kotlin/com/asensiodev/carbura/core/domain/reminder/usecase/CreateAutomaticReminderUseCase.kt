@@ -17,37 +17,42 @@ data class GeneratedMaintenanceReminder(
 
 class CreateAutomaticReminderUseCase(
     private val repository: ReminderRepository,
-    private val notificationScheduler: ReminderNotificationScheduler,
+    @Suppress("UNUSED_PARAMETER") notificationScheduler: ReminderNotificationScheduler,
 ) : SuspendUseCase<MaintenanceRecord, GeneratedMaintenanceReminder?> {
     override suspend fun invoke(params: MaintenanceRecord): GeneratedMaintenanceReminder? {
         val reminderId = maintenanceReminderId(params.id)
-        val dueDate = params.nextDueDate
-        val maintenanceTypeCode = params.maintenanceTypeCode
-        if (dueDate == null || (maintenanceTypeCode != MaintenanceTypeCode.Itv && maintenanceTypeCode != MaintenanceTypeCode.Insurance)) {
-            notificationScheduler.cancel(reminderId)
-            repository.deleteReminder(reminderId)
+        val generated = deriveGeneratedMaintenanceReminder(params)
+        if (generated == null) {
+            repository.deleteReminderWithNotification(reminderId)
             return null
         }
-        val title =
-            when (maintenanceTypeCode) {
-                MaintenanceTypeCode.Itv -> "Proxima ITV"
-                MaintenanceTypeCode.Insurance -> "Proximo seguro"
-                else -> error("Maintenance reminder eligibility must be reconciled before creation")
-            }
-
-        val reminder =
-            Reminder(
-                id = reminderId,
-                familyId = params.familyId,
-                vehicleId = params.vehicleId,
-                maintenanceTypeId = params.maintenanceTypeId,
-                title = title,
-                dueDate = dueDate,
-                notifyDaysBefore = if (maintenanceTypeCode == MaintenanceTypeCode.Itv) 60 else 45,
-            )
-        val notificationPlan = maintenanceReminderNotificationPlan(reminder, maintenanceTypeCode) ?: return null
-        repository.saveReminder(reminder)
-        notificationScheduler.schedule(notificationPlan)
-        return GeneratedMaintenanceReminder(reminder, notificationPlan)
+        repository.saveReminderWithNotification(generated.reminder, generated.notificationPlan)
+        return generated
     }
+}
+
+fun deriveGeneratedMaintenanceReminder(params: MaintenanceRecord): GeneratedMaintenanceReminder? {
+    val dueDate = params.nextDueDate ?: return null
+    val maintenanceTypeCode = params.maintenanceTypeCode
+    if (maintenanceTypeCode != MaintenanceTypeCode.Itv && maintenanceTypeCode != MaintenanceTypeCode.Insurance) return null
+    val reminderId = maintenanceReminderId(params.id)
+    val title =
+        when (maintenanceTypeCode) {
+            MaintenanceTypeCode.Itv -> "Proxima ITV"
+            MaintenanceTypeCode.Insurance -> "Proximo seguro"
+            else -> error("Maintenance reminder eligibility must be reconciled before creation")
+        }
+
+    val reminder =
+        Reminder(
+            id = reminderId,
+            familyId = params.familyId,
+            vehicleId = params.vehicleId,
+            maintenanceTypeId = params.maintenanceTypeId,
+            title = title,
+            dueDate = dueDate,
+            notifyDaysBefore = if (maintenanceTypeCode == MaintenanceTypeCode.Itv) 60 else 45,
+        )
+    val notificationPlan = maintenanceReminderNotificationPlan(reminder, maintenanceTypeCode) ?: return null
+    return GeneratedMaintenanceReminder(reminder, notificationPlan)
 }

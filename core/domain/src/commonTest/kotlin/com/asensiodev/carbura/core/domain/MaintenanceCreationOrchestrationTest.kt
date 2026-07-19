@@ -5,6 +5,7 @@ import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceR
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderFromInputUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
 import com.asensiodev.carbura.core.domain.reminder.usecase.CreateAutomaticReminderUseCase
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
@@ -115,8 +116,11 @@ class MaintenanceCreationOrchestrationTest {
 
             val creation = assertIs<DomainResult.Success<*>>(result).value
             assertEquals(listOf(record), maintenanceRepository.savedRecords)
-            assertEquals(1, reminderRepository.savedReminders.size)
-            assertEquals(1, scheduler.scheduledPlans.size)
+            val notificationMutation =
+                maintenanceRepository.notificationMutations.single() as ReminderNotificationMutation.Upsert
+            assertEquals("maintenance-reminder:record-1", notificationMutation.reminder.id.value)
+            assertEquals(3, notificationMutation.notificationPlan?.alerts?.size)
+            assertEquals(0, scheduler.scheduledPlans.size)
             assertEquals(
                 "maintenance-reminder:record-1",
                 (creation as com.asensiodev.carbura.core.domain.maintenance.usecase.MaintenanceCreationResult)
@@ -150,15 +154,14 @@ class MaintenanceCreationOrchestrationTest {
             )
             assertEquals(
                 "maintenance-reminder:record-1",
-                reminderRepository.savedReminders
-                    .single()
-                    .id.value,
+                (maintenanceRepository.notificationMutations.single() as ReminderNotificationMutation.Upsert).reminder.id.value,
             )
             assertEquals(
                 listOf(45, 37, 7),
-                scheduler.scheduledPlans
-                    .single()
-                    .alerts
+                (maintenanceRepository.notificationMutations.single() as ReminderNotificationMutation.Upsert)
+                    .notificationPlan
+                    ?.alerts
+                    .orEmpty()
                     .map { it.daysBefore },
             )
         }
@@ -180,8 +183,8 @@ class MaintenanceCreationOrchestrationTest {
             useCase(record)
 
             assertEquals(1, maintenanceRepository.savedRecords.size)
-            assertEquals(1, reminderRepository.savedReminders.size)
-            assertEquals(scheduler.scheduledPlans[0], scheduler.scheduledPlans[1])
+            assertEquals(2, maintenanceRepository.notificationMutations.size)
+            assertEquals(maintenanceRepository.notificationMutations[0], maintenanceRepository.notificationMutations[1])
         }
 
     private fun input(
