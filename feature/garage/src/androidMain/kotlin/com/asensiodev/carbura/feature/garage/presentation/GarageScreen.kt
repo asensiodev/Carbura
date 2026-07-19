@@ -1152,7 +1152,8 @@ internal fun VehicleCard(
                         Text(
                             text = vehicle.name,
                             modifier = Modifier.semantics { heading() },
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold,
                         )
                         Text(
                             text = vehicle.type.label(),
@@ -1178,17 +1179,29 @@ internal fun VehicleCard(
                         )
                     }
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing4)) {
-                    Text(
-                        text = stringResource(R.string.odometer_summary_label),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = stringResource(R.string.odometer_summary_value, vehicle.currentOdometerKm),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = Spacings.spacing16, vertical = Spacings.spacing12),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.odometer_summary_label),
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = stringResource(R.string.odometer_summary_value, vehicle.currentOdometerKm),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
                 Button(
                     onClick = { onSelectVehicle(vehicle) },
