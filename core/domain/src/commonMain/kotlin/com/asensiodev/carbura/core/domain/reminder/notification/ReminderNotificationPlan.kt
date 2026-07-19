@@ -62,6 +62,8 @@ fun maintenanceReminderNotificationPlan(
 
 fun maintenanceReminderId(recordId: MaintenanceRecordId): ReminderId = ReminderId("maintenance-reminder:${recordId.value}")
 
+fun plannedMaintenanceReminderId(recordId: MaintenanceRecordId): ReminderId = ReminderId("planned-maintenance-reminder:${recordId.value}")
+
 fun reminderAlertIdentity(
     reminderId: ReminderId,
     alertKind: ReminderAlertKind,

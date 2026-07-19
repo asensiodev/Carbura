@@ -11,21 +11,31 @@ import kotlin.test.assertFailsWith
 
 class DeleteMaintenanceRecordUseCaseTest {
     @Test
-    fun sourceDeletionDeletesOnlyDeterministicReminderAndCancelsItsPlan() =
+    fun sourceDeletionDeletesBothDeterministicRemindersAndCancelsTheirPlans() =
         runTest {
             val maintenanceRepository = FakeMaintenanceRecordRepository()
             val reminderRepository = FakeReminderRepository()
             val scheduler = FakeReminderNotificationScheduler()
             reminderRepository.saveReminder(reminder("maintenance-reminder:record-1"))
+            reminderRepository.saveReminder(reminder("planned-maintenance-reminder:record-1"))
             reminderRepository.saveReminder(reminder("manual-reminder"))
 
             DeleteMaintenanceRecordUseCase(maintenanceRepository, reminderRepository, scheduler)(
                 MaintenanceRecordId("record-1"),
             )
 
-            assertEquals(listOf(ReminderId("maintenance-reminder:record-1")), reminderRepository.deletedReminderIds)
+            assertEquals(
+                listOf(
+                    ReminderId("maintenance-reminder:record-1"),
+                    ReminderId("planned-maintenance-reminder:record-1"),
+                ),
+                reminderRepository.deletedReminderIds,
+            )
             assertEquals(listOf("manual-reminder"), reminderRepository.savedReminders.map { it.id.value })
-            assertEquals(listOf("maintenance-reminder:record-1"), scheduler.cancelledReminderIds)
+            assertEquals(
+                listOf("maintenance-reminder:record-1", "planned-maintenance-reminder:record-1"),
+                scheduler.cancelledReminderIds,
+            )
         }
 
     @Test
@@ -79,8 +89,8 @@ class DeleteMaintenanceRecordUseCaseTest {
             useCase(MaintenanceRecordId("record-1"))
 
             assertEquals(emptyList(), maintenanceRepository.savedRecords)
-            assertEquals(2, scheduler.cancelledReminderIds.size)
-            assertEquals(2, reminderRepository.deletedReminderIds.size)
+            assertEquals(4, scheduler.cancelledReminderIds.size)
+            assertEquals(4, reminderRepository.deletedReminderIds.size)
         }
 
     private suspend fun sourceRepository(): FakeMaintenanceRecordRepository =

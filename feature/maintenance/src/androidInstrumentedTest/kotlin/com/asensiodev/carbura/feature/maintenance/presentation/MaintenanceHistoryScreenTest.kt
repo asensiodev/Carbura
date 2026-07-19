@@ -144,11 +144,52 @@ class MaintenanceHistoryScreenTest {
         composeRule.onNodeWithTag("save_maintenance_button").assertIsDisplayed()
     }
 
+    @Test
+    fun futureMaintenanceOfferDispatchesCreateReminderChoice() {
+        var accepted = false
+        setScreen(
+            state = state().copy(performedOn = "2026-08-14", showFutureReminderOffer = true),
+            onSaveFutureWithReminder = { accepted = true },
+        )
+
+        composeRule.onNodeWithTag("future_maintenance_reminder_dialog").assertIsDisplayed()
+        composeRule.onNodeWithText("¿Quieres crear un recordatorio?").assertIsDisplayed()
+        composeRule.onNodeWithText("Guardar y crear recordatorio").assertIsDisplayed().performClick()
+        composeRule.runOnIdle { check(accepted) }
+    }
+
+    @Test
+    fun futureMaintenanceOfferDispatchesSaveOnlyChoice() {
+        var saveOnly = false
+        setScreen(
+            state = state().copy(performedOn = "2026-08-14", showFutureReminderOffer = true),
+            onSaveFutureOnly = { saveOnly = true },
+        )
+
+        composeRule.onNodeWithText("Guardar sin este recordatorio").assertIsDisplayed().performClick()
+        composeRule.runOnIdle { check(saveOnly) }
+    }
+
+    @Test
+    fun futureMaintenanceOfferActionsRemainVisibleAtLargeText() {
+        setScreen(
+            state = state().copy(performedOn = "2026-08-14", showFutureReminderOffer = true),
+            fontScale = 2f,
+        )
+
+        composeRule.onNodeWithText("¿Quieres crear un recordatorio?").assertIsDisplayed()
+        composeRule.onNodeWithText("Guardar y crear recordatorio").assertIsDisplayed()
+        composeRule.onNodeWithText("Guardar sin este recordatorio").assertIsDisplayed()
+    }
+
     private fun setScreen(
         state: MaintenanceHistoryUiState,
         onRetry: () -> Unit = {},
         onDeleteMaintenance: (MaintenanceRecord) -> Unit = {},
         onTypeSelected: (MaintenanceTypeCode) -> Unit = {},
+        onSaveFutureWithReminder: () -> Unit = {},
+        onSaveFutureOnly: () -> Unit = {},
+        onDismissFutureReminderOffer: () -> Unit = {},
         fontScale: Float = 1f,
     ) {
         composeRule.setContent {
@@ -170,6 +211,9 @@ class MaintenanceHistoryScreenTest {
                         onWorkshopChange = {},
                         onNotesChange = {},
                         onSubmitMaintenance = {},
+                        onSaveFutureWithReminder = onSaveFutureWithReminder,
+                        onSaveFutureOnly = onSaveFutureOnly,
+                        onDismissFutureReminderOffer = onDismissFutureReminderOffer,
                         onDeleteMaintenance = onDeleteMaintenance,
                         onRetry = onRetry,
                     )

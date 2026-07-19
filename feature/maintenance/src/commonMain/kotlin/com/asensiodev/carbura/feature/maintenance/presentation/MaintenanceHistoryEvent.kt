@@ -44,6 +44,12 @@ sealed interface MaintenanceHistoryEvent {
 
     data object SubmitMaintenance : MaintenanceHistoryEvent
 
+    data object SaveFutureMaintenanceWithReminder : MaintenanceHistoryEvent
+
+    data object SaveFutureMaintenanceOnly : MaintenanceHistoryEvent
+
+    data object DismissFutureReminderOffer : MaintenanceHistoryEvent
+
     data class DeleteMaintenance(
         val recordId: MaintenanceRecordId,
     ) : MaintenanceHistoryEvent

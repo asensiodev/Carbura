@@ -8,8 +8,11 @@ import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceR
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderFromInputUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.GetVehicleHistoryUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.CreatePlannedMaintenanceReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.RemovePlannedMaintenanceReminderUseCase
 import com.asensiodev.carbura.core.domain.sync.SyncManager
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
+import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
@@ -35,6 +38,8 @@ class MaintenanceHistoryViewModel(
     private val familyId: FamilyId,
     private val dispatchers: DispatcherProvider,
     private val createMaintenanceWithReminderFromInputUseCase: CreateMaintenanceWithReminderFromInputUseCase,
+    private val createPlannedMaintenanceReminderUseCase: CreatePlannedMaintenanceReminderUseCase,
+    private val removePlannedMaintenanceReminderUseCase: RemovePlannedMaintenanceReminderUseCase,
     private val getVehicleHistoryUseCase: GetVehicleHistoryUseCase,
     private val deleteMaintenanceRecordUseCase: DeleteMaintenanceRecordUseCase,
     private val vehicleRepository: VehicleRepository,
@@ -84,7 +89,11 @@ class MaintenanceHistoryViewModel(
             is MaintenanceHistoryEvent.CostChanged -> updateForm { it.copy(cost = event.value, validationError = null) }
             is MaintenanceHistoryEvent.WorkshopChanged -> updateForm { it.copy(workshop = event.value, validationError = null) }
             is MaintenanceHistoryEvent.NotesChanged -> updateForm { it.copy(notes = event.value, validationError = null) }
-            MaintenanceHistoryEvent.SubmitMaintenance -> scope.launch { createMaintenance() }
+            MaintenanceHistoryEvent.SubmitMaintenance -> submitMaintenance()
+            MaintenanceHistoryEvent.SaveFutureMaintenanceWithReminder -> saveFutureMaintenance(createReminder = true)
+            MaintenanceHistoryEvent.SaveFutureMaintenanceOnly -> saveFutureMaintenance(createReminder = false)
+            MaintenanceHistoryEvent.DismissFutureReminderOffer ->
+                _uiState.update { it.copy(showFutureReminderOffer = false) }
             is MaintenanceHistoryEvent.DeleteMaintenance -> scope.launch { deleteMaintenance(event.recordId) }
         }
     }
@@ -138,7 +147,23 @@ class MaintenanceHistoryViewModel(
         }
     }
 
-    private suspend fun createMaintenance() {
+    private fun submitMaintenance() {
+        if (_uiState.value.activeMutation != null) return
+        val performedOn = _uiState.value.performedOn.toCalendarDateOrNull()
+        if (performedOn != null && performedOn > localDateProvider.currentDate()) {
+            _uiState.update { it.copy(showFutureReminderOffer = true) }
+        } else {
+            scope.launch { createMaintenance(plannedReminderChoice = null) }
+        }
+    }
+
+    private fun saveFutureMaintenance(createReminder: Boolean) {
+        if (!_uiState.value.showFutureReminderOffer || _uiState.value.activeMutation != null) return
+        _uiState.update { it.copy(showFutureReminderOffer = false) }
+        scope.launch { createMaintenance(plannedReminderChoice = createReminder) }
+    }
+
+    private suspend fun createMaintenance(plannedReminderChoice: Boolean?) {
         if (_uiState.value.activeMutation != null) return
         _uiState.update {
             it.copy(
@@ -165,6 +190,16 @@ class MaintenanceHistoryViewModel(
         try {
             when (val result = withContext(dispatchers.io) { createMaintenanceWithReminderFromInputUseCase(input) }) {
                 is DomainResult.Success -> {
+                    val plannedReminder =
+                        when (plannedReminderChoice) {
+                            true -> withContext(dispatchers.io) { createPlannedMaintenanceReminderUseCase(result.value.record) }
+                            false,
+                            null,
+                            -> {
+                                withContext(dispatchers.io) { removePlannedMaintenanceReminderUseCase(result.value.record) }
+                                null
+                            }
+                        }
                     val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
                     _uiState.update {
                         it.copy(
@@ -185,7 +220,7 @@ class MaintenanceHistoryViewModel(
                         MaintenanceHistoryEffect.MaintenanceCreated(
                             typeCode = input.maintenanceTypeCode,
                             customTypeLabel = input.customTypeLabel.orEmpty().trim(),
-                            reminderCreated = result.value.generatedReminder != null,
+                            reminderCreated = result.value.generatedReminder != null || plannedReminder != null,
                         ),
                     )
                     syncAfterMutation()
@@ -245,3 +280,10 @@ class MaintenanceHistoryViewModel(
 internal fun MaintenanceRecord.displayType(): String = maintenanceTypeId.value.removePrefix("type-").replace('-', ' ')
 
 private fun randomMaintenanceRecordId(): MaintenanceRecordId = MaintenanceRecordId("maintenance-${Random.nextInt(1, Int.MAX_VALUE)}")
+
+private fun String.toCalendarDateOrNull(): CalendarDate? =
+    try {
+        CalendarDate(this)
+    } catch (_: IllegalArgumentException) {
+        null
+    }

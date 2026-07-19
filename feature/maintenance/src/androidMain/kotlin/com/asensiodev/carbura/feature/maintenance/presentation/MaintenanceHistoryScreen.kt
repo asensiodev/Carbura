@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.core.designsystem.SwipeToDeleteContainer
+import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
@@ -182,6 +183,9 @@ fun MaintenanceHistoryRoute(
         onWorkshopChange = { viewModel.onEvent(MaintenanceHistoryEvent.WorkshopChanged(it)) },
         onNotesChange = { viewModel.onEvent(MaintenanceHistoryEvent.NotesChanged(it)) },
         onSubmitMaintenance = { viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance) },
+        onSaveFutureWithReminder = { viewModel.onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceWithReminder) },
+        onSaveFutureOnly = { viewModel.onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceOnly) },
+        onDismissFutureReminderOffer = { viewModel.onEvent(MaintenanceHistoryEvent.DismissFutureReminderOffer) },
         onDeleteMaintenance = { viewModel.onEvent(MaintenanceHistoryEvent.DeleteMaintenance(it.id)) },
         onRetry = { viewModel.onEvent(MaintenanceHistoryEvent.Retry) },
         modifier = modifier,
@@ -214,6 +218,9 @@ internal fun MaintenanceHistoryScreen(
     onWorkshopChange: (String) -> Unit,
     onNotesChange: (String) -> Unit,
     onSubmitMaintenance: () -> Unit,
+    onSaveFutureWithReminder: () -> Unit,
+    onSaveFutureOnly: () -> Unit,
+    onDismissFutureReminderOffer: () -> Unit,
     onDeleteMaintenance: (MaintenanceRecord) -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
@@ -381,6 +388,32 @@ internal fun MaintenanceHistoryScreen(
             onWorkshopChange = onWorkshopChange,
             onNotesChange = onNotesChange,
             onSubmitMaintenance = onSubmitMaintenance,
+        )
+    }
+
+    if (state.showFutureReminderOffer) {
+        AlertDialog(
+            onDismissRequest = onDismissFutureReminderOffer,
+            modifier = Modifier.testTag("future_maintenance_reminder_dialog"),
+            title = { Text(stringResource(R.string.future_maintenance_reminder_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.future_maintenance_reminder_description,
+                        CalendarDate(state.performedOn).localizedDate(),
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = onSaveFutureWithReminder) {
+                    Text(stringResource(R.string.future_maintenance_reminder_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onSaveFutureOnly) {
+                    Text(stringResource(R.string.future_maintenance_reminder_save_only))
+                }
+            },
         )
     }
 

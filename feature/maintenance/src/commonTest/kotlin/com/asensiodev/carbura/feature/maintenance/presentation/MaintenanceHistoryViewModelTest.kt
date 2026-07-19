@@ -11,6 +11,8 @@ import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotifica
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
 import com.asensiodev.carbura.core.domain.reminder.usecase.CreateAutomaticReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.CreatePlannedMaintenanceReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.usecase.RemovePlannedMaintenanceReminderUseCase
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
@@ -472,6 +474,7 @@ class MaintenanceHistoryViewModelTest {
         nextRecordId: () -> MaintenanceRecordId = { MaintenanceRecordId("record-test") },
         localDate: CalendarDate = CalendarDate("2026-07-17"),
         reminderRepository: FakeReminderRepository = FakeReminderRepository(),
+        notificationScheduler: FakeNotificationScheduler = FakeNotificationScheduler(),
     ): MaintenanceHistoryViewModel {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         return MaintenanceHistoryViewModel(
@@ -487,11 +490,15 @@ class MaintenanceHistoryViewModelTest {
                 CreateMaintenanceWithReminderFromInputUseCase(
                     CreateMaintenanceWithReminderUseCase(
                         CreateMaintenanceRecordUseCase(repository),
-                        CreateAutomaticReminderUseCase(reminderRepository, FakeNotificationScheduler()),
+                        CreateAutomaticReminderUseCase(reminderRepository, notificationScheduler),
                     ),
                 ),
+            createPlannedMaintenanceReminderUseCase =
+                CreatePlannedMaintenanceReminderUseCase(reminderRepository, notificationScheduler),
+            removePlannedMaintenanceReminderUseCase =
+                RemovePlannedMaintenanceReminderUseCase(reminderRepository, notificationScheduler),
             getVehicleHistoryUseCase = GetVehicleHistoryUseCase(repository),
-            deleteMaintenanceRecordUseCase = DeleteMaintenanceRecordUseCase(repository, reminderRepository, FakeNotificationScheduler()),
+            deleteMaintenanceRecordUseCase = DeleteMaintenanceRecordUseCase(repository, reminderRepository, notificationScheduler),
             vehicleRepository = vehicleRepository,
             nextRecordId = nextRecordId,
             localDateProvider = LocalDateProvider { localDate },
@@ -530,6 +537,7 @@ private class FakeMaintenanceRecordRepository(
         saveGate?.await()
         saveError?.let { throw it }
         if (failSaves) error("save failed")
+        savedRecords.removeAll { it.id == record.id }
         savedRecords += record
     }
 
@@ -605,8 +613,15 @@ private class FakeReminderRepository : ReminderRepository {
     }
 }
 
-private class FakeNotificationScheduler : ReminderNotificationScheduler {
-    override suspend fun schedule(plan: ReminderNotificationPlan) = Unit
+private class FakeNotificationScheduler(
+    var scheduleError: Throwable? = null,
+) : ReminderNotificationScheduler {
+    val scheduledPlans = mutableListOf<ReminderNotificationPlan>()
+
+    override suspend fun schedule(plan: ReminderNotificationPlan) {
+        scheduleError?.let { throw it }
+        scheduledPlans += plan
+    }
 
     override suspend fun cancel(reminderId: ReminderId) = Unit
 }

@@ -21,6 +21,7 @@ data class MaintenanceHistoryUiState(
     val validationError: CarburaString? = null,
     val persistenceError: Boolean = false,
     val activeMutation: MaintenanceMutation? = null,
+    val showFutureReminderOffer: Boolean = false,
 ) {
     val isEmpty: Boolean = records.isEmpty() && loadState == MaintenanceLoadState.Content
 
