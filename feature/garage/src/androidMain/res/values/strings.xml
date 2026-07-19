@@ -55,6 +55,10 @@
     <string name="reminder_suggestions_title">Crear recordatorios</string>
     <string name="reminder_suggestions_description">Carbura puede crear estos avisos para tu vehículo:</string>
     <string name="create_reminders_button">Guardar y crear avisos</string>
+    <string name="reminder_removal_title">Actualizar recordatorios</string>
+    <string name="reminder_removal_description">Has eliminado los objetivos de planificación. ¿Quieres eliminar también sus avisos asociados?</string>
+    <string name="update_reminders_button">Guardar y actualizar avisos</string>
+    <string name="save_without_updating_reminders_button">Guardar sin actualizar avisos</string>
     <string name="save_without_reminders_button">Guardar sin avisos</string>
     <string name="validation_blank_vehicle_name">Introduce un nombre para el vehículo.</string>
     <string name="validation_negative_vehicle_odometer">Los kilómetros no pueden ser negativos.</string>

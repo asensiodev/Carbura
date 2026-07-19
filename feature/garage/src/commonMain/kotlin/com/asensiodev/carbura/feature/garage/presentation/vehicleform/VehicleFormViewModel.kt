@@ -284,10 +284,13 @@ class VehicleFormViewModel(
             (vehicle.nextItvDate != null && candidate.nextItvDate == null) ||
                 (vehicle.insuranceRenewalDate != null && candidate.insuranceRenewalDate == null) ||
                 (vehicle.nextServiceOdometerKm != null && candidate.nextServiceOdometerKm == null)
-        if (!allowOdometerDecrease &&
-            !skipReminderConfirmation &&
-            showReminderConfirmation(candidate, VehicleSaveMode.Edit, force = removedTarget)
-        ) {
+        val planningTargetsChanged =
+            vehicle.nextItvDate != candidate.nextItvDate ||
+                vehicle.insuranceRenewalDate != candidate.insuranceRenewalDate ||
+                vehicle.nextServiceOdometerKm != candidate.nextServiceOdometerKm
+        val shouldConfirmReminderChanges =
+            !allowOdometerDecrease && !skipReminderConfirmation && planningTargetsChanged
+        if (shouldConfirmReminderChanges && showReminderConfirmation(candidate, VehicleSaveMode.Edit, force = removedTarget)) {
             return
         }
 

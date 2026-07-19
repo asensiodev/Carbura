@@ -56,6 +56,28 @@ class GarageOverviewViewModelTest {
         }
 
     @Test
+    fun refreshAppendsNewVehiclesWithoutReorderingExistingVehicles() =
+        runTest {
+            val first = vehicle(id = "vehicle-1", name = "B vehicle")
+            val second = vehicle(id = "vehicle-2", name = "C vehicle")
+            val added = vehicle(id = "vehicle-3", name = "A vehicle")
+            val repository = FakeOverviewVehicleRepository(mutableListOf(first, second))
+            val viewModel = viewModel(repository)
+            viewModel.onEvent(GarageOverviewEvent.Started)
+            advanceUntilIdle()
+
+            repository.vehicles.add(0, added)
+            viewModel.onEvent(GarageOverviewEvent.Refresh)
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf(first.id, second.id, added.id),
+                viewModel.uiState.value.vehicles
+                    .map { it.id },
+            )
+        }
+
+    @Test
     fun cancelledLoadRestoresPriorStateAndCanBeRetried() =
         runTest {
             val repository = FakeOverviewVehicleRepository().apply { failLoads = true }
@@ -188,8 +210,10 @@ class GarageOverviewViewModelTest {
         )
     }
 
-    private fun vehicle(id: String = "vehicle-1") =
-        Vehicle(VehicleId(id), familyId, "Coche familiar", VehicleType.Car, currentOdometerKm = 12_000)
+    private fun vehicle(
+        id: String = "vehicle-1",
+        name: String = "Coche familiar",
+    ) = Vehicle(VehicleId(id), familyId, name, VehicleType.Car, currentOdometerKm = 12_000)
 }
 
 private class FakeOverviewVehicleRepository(

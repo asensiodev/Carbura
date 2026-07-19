@@ -121,6 +121,32 @@ class GarageScreenTest {
     }
 
     @Test
+    fun insertedVehicleKeepsItsDeleteIdentity() {
+        val existing = vehicle("Vehículo existente", "vehicle-existing")
+        val added = vehicle("Vehículo nuevo", "vehicle-new")
+        var deletedVehicle: Vehicle? = null
+        var vehicles by mutableStateOf(listOf(existing))
+        composeRule.setContent {
+            CompactGarage {
+                TestGarageScreen(
+                    overviewState = GarageOverviewUiState(vehicles, GarageLoadState.Loaded),
+                    onDeleteVehicle = { deletedVehicle = it },
+                )
+            }
+        }
+        composeRule.runOnIdle { vehicles = listOf(added, existing) }
+
+        composeRule.onNodeWithTag("vehicle_card_vehicle-new").performTouchInput { swipeLeft() }
+        composeRule
+            .onNodeWithTag("vehicle_delete_dialog_vehicle-new")
+            .assertIsDisplayed()
+            .assertTextContains("Vehículo nuevo")
+        composeRule.onNodeWithText("Borrar").performClick()
+
+        composeRule.runOnIdle { check(deletedVehicle?.id == added.id) }
+    }
+
+    @Test
     fun compactCreateFormScrollsToFieldErrorAndSaveAction() {
         composeRule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(density = 1f, fontScale = 2f)) {
@@ -306,6 +332,7 @@ private fun TestGarageScreen(
     onEditNameChange: (String) -> Unit = {},
     onSubmitEdit: () -> Unit = {},
     onDismissEdit: () -> Unit = {},
+    onDeleteVehicle: (Vehicle) -> Unit = {},
 ) {
     GarageScreen(
         overviewState = overviewState,
@@ -321,7 +348,7 @@ private fun TestGarageScreen(
         onNextServiceOdometerChange = {},
         onCreateVehicle = {},
         onSelectVehicle = {},
-        onDeleteVehicle = {},
+        onDeleteVehicle = onDeleteVehicle,
         onEditVehicle = {},
         onQuickOdometerUpdate = {},
         onEditNameChange = onEditNameChange,

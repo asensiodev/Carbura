@@ -100,6 +100,7 @@ import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFor
 import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormMutation
 import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormUiState
 import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormViewModel
+import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleSaveMode
 import com.asensiodev.carbura.featuregarage.R
 import org.koin.core.context.GlobalContext
 import org.koin.core.parameter.parametersOf
@@ -384,7 +385,10 @@ internal fun GarageScreen(
                                     )
                                 }
                             } else {
-                                items(overviewState.vehicles) { vehicle ->
+                                items(
+                                    items = overviewState.vehicles,
+                                    key = { vehicle -> vehicle.id.value },
+                                ) { vehicle ->
                                     VehicleCard(
                                         vehicle = vehicle,
                                         actionsEnabled =
@@ -558,12 +562,32 @@ internal fun GarageScreen(
     }
 
     if (formState.reminderConfirmationMode != null) {
+        val removesAllReminderTargets =
+            formState.reminderConfirmationMode == VehicleSaveMode.Edit && formState.reminderSuggestions.isEmpty()
         AlertDialog(
             onDismissRequest = onDeclineReminderSuggestions,
-            title = { Text(stringResource(R.string.reminder_suggestions_title)) },
+            title = {
+                Text(
+                    stringResource(
+                        if (removesAllReminderTargets) {
+                            R.string.reminder_removal_title
+                        } else {
+                            R.string.reminder_suggestions_title
+                        },
+                    ),
+                )
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
-                    Text(stringResource(R.string.reminder_suggestions_description))
+                    Text(
+                        stringResource(
+                            if (removesAllReminderTargets) {
+                                R.string.reminder_removal_description
+                            } else {
+                                R.string.reminder_suggestions_description
+                            },
+                        ),
+                    )
                     formState.reminderSuggestions.forEach { suggestion ->
                         Text("- ${suggestion.reminder.title}")
                     }
@@ -571,12 +595,28 @@ internal fun GarageScreen(
             },
             confirmButton = {
                 TextButton(onClick = onConfirmReminderSuggestions) {
-                    Text(stringResource(R.string.create_reminders_button))
+                    Text(
+                        stringResource(
+                            if (removesAllReminderTargets) {
+                                R.string.update_reminders_button
+                            } else {
+                                R.string.create_reminders_button
+                            },
+                        ),
+                    )
                 }
             },
             dismissButton = {
                 TextButton(onClick = onDeclineReminderSuggestions) {
-                    Text(stringResource(R.string.save_without_reminders_button))
+                    Text(
+                        stringResource(
+                            if (removesAllReminderTargets) {
+                                R.string.save_without_updating_reminders_button
+                            } else {
+                                R.string.save_without_reminders_button
+                            },
+                        ),
+                    )
                 }
             },
         )
@@ -836,7 +876,11 @@ internal fun VehicleDeleteDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
                 Text(stringResource(R.string.delete_vehicle_dialog_description))
-                Text(vehicle.name, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = vehicle.name,
+                    modifier = Modifier.testTag("vehicle_delete_dialog_${vehicle.id.value}"),
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
         },
         confirmButton = {
@@ -1181,29 +1225,26 @@ internal fun VehicleCard(
                         )
                     }
                 }
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacings.spacing4, vertical = Spacings.spacing8),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = Spacings.spacing16, vertical = Spacings.spacing12),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.odometer_summary_label),
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = stringResource(R.string.odometer_summary_value, vehicle.currentOdometerKm),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
+                    Text(
+                        text = stringResource(R.string.odometer_summary_label),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = stringResource(R.string.odometer_summary_value, vehicle.currentOdometerKm),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
                 Button(
                     onClick = { onSelectVehicle(vehicle) },

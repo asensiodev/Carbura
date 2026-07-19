@@ -7,6 +7,7 @@ import com.asensiodev.carbura.core.domain.sync.SyncManager
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.domain.vehicle.usecase.DeleteVehicleUseCase
 import com.asensiodev.carbura.core.model.FamilyId
+import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -61,7 +62,12 @@ class GarageOverviewViewModel(
             if (showLoading) _uiState.update { it.copy(loadState = GarageLoadState.Loading) }
             try {
                 val vehicles = withContext(dispatchers.io) { vehicleRepository.observeVehicles(familyId) }
-                _uiState.update { it.copy(vehicles = vehicles, loadState = GarageLoadState.Loaded) }
+                _uiState.update {
+                    it.copy(
+                        vehicles = mergeVehiclesPreservingOrder(it.vehicles, vehicles),
+                        loadState = GarageLoadState.Loaded,
+                    )
+                }
                 loadSettled = true
             } catch (error: CancellationException) {
                 throw error
@@ -107,4 +113,14 @@ class GarageOverviewViewModel(
             }
         }
     }
+}
+
+private fun mergeVehiclesPreservingOrder(
+    current: List<Vehicle>,
+    refreshed: List<Vehicle>,
+): List<Vehicle> {
+    if (current.isEmpty()) return refreshed
+    val refreshedById = refreshed.associateBy { it.id }
+    val currentIds = current.mapTo(mutableSetOf()) { it.id }
+    return current.mapNotNull { refreshedById[it.id] } + refreshed.filterNot { it.id in currentIds }
 }

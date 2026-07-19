@@ -173,6 +173,59 @@ class VehicleFormViewModelTest {
         }
 
     @Test
+    fun unrelatedEditDoesNotRepeatReminderDecisionForExistingTarget() =
+        runTest {
+            val repository = FakeFormVehicleRepository()
+            val viewModel = viewModel(repository)
+            val vehicle = vehicle().copy(nextItvDate = CalendarDate("2027-05-10"))
+            viewModel.onEvent(VehicleFormEvent.EditVehicleRequested(vehicle))
+            viewModel.onEvent(VehicleFormEvent.EditNameChanged("Coche actualizado"))
+
+            viewModel.onEvent(VehicleFormEvent.SubmitVehicleEdit)
+            advanceUntilIdle()
+
+            assertEquals(null, viewModel.uiState.value.reminderConfirmationMode)
+            assertEquals("Coche actualizado", repository.vehicles.single().name)
+            assertEquals(CalendarDate("2027-05-10"), repository.vehicles.single().nextItvDate)
+        }
+
+    @Test
+    fun changedPlanningTargetRequiresReminderDecisionDuringEdit() =
+        runTest {
+            val repository = FakeFormVehicleRepository()
+            val viewModel = viewModel(repository)
+            val vehicle = vehicle().copy(nextItvDate = CalendarDate("2027-05-10"))
+            viewModel.onEvent(VehicleFormEvent.EditVehicleRequested(vehicle))
+            viewModel.onEvent(VehicleFormEvent.EditNextItvDateChanged("2027-06-10"))
+
+            viewModel.onEvent(VehicleFormEvent.SubmitVehicleEdit)
+            advanceUntilIdle()
+
+            assertEquals(VehicleSaveMode.Edit, viewModel.uiState.value.reminderConfirmationMode)
+            assertTrue(repository.vehicles.isEmpty())
+        }
+
+    @Test
+    fun removedPlanningTargetRequiresReminderDecisionDuringEdit() =
+        runTest {
+            val repository = FakeFormVehicleRepository()
+            val viewModel = viewModel(repository)
+            val vehicle = vehicle().copy(nextItvDate = CalendarDate("2027-05-10"))
+            viewModel.onEvent(VehicleFormEvent.EditVehicleRequested(vehicle))
+            viewModel.onEvent(VehicleFormEvent.EditNextItvDateChanged(""))
+
+            viewModel.onEvent(VehicleFormEvent.SubmitVehicleEdit)
+            advanceUntilIdle()
+
+            assertEquals(VehicleSaveMode.Edit, viewModel.uiState.value.reminderConfirmationMode)
+            assertTrue(
+                viewModel.uiState.value.reminderSuggestions
+                    .isEmpty(),
+            )
+            assertTrue(repository.vehicles.isEmpty())
+        }
+
+    @Test
     fun cancelledReconciliationDoesNotPublishCreateSuccess() =
         runTest {
             val repository = FakeFormVehicleRepository()
