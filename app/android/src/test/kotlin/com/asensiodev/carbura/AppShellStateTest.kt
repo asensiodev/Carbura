@@ -5,7 +5,6 @@ import com.asensiodev.carbura.app.shared.CarburaRoute
 import com.asensiodev.carbura.core.domain.sync.SyncStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertIs
 
 class AppShellStateTest {
     @Test
@@ -50,14 +49,21 @@ class AppShellStateTest {
     @Test
     fun syncFailureIsShownOnceUntilSuccessAndCanBeShownAgain() {
         val tracker = SyncFeedbackTracker()
-        val failure = SyncStatus(lastErrorMessage = "timeout")
+        val failure = SyncStatus(lastErrorMessage = "timeout", failureId = 1L)
 
-        assertIs<SyncFeedbackEvent.ShowFailure>(tracker.update(failure))
-        assertEquals(SyncFeedbackEvent.None, tracker.update(failure))
-        tracker.retryRequested()
+        assertEquals(SyncFeedbackEvent.ShowFailure(1L, "timeout"), tracker.update(failure))
         assertEquals(SyncFeedbackEvent.None, tracker.update(SyncStatus(isSyncing = true)))
-        assertIs<SyncFeedbackEvent.ShowFailure>(tracker.update(failure))
-        assertEquals(SyncFeedbackEvent.Clear, tracker.update(SyncStatus(lastSyncedAtMillis = 10L)))
-        assertIs<SyncFeedbackEvent.ShowFailure>(tracker.update(failure))
+        assertEquals(SyncFeedbackEvent.ShowFailure(1L, "timeout"), tracker.update(failure))
+        assertEquals(
+            SyncFeedbackEvent.ShowFailure(2L, "timeout"),
+            tracker.update(failure.copy(failureId = 2L)),
+        )
+    }
+
+    @Test
+    fun acknowledgedFailureIsNotReplayedToRecreatedTracker() {
+        val acknowledgedFailure = SyncStatus(lastErrorMessage = "timeout", failureId = 1L, acknowledgedFailureId = 1L)
+
+        assertEquals(SyncFeedbackEvent.None, SyncFeedbackTracker().update(acknowledgedFailure))
     }
 }

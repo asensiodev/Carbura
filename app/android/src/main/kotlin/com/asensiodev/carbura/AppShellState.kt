@@ -19,35 +19,21 @@ internal fun MutableList<NavKey>.clearProtectedDestinations() = clear()
 internal sealed interface SyncFeedbackEvent {
     data object None : SyncFeedbackEvent
 
-    data object Clear : SyncFeedbackEvent
-
     data class ShowFailure(
+        val id: Long,
         val message: String,
     ) : SyncFeedbackEvent
 }
 
 internal class SyncFeedbackTracker {
-    private var shownFailure: String? = null
-    private var handledSuccess: Long? = null
-
-    fun retryRequested() {
-        shownFailure = null
-    }
-
     fun update(status: SyncStatus): SyncFeedbackEvent {
-        val success = status.lastSyncedAtMillis
-        if (!status.isSyncing && status.lastErrorMessage == null) {
-            if (success != null && success != handledSuccess) {
-                handledSuccess = success
-                shownFailure = null
-                return SyncFeedbackEvent.Clear
-            }
+        val failure = status.lastErrorMessage
+        val failureId = status.failureId
+        if (status.isSyncing) return SyncFeedbackEvent.None
+        if (failure == null || failureId == null || failureId == status.acknowledgedFailureId) {
+            return SyncFeedbackEvent.None
         }
 
-        val failure = status.lastErrorMessage
-        if (status.isSyncing || failure == null || failure == shownFailure) return SyncFeedbackEvent.None
-
-        shownFailure = failure
-        return SyncFeedbackEvent.ShowFailure(failure)
+        return SyncFeedbackEvent.ShowFailure(failureId, failure)
     }
 }

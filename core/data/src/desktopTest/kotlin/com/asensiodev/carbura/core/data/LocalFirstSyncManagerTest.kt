@@ -156,6 +156,54 @@ class LocalFirstSyncManagerTest {
         }
 
     @Test
+    fun acknowledgedFailureRetainsDiagnosticWithoutReplayingFeedback() =
+        runTest {
+            val syncManager = syncManager(FakeLocalSyncDataSource(), FakeRemoteSyncDataSource(shouldFail = true))
+            syncManager.syncNow()
+            val failureId = requireNotNull(syncManager.status.value.failureId)
+
+            syncManager.acknowledgeFailure(failureId)
+
+            assertEquals(failureId, syncManager.status.value.acknowledgedFailureId)
+            assertTrue(
+                syncManager.status.value.lastErrorMessage
+                    ?.isNotBlank() == true,
+            )
+        }
+
+    @Test
+    fun staleAcknowledgementDoesNotConsumeNewerFailure() =
+        runTest {
+            val syncManager = syncManager(FakeLocalSyncDataSource(), FakeRemoteSyncDataSource(shouldFail = true))
+            syncManager.syncNow()
+            val firstFailureId = requireNotNull(syncManager.status.value.failureId)
+            syncManager.syncNow()
+            val secondFailureId = requireNotNull(syncManager.status.value.failureId)
+
+            syncManager.acknowledgeFailure(firstFailureId)
+
+            assertTrue(secondFailureId != firstFailureId)
+            assertNull(syncManager.status.value.acknowledgedFailureId)
+        }
+
+    @Test
+    fun cancelledRetryRetainsPreviousFailureDiagnosticAndFeedback() =
+        runTest {
+            val remote = FakeRemoteSyncDataSource(shouldFail = true)
+            val syncManager = syncManager(FakeLocalSyncDataSource(), remote)
+            syncManager.syncNow()
+            val failureStatus = syncManager.status.value
+            remote.shouldFail = false
+            remote.shouldCancel = true
+
+            assertFailsWith<CancellationException> { syncManager.syncNow() }
+
+            assertEquals(failureStatus.lastErrorMessage, syncManager.status.value.lastErrorMessage)
+            assertEquals(failureStatus.failureId, syncManager.status.value.failureId)
+            assertEquals(failureStatus.acknowledgedFailureId, syncManager.status.value.acknowledgedFailureId)
+        }
+
+    @Test
     fun cancelledSyncDoesNotReportFailure() =
         runTest {
             val syncManager = syncManager(FakeLocalSyncDataSource(), FakeRemoteSyncDataSource(shouldCancel = true))

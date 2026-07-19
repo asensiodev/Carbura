@@ -78,8 +78,11 @@ import com.asensiodev.carbura.feature.onboarding.presentation.OnboardingEvent
 import com.asensiodev.carbura.feature.onboarding.presentation.OnboardingRoute
 import com.asensiodev.carbura.feature.onboarding.presentation.OnboardingViewModel
 import com.asensiodev.carbura.feature.reminders.presentation.RemindersRoute
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import org.koin.core.context.GlobalContext
 import java.time.Instant
 import java.time.ZoneId
@@ -224,6 +227,7 @@ private fun CarburaApp(
         currentRoute = currentRoute,
         syncStatus = syncStatus,
         onRetrySync = { syncScope.launch { syncManager.syncNow() } },
+        onSyncFailureShown = syncManager::acknowledgeFailure,
         onGarageSelected = {
             backStack.navigateToTopLevel(CarburaRoute.Garage)
         },
@@ -311,6 +315,7 @@ private fun CarburaMainScaffold(
     currentRoute: CarburaRoute,
     syncStatus: SyncStatus,
     onRetrySync: () -> Unit,
+    onSyncFailureShown: (Long) -> Unit,
     onGarageSelected: () -> Unit,
     onRemindersSelected: () -> Unit,
     onUserSelected: () -> Unit,
@@ -321,22 +326,40 @@ private fun CarburaMainScaffold(
     val failureMessage = stringResource(R.string.sync_failure_message)
     val retryLabel = stringResource(R.string.sync_retry_action)
 
-    LaunchedEffect(syncStatus) {
-        when (feedbackTracker.update(syncStatus)) {
+    LaunchedEffect(syncStatus.failureId, syncStatus.isSyncing) {
+        when (val feedback = feedbackTracker.update(syncStatus)) {
             SyncFeedbackEvent.None -> Unit
-            SyncFeedbackEvent.Clear -> snackbarHostState.currentSnackbarData?.dismiss()
             is SyncFeedbackEvent.ShowFailure -> {
-                val result =
-                    snackbarHostState.showSnackbar(
-                        message = failureMessage,
-                        actionLabel = retryLabel,
-                        duration = SnackbarDuration.Indefinite,
-                    )
-                if (result == SnackbarResult.ActionPerformed) {
-                    feedbackTracker.retryRequested()
-                    onRetrySync()
+                coroutineScope {
+                    val previousSnackbar = snackbarHostState.currentSnackbarData
+                    previousSnackbar?.dismiss()
+                    val delivery =
+                        async {
+                            snackbarHostState.showSnackbar(
+                                message = failureMessage,
+                                actionLabel = retryLabel,
+                                duration = SnackbarDuration.Indefinite,
+                            )
+                        }
+                    while (delivery.isActive) {
+                        val displayedSnackbar = snackbarHostState.currentSnackbarData
+                        if (displayedSnackbar != null && displayedSnackbar !== previousSnackbar) {
+                            onSyncFailureShown(feedback.id)
+                            break
+                        }
+                        yield()
+                    }
+                    if (delivery.await() == SnackbarResult.ActionPerformed) {
+                        onRetrySync()
+                    }
                 }
             }
+        }
+    }
+
+    LaunchedEffect(syncStatus.lastSyncedAtMillis) {
+        if (!syncStatus.isSyncing && syncStatus.lastErrorMessage == null && syncStatus.lastSyncedAtMillis != null) {
+            snackbarHostState.currentSnackbarData?.dismiss()
         }
     }
     val showBottomBar =
@@ -417,6 +440,7 @@ private fun UserRoute(
                     Text(
                         text = stringResource(R.string.user_title),
                         fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(start = Spacings.spacing8),
                     )
                 },
                 colors =
@@ -437,7 +461,12 @@ private fun UserRoute(
                     Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(Spacings.spacing24),
+                        .padding(
+                            start = Spacings.spacing24,
+                            top = Spacings.spacing16,
+                            end = Spacings.spacing24,
+                            bottom = Spacings.spacing24,
+                        ),
                 verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
             ) {
                 Card(modifier = Modifier.fillMaxWidth()) {

@@ -22,12 +22,13 @@ internal class LocalFirstSyncManager(
 ) : SyncManager {
     private val mutex = Mutex()
     private val _status = MutableStateFlow(SyncStatus())
+    private var nextFailureId = 0L
 
     override val status: StateFlow<SyncStatus> = _status
 
     override suspend fun syncNow(): SyncResult =
         mutex.withLock {
-            _status.update { it.copy(isSyncing = true, lastErrorMessage = null) }
+            _status.update { it.copy(isSyncing = true) }
             try {
                 val syncedAt = syncActiveFamily()
                 _status.update {
@@ -35,18 +36,38 @@ internal class LocalFirstSyncManager(
                         isSyncing = false,
                         lastSyncedAtMillis = syncedAt,
                         lastErrorMessage = null,
+                        failureId = null,
+                        acknowledgedFailureId = null,
                     )
                 }
                 SyncResult.Success(syncedAt)
             } catch (error: CancellationException) {
-                _status.update { it.copy(isSyncing = false, lastErrorMessage = null) }
+                _status.update { it.copy(isSyncing = false) }
                 throw error
             } catch (error: Throwable) {
                 val message = error.message ?: error::class.simpleName ?: "Sync failed"
-                _status.update { it.copy(isSyncing = false, lastErrorMessage = message) }
+                nextFailureId += 1L
+                _status.update {
+                    it.copy(
+                        isSyncing = false,
+                        lastErrorMessage = message,
+                        failureId = nextFailureId,
+                        acknowledgedFailureId = null,
+                    )
+                }
                 SyncResult.Failure(message)
             }
         }
+
+    override fun acknowledgeFailure(failureId: Long) {
+        _status.update { status ->
+            if (status.failureId == failureId) {
+                status.copy(acknowledgedFailureId = failureId)
+            } else {
+                status
+            }
+        }
+    }
 
     private suspend fun syncActiveFamily(): Long {
         val familyId = resolveFamilyId()
