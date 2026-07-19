@@ -7,6 +7,7 @@ import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceW
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.GetVehicleHistoryUseCase
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
@@ -104,10 +105,12 @@ class FutureMaintenanceReminderViewModelTest {
     @Test
     fun acceptingFutureOfferCreatesOnePlannedReminderAndReportsSuccess() =
         runTest {
+            val repository = FutureMaintenanceRepository()
             val reminderRepository = FutureReminderRepository()
             val scheduler = FutureNotificationScheduler()
             val viewModel =
                 viewModel(
+                    repository = repository,
                     reminderRepository = reminderRepository,
                     scheduler = scheduler,
                     nextRecordId = { MaintenanceRecordId("future-record") },
@@ -127,7 +130,7 @@ class FutureMaintenanceReminderViewModelTest {
             assertEquals(CalendarDate("2026-08-14"), reminder.dueDate)
             assertEquals(
                 listOf(0),
-                scheduler.scheduledPlans
+                reminderRepository.notificationPlans
                     .single()
                     .alerts
                     .map { it.daysBefore },
@@ -178,7 +181,7 @@ class FutureMaintenanceReminderViewModelTest {
         }
 
     @Test
-    fun plannedReminderFailureKeepsStableMaintenanceRetryable() =
+    fun schedulerFailureDoesNotFailDurablyRecordedReminder() =
         runTest {
             val repository = FutureMaintenanceRepository()
             val reminderRepository = FutureReminderRepository()
@@ -195,16 +198,10 @@ class FutureMaintenanceReminderViewModelTest {
             viewModel.onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceWithReminder)
             advanceUntilIdle()
 
-            assertTrue(viewModel.uiState.value.persistenceError)
-            scheduler.scheduleError = null
-            prepareFutureSubmission(viewModel)
-            viewModel.onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceWithReminder)
-            advanceUntilIdle()
-
+            assertFalse(viewModel.uiState.value.persistenceError)
             assertEquals(1, allocationCount)
             assertEquals(1, repository.savedRecords.size)
             assertEquals(1, reminderRepository.savedReminders.size)
-            assertFalse(viewModel.uiState.value.persistenceError)
         }
 
     @Test
@@ -248,10 +245,11 @@ class FutureMaintenanceReminderViewModelTest {
         }
 
     @Test
-    fun cancelledPlannedReminderDoesNotBecomePersistenceError() =
+    fun schedulerCancellationDoesNotFailDurablyRecordedReminder() =
         runTest {
             val scheduler = FutureNotificationScheduler(CancellationException("cancelled"))
-            val viewModel = viewModel(scheduler = scheduler)
+            val reminderRepository = FutureReminderRepository()
+            val viewModel = viewModel(reminderRepository = reminderRepository, scheduler = scheduler)
             prepareFutureSubmission(viewModel)
 
             viewModel.onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceWithReminder)
@@ -259,7 +257,8 @@ class FutureMaintenanceReminderViewModelTest {
 
             assertNull(viewModel.uiState.value.activeMutation)
             assertFalse(viewModel.uiState.value.persistenceError)
-            assertEquals("2026-08-14", viewModel.uiState.value.performedOn)
+            assertEquals("2026-07-17", viewModel.uiState.value.performedOn)
+            assertEquals(1, reminderRepository.savedReminders.size)
         }
 
     private fun prepareFutureSubmission(viewModel: MaintenanceHistoryViewModel) {
@@ -274,6 +273,7 @@ class FutureMaintenanceReminderViewModelTest {
         nextRecordId: () -> MaintenanceRecordId = { MaintenanceRecordId("future-record") },
     ): MaintenanceHistoryViewModel {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        repository.reminderRepository = reminderRepository
         return MaintenanceHistoryViewModel(
             vehicleId = vehicle.id,
             familyId = familyId,
@@ -306,6 +306,8 @@ private class FutureMaintenanceRepository(
     private val saveGate: CompletableDeferred<Unit>? = null,
 ) : MaintenanceRecordRepository {
     val savedRecords = mutableListOf<MaintenanceRecord>()
+    val notificationPlans = mutableListOf<ReminderNotificationPlan>()
+    var reminderRepository: ReminderRepository? = null
     var saveCalls = 0
 
     override suspend fun saveMaintenanceRecord(record: MaintenanceRecord) {
@@ -313,6 +315,21 @@ private class FutureMaintenanceRepository(
         saveGate?.await()
         savedRecords.removeAll { it.id == record.id }
         savedRecords += record
+    }
+
+    override suspend fun saveMaintenanceRecordWithNotification(
+        record: MaintenanceRecord,
+        mutation: ReminderNotificationMutation,
+    ) {
+        saveMaintenanceRecord(record)
+        val reminders = requireNotNull(reminderRepository)
+        when (mutation) {
+            is ReminderNotificationMutation.Upsert -> {
+                reminders.saveReminderWithNotification(mutation.reminder, mutation.notificationPlan)
+                mutation.notificationPlan?.let(notificationPlans::add)
+            }
+            is ReminderNotificationMutation.Delete -> reminders.deleteReminderWithNotification(mutation.reminderId)
+        }
     }
 
     override suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord> =
@@ -325,6 +342,7 @@ private class FutureMaintenanceRepository(
 
 private class FutureReminderRepository : ReminderRepository {
     val savedReminders = mutableListOf<Reminder>()
+    val notificationPlans = mutableListOf<ReminderNotificationPlan>()
 
     override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> =
         savedReminders.filter { it.familyId == familyId && !it.isCompleted }
@@ -334,6 +352,14 @@ private class FutureReminderRepository : ReminderRepository {
     override suspend fun saveReminder(reminder: Reminder) {
         savedReminders.removeAll { it.id == reminder.id }
         savedReminders += reminder
+    }
+
+    override suspend fun saveReminderWithNotification(
+        reminder: Reminder,
+        notificationPlan: ReminderNotificationPlan?,
+    ) {
+        saveReminder(reminder)
+        notificationPlan?.let(notificationPlans::add)
     }
 
     override suspend fun markReminderCompleted(reminderId: ReminderId) = Unit

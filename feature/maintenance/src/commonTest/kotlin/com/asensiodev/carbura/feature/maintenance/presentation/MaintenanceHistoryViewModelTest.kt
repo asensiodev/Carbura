@@ -7,6 +7,7 @@ import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceW
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.GetVehicleHistoryUseCase
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
@@ -477,6 +478,7 @@ class MaintenanceHistoryViewModelTest {
         notificationScheduler: FakeNotificationScheduler = FakeNotificationScheduler(),
     ): MaintenanceHistoryViewModel {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        repository.reminderRepository = reminderRepository
         return MaintenanceHistoryViewModel(
             vehicleId = vehicleId,
             familyId = familyId,
@@ -529,6 +531,7 @@ private class FakeMaintenanceRecordRepository(
     private val deleteGate: CompletableDeferred<Unit>? = null,
 ) : MaintenanceRecordRepository {
     val savedRecords = mutableListOf<MaintenanceRecord>()
+    var reminderRepository: ReminderRepository? = null
     var saveCalls = 0
     var deleteCalls = 0
 
@@ -539,6 +542,19 @@ private class FakeMaintenanceRecordRepository(
         if (failSaves) error("save failed")
         savedRecords.removeAll { it.id == record.id }
         savedRecords += record
+    }
+
+    override suspend fun saveMaintenanceRecordWithNotification(
+        record: MaintenanceRecord,
+        mutation: ReminderNotificationMutation,
+    ) {
+        saveMaintenanceRecord(record)
+        val reminders = requireNotNull(reminderRepository)
+        when (mutation) {
+            is ReminderNotificationMutation.Upsert ->
+                reminders.saveReminderWithNotification(mutation.reminder, mutation.notificationPlan)
+            is ReminderNotificationMutation.Delete -> reminders.deleteReminderWithNotification(mutation.reminderId)
+        }
     }
 
     override suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord> =

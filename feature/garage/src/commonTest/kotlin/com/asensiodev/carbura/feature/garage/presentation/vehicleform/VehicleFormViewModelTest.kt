@@ -228,8 +228,8 @@ class VehicleFormViewModelTest {
     @Test
     fun cancelledReconciliationDoesNotPublishCreateSuccess() =
         runTest {
-            val repository = FakeFormVehicleRepository()
-            val reminderRepository = FakeFormReminderRepository().apply { cancelSaves = true }
+            val repository = FakeFormVehicleRepository().apply { cancelSaves = true }
+            val reminderRepository = FakeFormReminderRepository()
             val viewModel = viewModel(repository, reminderRepository = reminderRepository)
             viewModel.onEvent(VehicleFormEvent.NameChanged("Coche familiar"))
             viewModel.onEvent(VehicleFormEvent.OdometerChanged("12000"))

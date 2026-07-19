@@ -6,6 +6,7 @@ import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceR
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderFromInputUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderUseCase
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
@@ -33,8 +34,8 @@ class MaintenanceGeneratedReminderJourneyTest {
             val familyId = FamilyId("family-e2e")
             val vehicleId = VehicleId("vehicle-e2e")
             val vehicleRepository = InMemoryVehicleRepository()
-            val maintenanceRepository = InMemoryMaintenanceRepository()
             val reminderRepository = InMemoryReminderRepository()
+            val maintenanceRepository = InMemoryMaintenanceRepository(reminderRepository)
             val scheduler = RecordingScheduler()
             vehicleRepository.saveVehicle(
                 Vehicle(
@@ -80,7 +81,7 @@ class MaintenanceGeneratedReminderJourneyTest {
             )
             assertEquals(
                 listOf(60, 30, 7),
-                scheduler.plans
+                maintenanceRepository.plans
                     .single()
                     .alerts
                     .map { it.daysBefore },
@@ -103,12 +104,29 @@ private class InMemoryVehicleRepository : VehicleRepository {
     }
 }
 
-private class InMemoryMaintenanceRepository : MaintenanceRecordRepository {
+private class InMemoryMaintenanceRepository(
+    private val reminderRepository: ReminderRepository,
+) : MaintenanceRecordRepository {
     val records = mutableListOf<MaintenanceRecord>()
+    val plans = mutableListOf<ReminderNotificationPlan>()
 
     override suspend fun saveMaintenanceRecord(record: MaintenanceRecord) {
         records.removeAll { it.id == record.id }
         records += record
+    }
+
+    override suspend fun saveMaintenanceRecordWithNotification(
+        record: MaintenanceRecord,
+        mutation: ReminderNotificationMutation,
+    ) {
+        saveMaintenanceRecord(record)
+        when (mutation) {
+            is ReminderNotificationMutation.Upsert -> {
+                reminderRepository.saveReminder(mutation.reminder)
+                mutation.notificationPlan?.let(plans::add)
+            }
+            is ReminderNotificationMutation.Delete -> reminderRepository.deleteReminder(mutation.reminderId)
+        }
     }
 
     override suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord> = records.filter { it.vehicleId == vehicleId }
