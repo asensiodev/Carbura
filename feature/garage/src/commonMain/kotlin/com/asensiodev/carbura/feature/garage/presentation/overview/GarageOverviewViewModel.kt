@@ -8,6 +8,7 @@ import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.domain.vehicle.usecase.DeleteVehicleUseCase
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.VehicleId
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -52,25 +53,34 @@ class GarageOverviewViewModel(
     }
 
     private fun loadVehicles(showLoading: Boolean) {
-        if (loadInProgress) return
-        loadInProgress = true
-        if (showLoading) _uiState.update { it.copy(loadState = GarageLoadState.Loading) }
         scope.launch {
+            if (loadInProgress) return@launch
+            loadInProgress = true
+            val previousLoadState = _uiState.value.loadState
+            var loadSettled = false
+            if (showLoading) _uiState.update { it.copy(loadState = GarageLoadState.Loading) }
             try {
                 val vehicles = withContext(dispatchers.io) { vehicleRepository.observeVehicles(familyId) }
                 _uiState.update { it.copy(vehicles = vehicles, loadState = GarageLoadState.Loaded) }
+                loadSettled = true
+            } catch (error: CancellationException) {
+                throw error
             } catch (_: Exception) {
                 if (showLoading) _uiState.update { it.copy(loadState = GarageLoadState.Error) }
+                loadSettled = true
             } finally {
+                if (showLoading && !loadSettled) {
+                    _uiState.update { it.copy(loadState = previousLoadState) }
+                }
                 loadInProgress = false
             }
         }
     }
 
     private fun deleteVehicle(vehicleId: VehicleId) {
-        if (_uiState.value.deletingVehicleId != null) return
-        _uiState.update { it.copy(deletingVehicleId = vehicleId, deleteError = false) }
         scope.launch {
+            if (_uiState.value.deletingVehicleId != null) return@launch
+            _uiState.update { it.copy(deletingVehicleId = vehicleId, deleteError = false) }
             val vehicleName =
                 _uiState.value.vehicles
                     .firstOrNull { it.id == vehicleId }
@@ -86,6 +96,8 @@ class GarageOverviewViewModel(
                 }
                 _effects.send(GarageOverviewEffect.VehicleDeleted(vehicleName))
                 scope.launch { syncManager?.syncNow() }
+            } catch (error: CancellationException) {
+                throw error
             } catch (_: Exception) {
                 _uiState.update { it.copy(deleteError = true) }
             } finally {

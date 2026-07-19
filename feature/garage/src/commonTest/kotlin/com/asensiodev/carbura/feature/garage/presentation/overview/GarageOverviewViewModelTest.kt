@@ -13,8 +13,11 @@ import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
 import com.asensiodev.carbura.core.testing.TestDispatcherProvider
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -22,6 +25,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -49,6 +53,29 @@ class GarageOverviewViewModelTest {
             assertEquals(GarageLoadState.Loaded, viewModel.uiState.value.loadState)
             advanceUntilIdle()
             assertEquals(2, viewModel.uiState.value.vehicles.size)
+        }
+
+    @Test
+    fun cancelledLoadRestoresPriorStateAndCanBeRetried() =
+        runTest {
+            val repository = FakeOverviewVehicleRepository().apply { failLoads = true }
+            val viewModel = viewModel(repository)
+            viewModel.onEvent(GarageOverviewEvent.Started)
+            advanceUntilIdle()
+            assertEquals(GarageLoadState.Error, viewModel.uiState.value.loadState)
+
+            repository.failLoads = false
+            repository.cancelLoads = true
+            viewModel.onEvent(GarageOverviewEvent.Retry)
+            advanceUntilIdle()
+            assertEquals(GarageLoadState.Error, viewModel.uiState.value.loadState)
+
+            repository.cancelLoads = false
+            repository.vehicles += vehicle()
+            viewModel.onEvent(GarageOverviewEvent.Retry)
+            advanceUntilIdle()
+            assertEquals(GarageLoadState.Loaded, viewModel.uiState.value.loadState)
+            assertEquals(listOf(vehicle()), viewModel.uiState.value.vehicles)
         }
 
     @Test
@@ -89,6 +116,52 @@ class GarageOverviewViewModelTest {
         }
 
     @Test
+    fun cancelledDeleteClearsDeletionWithoutErrorOrEffectAndCanBeRetried() =
+        runTest {
+            val repository = FakeOverviewVehicleRepository(mutableListOf(vehicle())).apply { cancelDeletes = true }
+            val viewModel = viewModel(repository)
+            viewModel.onEvent(GarageOverviewEvent.Started)
+            advanceUntilIdle()
+
+            viewModel.effects.test {
+                viewModel.onEvent(GarageOverviewEvent.DeleteVehicleConfirmed(VehicleId("vehicle-1")))
+                advanceUntilIdle()
+                assertEquals(null, viewModel.uiState.value.deletingVehicleId)
+                assertFalse(viewModel.uiState.value.deleteError)
+                assertEquals(1, viewModel.uiState.value.vehicles.size)
+                expectNoEvents()
+
+                repository.cancelDeletes = false
+                viewModel.onEvent(GarageOverviewEvent.DeleteVehicleConfirmed(VehicleId("vehicle-1")))
+                advanceUntilIdle()
+                assertIs<GarageOverviewEffect.VehicleDeleted>(awaitItem())
+            }
+        }
+
+    @Test
+    fun alreadyCancelledScopeDoesNotActivateLoadOrDeleteState() =
+        runTest {
+            val job = Job()
+            val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler) + job)
+            val repository = FakeOverviewVehicleRepository(mutableListOf(vehicle())).apply { failLoads = true }
+            val viewModel = viewModel(repository, scope)
+
+            viewModel.onEvent(GarageOverviewEvent.Started)
+            advanceUntilIdle()
+            assertEquals(GarageLoadState.Error, viewModel.uiState.value.loadState)
+            job.cancel()
+            repository.failLoads = false
+
+            viewModel.onEvent(GarageOverviewEvent.Retry)
+            viewModel.onEvent(GarageOverviewEvent.DeleteVehicleConfirmed(VehicleId("vehicle-1")))
+            runCurrent()
+
+            assertEquals(GarageLoadState.Error, viewModel.uiState.value.loadState)
+            assertEquals(null, viewModel.uiState.value.deletingVehicleId)
+            assertFalse(viewModel.uiState.value.deleteError)
+        }
+
+    @Test
     fun selectingVehicleEmitsNavigationEffect() =
         runTest {
             val viewModel = viewModel(FakeOverviewVehicleRepository())
@@ -101,14 +174,17 @@ class GarageOverviewViewModelTest {
             }
         }
 
-    private fun TestScope.viewModel(repository: FakeOverviewVehicleRepository): GarageOverviewViewModel {
+    private fun TestScope.viewModel(
+        repository: FakeOverviewVehicleRepository,
+        scope: CoroutineScope = this,
+    ): GarageOverviewViewModel {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         return GarageOverviewViewModel(
             familyId = familyId,
             vehicleRepository = repository,
             dispatchers = TestDispatcherProvider(dispatcher, dispatcher, dispatcher),
             deleteVehicleUseCase = DeleteVehicleUseCase(repository, EmptyReminderRepository(), EmptyScheduler()),
-            coroutineScope = this,
+            coroutineScope = scope,
         )
     }
 
@@ -120,11 +196,14 @@ private class FakeOverviewVehicleRepository(
     val vehicles: MutableList<Vehicle> = mutableListOf(),
 ) : VehicleRepository {
     var failLoads = false
+    var cancelLoads = false
     var failDeletes = false
+    var cancelDeletes = false
     var deleteCalls = 0
     var deleteGate: CompletableDeferred<Unit>? = null
 
     override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> {
+        if (cancelLoads) throw CancellationException("Load cancelled")
         if (failLoads) error("Load failed")
         return vehicles.filter { it.familyId == familyId }
     }
@@ -134,6 +213,7 @@ private class FakeOverviewVehicleRepository(
     override suspend fun deleteVehicle(vehicleId: VehicleId) {
         deleteCalls += 1
         deleteGate?.await()
+        if (cancelDeletes) throw CancellationException("Delete cancelled")
         if (failDeletes) error("Delete failed")
         vehicles.removeAll { it.id == vehicleId }
     }

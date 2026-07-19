@@ -14,6 +14,7 @@ import com.asensiodev.carbura.core.domain.reminder.notification.ReminderAlertKin
 import com.asensiodev.carbura.coredata.R
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.time.format.FormatStyle
 import java.util.Locale
 
@@ -29,7 +30,7 @@ class AndroidReminderNotificationReceiver : BroadcastReceiver() {
         }
 
         val reminderId = intent.getStringExtra(EXTRA_REMINDER_ID).orEmpty()
-        val alertKind = intent.getStringExtra(EXTRA_ALERT_KIND)?.let { runCatching { ReminderAlertKind.valueOf(it) }.getOrNull() }
+        val alertKind = intent.getStringExtra(EXTRA_ALERT_KIND)?.let { value -> ReminderAlertKind.entries.firstOrNull { it.name == value } }
         val dueDate = intent.getStringExtra(EXTRA_DUE_DATE).orEmpty()
         val fallbackTitle =
             intent.getStringExtra(EXTRA_REMINDER_TITLE).orEmpty().ifBlank {
@@ -109,8 +110,10 @@ internal fun localizedExpirationDate(
     iso8601: String,
     locale: Locale,
 ): String? =
-    runCatching {
+    try {
         LocalDate.parse(iso8601).format(
             DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale),
         )
-    }.getOrNull()
+    } catch (_: DateTimeParseException) {
+        null
+    }

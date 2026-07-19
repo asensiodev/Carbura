@@ -100,6 +100,7 @@ import org.koin.core.parameter.parametersOf
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.time.format.DateTimeParseException
 
 @Composable
 fun RemindersRoute(
@@ -918,13 +919,15 @@ private const val PERMISSION_PREFERENCES = "reminder_notification_permission"
 private const val PERMISSION_REQUESTED = "requested"
 
 private fun String.toUtcMillisOrNull(): Long? =
-    runCatching {
+    try {
         LocalDate
             .parse(this)
             .atStartOfDay()
             .toInstant(ZoneOffset.UTC)
             .toEpochMilli()
-    }.getOrNull()
+    } catch (_: DateTimeParseException) {
+        null
+    }
 
 private fun Long.toIsoDate(): String =
     Instant

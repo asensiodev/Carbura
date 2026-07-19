@@ -9,8 +9,11 @@ import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import com.asensiodev.carbura.core.testing.TestDispatcherProvider
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -20,6 +23,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -91,6 +95,68 @@ class OnboardingViewModelTest {
         }
 
     @Test
+    fun sessionLookupCancellationDoesNotBecomeSessionError() =
+        runTest {
+            val viewModel =
+                onboardingViewModel(
+                    authGateway =
+                        FakeAuthGateway(
+                            currentSessionError = CancellationException("Session lookup cancelled"),
+                        ),
+                )
+
+            viewModel.onEvent(OnboardingEvent.Started)
+            advanceUntilIdle()
+
+            assertNull(viewModel.uiState.value.error)
+            assertNull(viewModel.uiState.value.errorDiagnostic)
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertFalse(viewModel.uiState.value.isInitializing)
+        }
+
+    @Test
+    fun profileLookupCancellationDoesNotBecomeProfileError() =
+        runTest {
+            val viewModel =
+                onboardingViewModel(
+                    authGateway = FakeAuthGateway(currentSession = authSession()),
+                    remoteUserProfileGateway =
+                        FakeRemoteUserProfileGateway(
+                            profile = null,
+                            getProfileError = CancellationException("Profile lookup cancelled"),
+                        ),
+                )
+
+            viewModel.onEvent(OnboardingEvent.Started)
+            advanceUntilIdle()
+
+            assertNull(viewModel.uiState.value.error)
+            assertNull(viewModel.uiState.value.errorDiagnostic)
+            assertFalse(viewModel.uiState.value.isInitializing)
+        }
+
+    @Test
+    fun profileCreationCancellationDoesNotBecomeCreationError() =
+        runTest {
+            val viewModel =
+                onboardingViewModel(
+                    authGateway = FakeAuthGateway(currentSession = authSession()),
+                    remoteUserProfileGateway =
+                        FakeRemoteUserProfileGateway(
+                            profile = null,
+                            ensureProfileError = CancellationException("Profile creation cancelled"),
+                        ),
+                )
+
+            viewModel.onEvent(OnboardingEvent.Started)
+            advanceUntilIdle()
+
+            assertNull(viewModel.uiState.value.error)
+            assertNull(viewModel.uiState.value.errorDiagnostic)
+            assertFalse(viewModel.uiState.value.isInitializing)
+        }
+
+    @Test
     fun googleLoginEmitsLoadingThenNavigateWhenProfileExists() =
         runTest {
             val signInGate = CompletableDeferred<Unit>()
@@ -135,6 +201,77 @@ class OnboardingViewModelTest {
             assertFalse(state.isAuthenticated)
             assertEquals(OnboardingError.SignInFailed, state.error)
             assertTrue(state.errorDiagnostic.orEmpty().contains("Missing config"))
+        }
+
+    @Test
+    fun googleLoginCancellationDoesNotBecomeSignInError() =
+        runTest {
+            val viewModel =
+                onboardingViewModel(
+                    authGateway =
+                        FakeAuthGateway(
+                            signInError = CancellationException("Google sign-in cancelled"),
+                        ),
+                )
+
+            viewModel.onEvent(OnboardingEvent.GoogleSignInClicked)
+            advanceUntilIdle()
+
+            assertNull(viewModel.uiState.value.error)
+            assertNull(viewModel.uiState.value.errorDiagnostic)
+            assertFalse(viewModel.uiState.value.isLoading)
+        }
+
+    @Test
+    fun repeatedGoogleLoginDoesNotClearOrDuplicateActiveRequest() =
+        runTest {
+            val signInGate = CompletableDeferred<Unit>()
+            val authGateway = FakeAuthGateway(signInSession = authSession(), signInGate = signInGate)
+            val viewModel =
+                onboardingViewModel(
+                    authGateway = authGateway,
+                    remoteUserProfileGateway = FakeRemoteUserProfileGateway(remoteProfile()),
+                )
+
+            viewModel.onEvent(OnboardingEvent.GoogleSignInClicked)
+            runCurrent()
+            viewModel.onEvent(OnboardingEvent.GoogleSignInClicked)
+            runCurrent()
+
+            assertEquals(1, authGateway.signInAttempts)
+            assertTrue(viewModel.uiState.value.isLoading)
+            signInGate.complete(Unit)
+            advanceUntilIdle()
+            assertFalse(viewModel.uiState.value.isLoading)
+        }
+
+    @Test
+    fun alreadyCancelledScopeDoesNotLeaveAuthenticationLoading() =
+        runTest {
+            val job = Job().also { it.cancel() }
+            val authGateway = FakeAuthGateway(signInSession = authSession())
+            val cancelledScope = CoroutineScope(StandardTestDispatcher(testScheduler) + job)
+            val viewModel = onboardingViewModel(authGateway = authGateway, coroutineScope = cancelledScope)
+
+            viewModel.onEvent(OnboardingEvent.GoogleSignInClicked)
+            advanceUntilIdle()
+
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertEquals(0, authGateway.signInAttempts)
+        }
+
+    @Test
+    fun credentialRequestCancellationClearsLoadingWithoutError() =
+        runTest {
+            val viewModel = onboardingViewModel()
+
+            viewModel.onEvent(OnboardingEvent.GoogleCredentialRequestStarted)
+            assertTrue(viewModel.uiState.value.isLoading)
+            viewModel.onEvent(OnboardingEvent.GoogleCredentialRequestCancelled)
+
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertNull(viewModel.uiState.value.error)
+            assertNull(viewModel.uiState.value.errorDiagnostic)
         }
 
     @Test
@@ -238,6 +375,25 @@ class OnboardingViewModelTest {
         }
 
     @Test
+    fun googleIdTokenLoginCancellationDoesNotBecomeSignInError() =
+        runTest {
+            val viewModel =
+                onboardingViewModel(
+                    authGateway =
+                        FakeAuthGateway(
+                            signInError = CancellationException("ID token sign-in cancelled"),
+                        ),
+                )
+
+            viewModel.onEvent(OnboardingEvent.GoogleIdTokenReceived("test-id-token"))
+            advanceUntilIdle()
+
+            assertNull(viewModel.uiState.value.error)
+            assertNull(viewModel.uiState.value.errorDiagnostic)
+            assertFalse(viewModel.uiState.value.isLoading)
+        }
+
+    @Test
     fun credentialFailureIsNormalizedAndCanBeRetried() =
         runTest {
             val authGateway = FakeAuthGateway(signInError = IllegalStateException("OAuth client secret"))
@@ -316,9 +472,32 @@ class OnboardingViewModelTest {
             assertEquals(null, state.familyName)
         }
 
+    @Test
+    fun signOutCancellationDoesNotBecomeSignOutError() =
+        runTest {
+            val viewModel =
+                onboardingViewModel(
+                    authGateway =
+                        FakeAuthGateway(
+                            currentSession = authSession(),
+                            signOutError = CancellationException("Sign-out cancelled"),
+                        ),
+                )
+            viewModel.onEvent(OnboardingEvent.Started)
+            advanceUntilIdle()
+
+            viewModel.onEvent(OnboardingEvent.SignOutClicked)
+            advanceUntilIdle()
+
+            assertNull(viewModel.uiState.value.error)
+            assertNull(viewModel.uiState.value.errorDiagnostic)
+            assertFalse(viewModel.uiState.value.isLoading)
+        }
+
     private fun TestScope.onboardingViewModel(
         authGateway: AuthGateway = FakeAuthGateway(),
         remoteUserProfileGateway: RemoteUserProfileGateway = FakeRemoteUserProfileGateway(remoteProfile()),
+        coroutineScope: CoroutineScope = this,
     ): OnboardingViewModel {
         val dispatcher = StandardTestDispatcher(testScheduler)
         return OnboardingViewModel(
@@ -330,7 +509,7 @@ class OnboardingViewModelTest {
                     default = dispatcher,
                     main = dispatcher,
                 ),
-            coroutineScope = this,
+            coroutineScope = coroutineScope,
         )
     }
 
@@ -357,6 +536,7 @@ class OnboardingViewModelTest {
 
 private class FakeAuthGateway(
     private val currentSession: AuthSession? = null,
+    private val currentSessionError: Throwable? = null,
     private val signInSession: AuthSession =
         currentSession ?: AuthSession(
             accessToken = "access-token",
@@ -364,10 +544,14 @@ private class FakeAuthGateway(
         ),
     var signInError: Throwable? = null,
     private val signInGate: CompletableDeferred<Unit>? = null,
+    private val signOutError: Throwable? = null,
 ) : AuthGateway {
     var signInAttempts: Int = 0
 
-    override suspend fun currentSession(): AuthSession? = currentSession
+    override suspend fun currentSession(): AuthSession? {
+        currentSessionError?.let { throw it }
+        return currentSession
+    }
 
     override suspend fun signInWithGoogle(): AuthSession {
         signInAttempts += 1
@@ -383,7 +567,9 @@ private class FakeAuthGateway(
         return signInSession
     }
 
-    override suspend fun signOut() = Unit
+    override suspend fun signOut() {
+        signOutError?.let { throw it }
+    }
 }
 
 private class FakeRemoteUserProfileGateway(

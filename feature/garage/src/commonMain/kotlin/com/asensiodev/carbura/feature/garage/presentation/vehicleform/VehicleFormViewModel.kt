@@ -20,6 +20,7 @@ import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
 import com.asensiodev.carbura.core.stringresources.CarburaString
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -181,11 +182,13 @@ class VehicleFormViewModel(
         mutation: VehicleFormMutation,
         block: suspend () -> Unit,
     ) {
-        if (_uiState.value.activeMutation != null) return
-        _uiState.update { it.copy(activeMutation = mutation, persistenceError = false) }
         scope.launch {
+            if (_uiState.value.activeMutation != null) return@launch
+            _uiState.update { it.copy(activeMutation = mutation, persistenceError = false) }
             try {
                 block()
+            } catch (error: CancellationException) {
+                throw error
             } catch (_: Exception) {
                 _uiState.update { it.copy(persistenceError = true) }
             } finally {
@@ -224,6 +227,7 @@ class VehicleFormViewModel(
         val result = withContext(dispatchers.io) { createVehicleUseCase(vehicle) }
         when (result) {
             is DomainResult.Success -> {
+                if (reconcileReminders) reconcileReminders(result.value)
                 _uiState.update {
                     it.copy(
                         name = "",
@@ -238,7 +242,6 @@ class VehicleFormViewModel(
                     )
                 }
                 _effects.send(VehicleFormEffect.VehicleCreated(result.value.name))
-                if (reconcileReminders) reconcileReminders(result.value)
                 syncAfterMutation()
             }
             is DomainResult.ValidationError -> showCreateValidation(result.reason.toGarageMessage())

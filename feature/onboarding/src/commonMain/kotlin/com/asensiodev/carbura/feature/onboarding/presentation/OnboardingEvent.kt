@@ -7,6 +7,8 @@ sealed interface OnboardingEvent {
 
     data object GoogleCredentialRequestStarted : OnboardingEvent
 
+    data object GoogleCredentialRequestCancelled : OnboardingEvent
+
     data class GoogleIdTokenReceived(
         val idToken: String,
     ) : OnboardingEvent

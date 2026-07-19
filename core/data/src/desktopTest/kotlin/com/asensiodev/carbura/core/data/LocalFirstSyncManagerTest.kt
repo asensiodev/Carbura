@@ -9,11 +9,19 @@ import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import com.asensiodev.carbura.core.model.VehicleType
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class LocalFirstSyncManagerTest {
@@ -145,6 +153,72 @@ class LocalFirstSyncManagerTest {
 
             assertIs<SyncResult.Failure>(result)
             assertTrue(local.vehicles.single().pendingSync)
+        }
+
+    @Test
+    fun cancelledSyncDoesNotReportFailure() =
+        runTest {
+            val syncManager = syncManager(FakeLocalSyncDataSource(), FakeRemoteSyncDataSource(shouldCancel = true))
+
+            assertFailsWith<CancellationException> { syncManager.syncNow() }
+
+            assertFalse(syncManager.status.value.isSyncing)
+            assertNull(syncManager.status.value.lastErrorMessage)
+        }
+
+    @Test
+    fun cancellingActiveSyncReleasesMutexAndAllowsRetry() =
+        runTest {
+            val remote = FakeRemoteSyncDataSource(blockFirstVehicleRead = true)
+            val syncManager = syncManager(FakeLocalSyncDataSource(), remote)
+            val activeSync = launch { syncManager.syncNow() }
+            remote.firstVehicleReadStarted.await()
+
+            activeSync.cancelAndJoin()
+
+            assertFalse(syncManager.status.value.isSyncing)
+            assertNull(syncManager.status.value.lastErrorMessage)
+            assertIs<SyncResult.Success>(syncManager.syncNow())
+        }
+
+    @Test
+    fun cancellingMutexWaiterDoesNotCancelActiveSyncOrBlockLaterCallers() =
+        runTest {
+            val remote = FakeRemoteSyncDataSource(blockFirstVehicleRead = true)
+            val syncManager = syncManager(FakeLocalSyncDataSource(), remote)
+            var activeResult: SyncResult? = null
+            val activeSync = launch { activeResult = syncManager.syncNow() }
+            remote.firstVehicleReadStarted.await()
+            val waitingSync = launch { syncManager.syncNow() }
+            yield()
+
+            waitingSync.cancelAndJoin()
+
+            assertTrue(activeSync.isActive)
+            assertTrue(syncManager.status.value.isSyncing)
+            remote.releaseFirstVehicleRead.complete(Unit)
+            activeSync.join()
+            assertIs<SyncResult.Success>(activeResult)
+            assertIs<SyncResult.Success>(syncManager.syncNow())
+        }
+
+    @Test
+    fun concurrentSyncRequestsDoNotOverlapRemoteWork() =
+        runTest {
+            val remote = FakeRemoteSyncDataSource(blockFirstVehicleRead = true)
+            val syncManager = syncManager(FakeLocalSyncDataSource(), remote)
+            val results = mutableListOf<SyncResult>()
+            val first = launch { results += syncManager.syncNow() }
+            remote.firstVehicleReadStarted.await()
+            val second = launch { results += syncManager.syncNow() }
+            yield()
+
+            assertEquals(1, remote.vehicleReadCalls)
+            remote.releaseFirstVehicleRead.complete(Unit)
+            joinAll(first, second)
+
+            assertEquals(2, results.size)
+            assertTrue(results.all { it is SyncResult.Success })
         }
 
     @Test
@@ -398,7 +472,14 @@ private class FakeRemoteSyncDataSource(
     val maintenanceRecords: MutableList<SyncMaintenanceRecord> = mutableListOf(),
     val reminders: MutableList<SyncReminder> = mutableListOf(),
     var shouldFail: Boolean = false,
+    var shouldCancel: Boolean = false,
+    private val blockFirstVehicleRead: Boolean = false,
 ) : RemoteSyncDataSource {
+    val firstVehicleReadStarted = CompletableDeferred<Unit>()
+    val releaseFirstVehicleRead = CompletableDeferred<Unit>()
+    var vehicleReadCalls: Int = 0
+        private set
+
     override suspend fun upsertVehicles(vehicles: List<SyncVehicle>) {
         failIfNeeded()
         vehicles.forEach { vehicle ->
@@ -424,6 +505,11 @@ private class FakeRemoteSyncDataSource(
     }
 
     override suspend fun getVehicles(familyId: FamilyId): List<SyncVehicle> {
+        vehicleReadCalls += 1
+        if (blockFirstVehicleRead && vehicleReadCalls == 1) {
+            firstVehicleReadStarted.complete(Unit)
+            releaseFirstVehicleRead.await()
+        }
         failIfNeeded()
         return vehicles.filter { it.familyId == familyId.value }
     }
@@ -439,6 +525,7 @@ private class FakeRemoteSyncDataSource(
     }
 
     private fun failIfNeeded() {
+        if (shouldCancel) throw CancellationException("sync cancelled")
         if (shouldFail) error("remote failed")
     }
 }

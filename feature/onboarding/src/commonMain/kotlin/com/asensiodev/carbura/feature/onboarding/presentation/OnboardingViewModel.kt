@@ -8,6 +8,7 @@ import com.asensiodev.carbura.core.domain.auth.AuthSession
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfile
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.model.UserId
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -30,37 +31,94 @@ class OnboardingViewModel(
 
     private val _effects = Channel<OnboardingEffect>(capacity = Channel.BUFFERED)
     val effects: Flow<OnboardingEffect> = _effects.receiveAsFlow()
+    private var activeAuthOperation: AuthOperation? = null
 
     private val scope: CoroutineScope
         get() = coroutineScope ?: viewModelScope
 
     fun onEvent(event: OnboardingEvent) {
         when (event) {
-            OnboardingEvent.Started -> scope.launch { loadCurrentSession() }
-            OnboardingEvent.GoogleSignInClicked -> scope.launch { signInWithGoogle() }
-            OnboardingEvent.GoogleCredentialRequestStarted ->
-                _uiState.update {
-                    it.copy(isLoading = true, error = null, errorDiagnostic = null)
+            OnboardingEvent.Started ->
+                scope.launch {
+                    try {
+                        loadCurrentSession()
+                    } finally {
+                        _uiState.update { it.copy(isInitializing = false) }
+                    }
                 }
-            is OnboardingEvent.GoogleIdTokenReceived -> scope.launch { signInWithGoogle(event.idToken) }
+            OnboardingEvent.GoogleSignInClicked -> launchAuthOperation(AuthOperation.DirectSignIn) { signInWithGoogle() }
+            OnboardingEvent.GoogleCredentialRequestStarted -> beginCredentialRequest()
+            OnboardingEvent.GoogleCredentialRequestCancelled -> finishAuthOperation(AuthOperation.CredentialSignIn)
+            is OnboardingEvent.GoogleIdTokenReceived -> continueCredentialSignIn(event.idToken)
             is OnboardingEvent.GoogleSignInError ->
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = OnboardingError.SignInFailed,
-                        errorDiagnostic = event.diagnostic,
-                    )
+                if (activeAuthOperation == null || activeAuthOperation == AuthOperation.CredentialSignIn) {
+                    activeAuthOperation = null
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = OnboardingError.SignInFailed,
+                            errorDiagnostic = event.diagnostic,
+                        )
+                    }
                 }
-            OnboardingEvent.SignOutClicked -> scope.launch { signOut() }
+            OnboardingEvent.SignOutClicked -> launchAuthOperation(AuthOperation.SignOut) { signOut() }
         }
+    }
+
+    private fun launchAuthOperation(
+        operation: AuthOperation,
+        block: suspend () -> Unit,
+    ) {
+        if (activeAuthOperation != null) return
+        activeAuthOperation = operation
+        _uiState.update { it.copy(isLoading = true, error = null, errorDiagnostic = null) }
+        scope
+            .launch {
+                try {
+                    block()
+                } finally {
+                    finishAuthOperation(operation)
+                }
+            }.invokeOnCompletion { cause ->
+                if (cause is CancellationException) finishAuthOperation(operation)
+            }
+    }
+
+    private fun beginCredentialRequest() {
+        if (activeAuthOperation != null) return
+        activeAuthOperation = AuthOperation.CredentialSignIn
+        _uiState.update { it.copy(isLoading = true, error = null, errorDiagnostic = null) }
+    }
+
+    private fun continueCredentialSignIn(idToken: String) {
+        if (activeAuthOperation == null) beginCredentialRequest()
+        if (activeAuthOperation != AuthOperation.CredentialSignIn) return
+        scope
+            .launch {
+                try {
+                    signInWithGoogle(idToken)
+                } finally {
+                    finishAuthOperation(AuthOperation.CredentialSignIn)
+                }
+            }.invokeOnCompletion { cause ->
+                if (cause is CancellationException) finishAuthOperation(AuthOperation.CredentialSignIn)
+            }
+    }
+
+    private fun finishAuthOperation(operation: AuthOperation) {
+        if (activeAuthOperation != operation) return
+        activeAuthOperation = null
+        _uiState.update { it.copy(isLoading = false) }
     }
 
     private suspend fun loadCurrentSession() {
         _uiState.update { it.copy(isInitializing = true, error = null, errorDiagnostic = null) }
         val session =
-            runCatching {
+            try {
                 withContext(dispatchers.io) { authGateway.currentSession() }
-            }.getOrElse { error ->
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
                 _uiState.update {
                     it.copy(
                         isInitializing = false,
@@ -86,119 +144,106 @@ class OnboardingViewModel(
                 )
             }
         } else {
-            val profileResult =
-                runCatching {
+            try {
+                val profile =
                     withContext(dispatchers.io) {
                         remoteUserProfileGateway.getProfileForUser(UserId(session.user.id))
                     }
+                if (profile == null) {
+                    ensureProfileAndNavigate(session, isInitializing = true)
+                } else {
+                    applyAuthenticatedProfile(
+                        profile = profile,
+                        isInitializing = false,
+                        isLoading = false,
+                    )
                 }
-            profileResult
-                .onSuccess { profile ->
-                    if (profile == null) {
-                        ensureProfileAndNavigate(session, isInitializing = true)
-                    } else {
-                        applyAuthenticatedProfile(
-                            profile = profile,
-                            isInitializing = false,
-                            isLoading = false,
-                        )
-                    }
-                }.onFailure { error ->
-                    _uiState.update {
-                        it.copy(
-                            isInitializing = false,
-                            isLoading = false,
-                            isAuthenticated = false,
-                            displayName = session.displayName,
-                            email = session.user.email,
-                            familyId = null,
-                            familyName = null,
-                            error = OnboardingError.ProfileUnavailable,
-                            errorDiagnostic = error.diagnostic(),
-                        )
-                    }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isInitializing = false,
+                        isLoading = false,
+                        isAuthenticated = false,
+                        displayName = session.displayName,
+                        email = session.user.email,
+                        familyId = null,
+                        familyName = null,
+                        error = OnboardingError.ProfileUnavailable,
+                        errorDiagnostic = error.diagnostic(),
+                    )
                 }
+            }
         }
     }
 
     private suspend fun signInWithGoogle() {
-        if (_uiState.value.isLoading) return
-
-        _uiState.update { it.copy(isLoading = true, error = null, errorDiagnostic = null) }
-        val result =
-            runCatching {
-                val session = withContext(dispatchers.io) { authGateway.signInWithGoogle() }
-                val profile =
-                    withContext(dispatchers.io) {
-                        remoteUserProfileGateway.getProfileForUser(UserId(session.user.id))
-                    }
-                session to profile
-            }
-
-        result
-            .onSuccess { (session, profile) ->
-                if (profile == null) {
-                    ensureProfileAndNavigate(session)
-                } else {
-                    applyAuthenticatedProfile(profile = profile)
-                    _effects.send(OnboardingEffect.NavigateToGarage)
+        try {
+            val session = withContext(dispatchers.io) { authGateway.signInWithGoogle() }
+            val profile =
+                withContext(dispatchers.io) {
+                    remoteUserProfileGateway.getProfileForUser(UserId(session.user.id))
                 }
-            }.onFailure { error ->
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isAuthenticated = false,
-                        error = OnboardingError.SignInFailed,
-                        errorDiagnostic = error.diagnostic(),
-                    )
-                }
+            if (profile == null) {
+                ensureProfileAndNavigate(session)
+            } else {
+                applyAuthenticatedProfile(profile = profile)
+                _effects.send(OnboardingEffect.NavigateToGarage)
             }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    isAuthenticated = false,
+                    error = OnboardingError.SignInFailed,
+                    errorDiagnostic = error.diagnostic(),
+                )
+            }
+        }
     }
 
     private suspend fun signInWithGoogle(idToken: String) {
-        _uiState.update { it.copy(isLoading = true, error = null, errorDiagnostic = null) }
-        val result =
-            runCatching {
-                val session = withContext(dispatchers.io) { authGateway.signInWithGoogle(idToken) }
-                val profile =
-                    withContext(dispatchers.io) {
-                        remoteUserProfileGateway.getProfileForUser(UserId(session.user.id))
-                    }
-                session to profile
-            }
-
-        result
-            .onSuccess { (session, profile) ->
-                if (profile == null) {
-                    ensureProfileAndNavigate(session)
-                } else {
-                    applyAuthenticatedProfile(profile = profile)
-                    _effects.send(OnboardingEffect.NavigateToGarage)
+        try {
+            val session = withContext(dispatchers.io) { authGateway.signInWithGoogle(idToken) }
+            val profile =
+                withContext(dispatchers.io) {
+                    remoteUserProfileGateway.getProfileForUser(UserId(session.user.id))
                 }
-            }.onFailure { error ->
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isAuthenticated = false,
-                        error = OnboardingError.SignInFailed,
-                        errorDiagnostic = error.diagnostic(),
-                    )
-                }
+            if (profile == null) {
+                ensureProfileAndNavigate(session)
+            } else {
+                applyAuthenticatedProfile(profile = profile)
+                _effects.send(OnboardingEffect.NavigateToGarage)
             }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    isAuthenticated = false,
+                    error = OnboardingError.SignInFailed,
+                    errorDiagnostic = error.diagnostic(),
+                )
+            }
+        }
     }
 
     private suspend fun ensureProfileAndNavigate(
         session: AuthSession,
         isInitializing: Boolean = false,
     ) {
-        withContext(dispatchers.io) {
-            runCatching {
-                remoteUserProfileGateway.ensureProfile(
-                    displayName = session.displayName ?: "Usuario",
-                    email = session.user.email,
-                )
-            }
-        }.onSuccess { profile ->
+        try {
+            val profile =
+                withContext(dispatchers.io) {
+                    remoteUserProfileGateway.ensureProfile(
+                        displayName = session.displayName ?: "Usuario",
+                        email = session.user.email,
+                    )
+                }
             applyAuthenticatedProfile(
                 profile = profile,
                 isInitializing = false,
@@ -207,7 +252,9 @@ class OnboardingViewModel(
             if (!isInitializing) {
                 _effects.send(OnboardingEffect.NavigateToGarage)
             }
-        }.onFailure { error ->
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
             _uiState.update {
                 it.copy(
                     isInitializing = false,
@@ -241,10 +288,8 @@ class OnboardingViewModel(
     }
 
     private suspend fun signOut() {
-        _uiState.update { it.copy(isLoading = true, error = null, errorDiagnostic = null) }
-        runCatching {
+        try {
             withContext(dispatchers.io) { authGateway.signOut() }
-        }.onSuccess {
             _uiState.update {
                 OnboardingUiState(
                     isInitializing = false,
@@ -252,7 +297,9 @@ class OnboardingViewModel(
                 )
             }
             _effects.send(OnboardingEffect.NavigateToLogin)
-        }.onFailure { error ->
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
             _uiState.update {
                 it.copy(
                     isLoading = false,
@@ -262,6 +309,12 @@ class OnboardingViewModel(
             }
         }
     }
+}
+
+private enum class AuthOperation {
+    DirectSignIn,
+    CredentialSignIn,
+    SignOut,
 }
 
 private val AuthSession.displayName: String?

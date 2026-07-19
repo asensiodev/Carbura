@@ -8,6 +8,7 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.rpc
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -49,7 +50,7 @@ class SupabaseUserProfileGateway(
         )
 
     private suspend fun resolveFamilyName(familyId: FamilyId): String? =
-        runCatching {
+        resolveFamilyNameOrNull {
             client
                 .from("families")
                 .select {
@@ -60,8 +61,17 @@ class SupabaseUserProfileGateway(
                 }.decodeList<FamilyDto>()
                 .firstOrNull()
                 ?.name
-        }.getOrNull()
+        }
 }
+
+internal suspend fun resolveFamilyNameOrNull(lookup: suspend () -> String?): String? =
+    try {
+        lookup()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (_: Exception) {
+        null
+    }
 
 @Serializable
 internal data class EnsureUserProfileDto(

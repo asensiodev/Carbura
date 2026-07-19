@@ -7,6 +7,7 @@ import com.asensiodev.carbura.core.domain.sync.SyncStatus
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -27,24 +28,24 @@ internal class LocalFirstSyncManager(
     override suspend fun syncNow(): SyncResult =
         mutex.withLock {
             _status.update { it.copy(isSyncing = true, lastErrorMessage = null) }
-            runCatching { syncActiveFamily() }
-                .fold(
-                    onSuccess = { syncedAt ->
-                        _status.update {
-                            it.copy(
-                                isSyncing = false,
-                                lastSyncedAtMillis = syncedAt,
-                                lastErrorMessage = null,
-                            )
-                        }
-                        SyncResult.Success(syncedAt)
-                    },
-                    onFailure = { error ->
-                        val message = error.message ?: error::class.simpleName ?: "Sync failed"
-                        _status.update { it.copy(isSyncing = false, lastErrorMessage = message) }
-                        SyncResult.Failure(message)
-                    },
-                )
+            try {
+                val syncedAt = syncActiveFamily()
+                _status.update {
+                    it.copy(
+                        isSyncing = false,
+                        lastSyncedAtMillis = syncedAt,
+                        lastErrorMessage = null,
+                    )
+                }
+                SyncResult.Success(syncedAt)
+            } catch (error: CancellationException) {
+                _status.update { it.copy(isSyncing = false, lastErrorMessage = null) }
+                throw error
+            } catch (error: Throwable) {
+                val message = error.message ?: error::class.simpleName ?: "Sync failed"
+                _status.update { it.copy(isSyncing = false, lastErrorMessage = message) }
+                SyncResult.Failure(message)
+            }
         }
 
     private suspend fun syncActiveFamily(): Long {

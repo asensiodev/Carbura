@@ -18,6 +18,7 @@ import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +49,9 @@ class MaintenanceHistoryViewModel(
 
     private val _effects = Channel<MaintenanceHistoryEffect>(capacity = Channel.BUFFERED)
     val effects: Flow<MaintenanceHistoryEffect> = _effects.receiveAsFlow()
+    private var loadJob: Job? = null
+    private var loadRevision = 0L
+    private var settledLoadState = MaintenanceLoadState.Content
 
     private val scope: CoroutineScope
         get() = coroutineScope ?: viewModelScope
@@ -56,8 +60,8 @@ class MaintenanceHistoryViewModel(
         when (event) {
             MaintenanceHistoryEvent.Started,
             MaintenanceHistoryEvent.Retry,
-            -> scope.launch { loadHistory(showLoading = true) }
-            MaintenanceHistoryEvent.Refresh -> scope.launch { loadHistory(showLoading = false) }
+            -> launchLoad(showLoading = true)
+            MaintenanceHistoryEvent.Refresh -> launchLoad(showLoading = false)
             is MaintenanceHistoryEvent.TypeSelected ->
                 updateForm {
                     it.copy(
@@ -89,25 +93,48 @@ class MaintenanceHistoryViewModel(
         _uiState.update(transform)
     }
 
-    private suspend fun loadHistory(showLoading: Boolean) {
+    private fun launchLoad(showLoading: Boolean) {
+        val revision = ++loadRevision
+        loadJob?.cancel()
+        loadJob = scope.launch { loadHistory(showLoading, revision) }
+        loadJob?.invokeOnCompletion { cause ->
+            if (cause is CancellationException && showLoading && revision == loadRevision) {
+                _uiState.update { it.copy(loadState = settledLoadState) }
+            }
+        }
+    }
+
+    private suspend fun loadHistory(
+        showLoading: Boolean,
+        revision: Long,
+    ) {
         if (showLoading) _uiState.update { it.copy(loadState = MaintenanceLoadState.Loading) }
         try {
             val vehicle =
                 withContext(dispatchers.io) {
                     vehicleRepository.observeVehicles(familyId).firstOrNull { it.id == vehicleId }
                 } ?: error("Selected vehicle is unavailable")
+            if (revision != loadRevision) return
             _uiState.update { it.copy(vehicle = vehicle) }
             val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
+            if (revision != loadRevision) return
             _uiState.update {
                 it.copy(
                     records = records,
                     loadState = MaintenanceLoadState.Content,
                 )
             }
+            settledLoadState = MaintenanceLoadState.Content
         } catch (error: CancellationException) {
+            if (showLoading && revision == loadRevision) {
+                _uiState.update { it.copy(loadState = settledLoadState) }
+            }
             throw error
         } catch (_: Throwable) {
-            if (showLoading) _uiState.update { it.copy(loadState = MaintenanceLoadState.Error) }
+            if (showLoading && revision == loadRevision) {
+                _uiState.update { it.copy(loadState = MaintenanceLoadState.Error) }
+                settledLoadState = MaintenanceLoadState.Error
+            }
         }
     }
 

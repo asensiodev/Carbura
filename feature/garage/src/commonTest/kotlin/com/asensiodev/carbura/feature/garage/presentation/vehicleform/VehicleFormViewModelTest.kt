@@ -1,15 +1,24 @@
 package com.asensiodev.carbura.feature.garage.presentation.vehicleform
 
 import app.cash.turbine.test
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
+import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
+import com.asensiodev.carbura.core.domain.reminder.usecase.SaveVehicleWithRemindersUseCase
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
+import com.asensiodev.carbura.core.model.Reminder
+import com.asensiodev.carbura.core.model.ReminderId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
 import com.asensiodev.carbura.core.testing.TestDispatcherProvider
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -58,6 +67,25 @@ class VehicleFormViewModelTest {
         }
 
     @Test
+    fun cancelledCreateClearsMutationWithoutErrorOrSuccessEffect() =
+        runTest {
+            val repository = FakeFormVehicleRepository().apply { cancelSaves = true }
+            val viewModel = viewModel(repository)
+            viewModel.onEvent(VehicleFormEvent.NameChanged("Coche familiar"))
+            viewModel.onEvent(VehicleFormEvent.OdometerChanged("12000"))
+
+            viewModel.effects.test {
+                viewModel.onEvent(VehicleFormEvent.SubmitVehicle)
+                advanceUntilIdle()
+
+                assertEquals(null, viewModel.uiState.value.activeMutation)
+                assertFalse(viewModel.uiState.value.persistenceError)
+                assertEquals("Coche familiar", viewModel.uiState.value.name)
+                expectNoEvents()
+            }
+        }
+
+    @Test
     fun fullEditPrefillsFieldsAndUpdatesSameVehicle() =
         runTest {
             val repository = FakeFormVehicleRepository()
@@ -72,6 +100,26 @@ class VehicleFormViewModelTest {
             assertEquals(vehicle.id, repository.vehicles.single().id)
             assertEquals("Moto familiar", repository.vehicles.single().name)
             assertEquals(null, viewModel.uiState.value.editingVehicleId)
+        }
+
+    @Test
+    fun cancelledUpdateKeepsEditOpenWithoutErrorOrSuccessEffect() =
+        runTest {
+            val repository = FakeFormVehicleRepository().apply { cancelSaves = true }
+            val viewModel = viewModel(repository)
+            viewModel.onEvent(VehicleFormEvent.EditVehicleRequested(vehicle()))
+            viewModel.onEvent(VehicleFormEvent.EditNameChanged("Nombre actualizado"))
+
+            viewModel.effects.test {
+                viewModel.onEvent(VehicleFormEvent.SubmitVehicleEdit)
+                advanceUntilIdle()
+
+                assertEquals(null, viewModel.uiState.value.activeMutation)
+                assertFalse(viewModel.uiState.value.persistenceError)
+                assertEquals(VehicleId("vehicle-existing"), viewModel.uiState.value.editingVehicleId)
+                assertEquals("Nombre actualizado", viewModel.uiState.value.editName)
+                expectNoEvents()
+            }
         }
 
     @Test
@@ -125,6 +173,46 @@ class VehicleFormViewModelTest {
         }
 
     @Test
+    fun cancelledReconciliationDoesNotPublishCreateSuccess() =
+        runTest {
+            val repository = FakeFormVehicleRepository()
+            val reminderRepository = FakeFormReminderRepository().apply { cancelSaves = true }
+            val viewModel = viewModel(repository, reminderRepository = reminderRepository)
+            viewModel.onEvent(VehicleFormEvent.NameChanged("Coche familiar"))
+            viewModel.onEvent(VehicleFormEvent.OdometerChanged("12000"))
+            viewModel.onEvent(VehicleFormEvent.NextItvDateChanged("2027-05-10"))
+            viewModel.onEvent(VehicleFormEvent.SubmitVehicle)
+            advanceUntilIdle()
+            assertEquals(VehicleSaveMode.Create, viewModel.uiState.value.reminderConfirmationMode)
+
+            viewModel.effects.test {
+                viewModel.onEvent(VehicleFormEvent.ConfirmReminderSuggestions)
+                advanceUntilIdle()
+
+                assertEquals(null, viewModel.uiState.value.activeMutation)
+                assertFalse(viewModel.uiState.value.persistenceError)
+                assertEquals("Coche familiar", viewModel.uiState.value.name)
+                expectNoEvents()
+            }
+        }
+
+    @Test
+    fun alreadyCancelledScopeDoesNotActivateMutationState() =
+        runTest {
+            val job = Job().apply { cancel() }
+            val cancelledScope = CoroutineScope(UnconfinedTestDispatcher(testScheduler) + job)
+            val viewModel = viewModel(FakeFormVehicleRepository(), scope = cancelledScope)
+            viewModel.onEvent(VehicleFormEvent.NameChanged("Coche familiar"))
+
+            viewModel.onEvent(VehicleFormEvent.SubmitVehicle)
+            runCurrent()
+
+            assertEquals(null, viewModel.uiState.value.activeMutation)
+            assertFalse(viewModel.uiState.value.persistenceError)
+            assertEquals("Coche familiar", viewModel.uiState.value.name)
+        }
+
+    @Test
     fun invalidCreateAndEditExposeValidationEffects() =
         runTest {
             val viewModel = viewModel(FakeFormVehicleRepository())
@@ -136,14 +224,22 @@ class VehicleFormViewModelTest {
             }
         }
 
-    private fun TestScope.viewModel(repository: FakeFormVehicleRepository): VehicleFormViewModel {
+    private fun TestScope.viewModel(
+        repository: FakeFormVehicleRepository,
+        reminderRepository: ReminderRepository? = null,
+        scope: CoroutineScope = this,
+    ): VehicleFormViewModel {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         return VehicleFormViewModel(
             familyId = familyId,
             dispatchers = TestDispatcherProvider(dispatcher, dispatcher, dispatcher),
             vehicleRepository = repository,
+            saveVehicleWithRemindersUseCase =
+                reminderRepository?.let {
+                    SaveVehicleWithRemindersUseCase(repository, it, EmptyFormScheduler())
+                },
             nextVehicleId = { VehicleId("vehicle-new") },
-            coroutineScope = this,
+            coroutineScope = scope,
         )
     }
 
@@ -153,6 +249,7 @@ class VehicleFormViewModelTest {
 private class FakeFormVehicleRepository : VehicleRepository {
     val vehicles = mutableListOf<Vehicle>()
     var failSaves = false
+    var cancelSaves = false
     var saveCalls = 0
     var saveGate: CompletableDeferred<Unit>? = null
 
@@ -161,10 +258,33 @@ private class FakeFormVehicleRepository : VehicleRepository {
     override suspend fun saveVehicle(vehicle: Vehicle) {
         saveCalls += 1
         saveGate?.await()
+        if (cancelSaves) throw CancellationException("Save cancelled")
         if (failSaves) error("Save failed")
         vehicles.removeAll { it.id == vehicle.id }
         vehicles += vehicle
     }
 
     override suspend fun deleteVehicle(vehicleId: VehicleId) = Unit
+}
+
+private class FakeFormReminderRepository : ReminderRepository {
+    var cancelSaves = false
+
+    override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> = emptyList()
+
+    override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> = emptyList()
+
+    override suspend fun saveReminder(reminder: Reminder) {
+        if (cancelSaves) throw CancellationException("Reconciliation cancelled")
+    }
+
+    override suspend fun markReminderCompleted(reminderId: ReminderId) = Unit
+
+    override suspend fun deleteReminder(reminderId: ReminderId) = Unit
+}
+
+private class EmptyFormScheduler : ReminderNotificationScheduler {
+    override suspend fun schedule(plan: ReminderNotificationPlan) = Unit
+
+    override suspend fun cancel(reminderId: ReminderId) = Unit
 }

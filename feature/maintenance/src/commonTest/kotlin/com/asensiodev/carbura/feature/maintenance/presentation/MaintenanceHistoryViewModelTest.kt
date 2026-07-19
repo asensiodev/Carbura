@@ -24,17 +24,21 @@ import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
 import com.asensiodev.carbura.core.testing.TestDispatcherProvider
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -92,6 +96,79 @@ class MaintenanceHistoryViewModelTest {
 
             assertEquals(MaintenanceLoadState.Content, viewModel.uiState.value.loadState)
             assertEquals(vehicle, viewModel.uiState.value.vehicle)
+        }
+
+    @Test
+    fun cancelledLoadDoesNotBecomeErrorAndCanBeRetried() =
+        runTest {
+            val vehicleRepository = FakeVehicleRepository(listOf(vehicle), loadError = CancellationException("cancelled"))
+            val viewModel = maintenanceHistoryViewModel(vehicleRepository = vehicleRepository)
+
+            viewModel.onEvent(MaintenanceHistoryEvent.Started)
+            advanceUntilIdle()
+
+            assertEquals(MaintenanceLoadState.Content, viewModel.uiState.value.loadState)
+            vehicleRepository.loadError = null
+            viewModel.onEvent(MaintenanceHistoryEvent.Retry)
+            advanceUntilIdle()
+            assertEquals(MaintenanceLoadState.Content, viewModel.uiState.value.loadState)
+        }
+
+    @Test
+    fun obsoleteCancellationHostileLoadCannotOverwriteNewerResult() =
+        runTest {
+            val firstLoadGate = CompletableDeferred<Unit>()
+            val firstLoadStarted = CompletableDeferred<Unit>()
+            val currentVehicle = vehicle.copy(name = "Actual")
+            val repository =
+                CancellationHostileVehicleRepository(
+                    staleVehicle = vehicle.copy(name = "Obsoleto"),
+                    currentVehicle = currentVehicle,
+                    firstLoadStarted = firstLoadStarted,
+                    firstLoadGate = firstLoadGate,
+                )
+            val viewModel = maintenanceHistoryViewModel(vehicleRepository = repository)
+
+            viewModel.onEvent(MaintenanceHistoryEvent.Started)
+            firstLoadStarted.await()
+            viewModel.onEvent(MaintenanceHistoryEvent.Refresh)
+            advanceUntilIdle()
+            assertEquals(currentVehicle, viewModel.uiState.value.vehicle)
+
+            firstLoadGate.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(currentVehicle, viewModel.uiState.value.vehicle)
+        }
+
+    @Test
+    fun cancelledSaveClearsMutationWithoutPersistenceError() =
+        runTest {
+            val repository = FakeMaintenanceRecordRepository(saveError = CancellationException("cancelled"))
+            val viewModel = maintenanceHistoryViewModel(repository = repository)
+
+            viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance)
+            advanceUntilIdle()
+
+            assertNull(viewModel.uiState.value.activeMutation)
+            assertFalse(viewModel.uiState.value.persistenceError)
+        }
+
+    @Test
+    fun cancelledDeleteClearsMutationWithoutPersistenceError() =
+        runTest {
+            val existing = record("record", "2026-07-18")
+            val repository = FakeMaintenanceRecordRepository(deleteError = CancellationException("cancelled"))
+            repository.savedRecords += existing
+            val viewModel = maintenanceHistoryViewModel(repository = repository)
+            viewModel.onEvent(MaintenanceHistoryEvent.Started)
+            advanceUntilIdle()
+
+            viewModel.onEvent(MaintenanceHistoryEvent.DeleteMaintenance(existing.id))
+            advanceUntilIdle()
+
+            assertNull(viewModel.uiState.value.activeMutation)
+            assertFalse(viewModel.uiState.value.persistenceError)
+            assertEquals(listOf(existing), viewModel.uiState.value.records)
         }
 
     @Test
@@ -391,7 +468,7 @@ class MaintenanceHistoryViewModelTest {
 
     private fun TestScope.maintenanceHistoryViewModel(
         repository: FakeMaintenanceRecordRepository = FakeMaintenanceRecordRepository(),
-        vehicleRepository: FakeVehicleRepository = FakeVehicleRepository(listOf(vehicle)),
+        vehicleRepository: VehicleRepository = FakeVehicleRepository(listOf(vehicle)),
         nextRecordId: () -> MaintenanceRecordId = { MaintenanceRecordId("record-test") },
         localDate: CalendarDate = CalendarDate("2026-07-17"),
         reminderRepository: FakeReminderRepository = FakeReminderRepository(),
@@ -439,6 +516,8 @@ class MaintenanceHistoryViewModelTest {
 
 private class FakeMaintenanceRecordRepository(
     var failSaves: Boolean = false,
+    private val saveError: Throwable? = null,
+    private val deleteError: Throwable? = null,
     private val saveGate: CompletableDeferred<Unit>? = null,
     private val deleteGate: CompletableDeferred<Unit>? = null,
 ) : MaintenanceRecordRepository {
@@ -449,6 +528,7 @@ private class FakeMaintenanceRecordRepository(
     override suspend fun saveMaintenanceRecord(record: MaintenanceRecord) {
         saveCalls += 1
         saveGate?.await()
+        saveError?.let { throw it }
         if (failSaves) error("save failed")
         savedRecords += record
     }
@@ -459,6 +539,7 @@ private class FakeMaintenanceRecordRepository(
     override suspend fun deleteMaintenanceRecord(recordId: MaintenanceRecordId) {
         deleteCalls += 1
         deleteGate?.await()
+        deleteError?.let { throw it }
         savedRecords.removeAll { it.id == recordId }
     }
 }
@@ -466,10 +547,37 @@ private class FakeMaintenanceRecordRepository(
 private class FakeVehicleRepository(
     private val vehicles: List<Vehicle>,
     var failLoads: Boolean = false,
+    var loadError: Throwable? = null,
 ) : VehicleRepository {
     override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> {
+        loadError?.let { throw it }
         if (failLoads) error("load failed")
         return vehicles.filter { it.familyId == familyId }
+    }
+
+    override suspend fun saveVehicle(vehicle: Vehicle) = Unit
+
+    override suspend fun deleteVehicle(vehicleId: VehicleId) = Unit
+}
+
+private class CancellationHostileVehicleRepository(
+    private val staleVehicle: Vehicle,
+    private val currentVehicle: Vehicle,
+    private val firstLoadStarted: CompletableDeferred<Unit>,
+    private val firstLoadGate: CompletableDeferred<Unit>,
+) : VehicleRepository {
+    private var loadCalls = 0
+
+    override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> {
+        loadCalls += 1
+        if (loadCalls == 1) {
+            firstLoadStarted.complete(Unit)
+            return withContext(NonCancellable) {
+                firstLoadGate.await()
+                listOf(staleVehicle)
+            }
+        }
+        return listOf(currentVehicle)
     }
 
     override suspend fun saveVehicle(vehicle: Vehicle) = Unit

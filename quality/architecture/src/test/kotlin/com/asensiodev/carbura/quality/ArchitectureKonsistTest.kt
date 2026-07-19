@@ -58,4 +58,38 @@ class ArchitectureKonsistTest {
             .withNameEndingWith("Repository")
             .assertTrue { it.resideInPackage("..core.domain..repository..") }
     }
+
+    @Test
+    fun `production code does not use GlobalScope`() {
+        productionFiles().assertFalse { file -> file.hasTextContaining("GlobalScope") }
+    }
+
+    @Test
+    fun `production code does not construct unmanaged coroutine scopes`() {
+        productionFiles().assertFalse { file ->
+            file.hasTextContaining("CoroutineScope(") &&
+                !file.hasTextContaining("rememberCoroutineScope(")
+        }
+    }
+
+    @Test
+    fun `Android Compose code uses lifecycle aware state collection`() {
+        projectScope
+            .slice { it.projectPath.contains("/src/androidMain/") }
+            .files
+            .assertFalse { file -> file.hasTextContaining("collectAsState(") }
+    }
+
+    @Test
+    fun `project code uses explicit exception handling`() {
+        val forbiddenCall = "run" + "Catching"
+        projectScope.files.assertFalse { file -> file.hasTextContaining(forbiddenCall) }
+    }
+
+    private fun productionFiles() =
+        projectScope.files.filter { file ->
+            file.projectPath.contains("/src/commonMain/") ||
+                file.projectPath.contains("/src/androidMain/") ||
+                file.projectPath.contains("/src/desktopMain/")
+        }
 }

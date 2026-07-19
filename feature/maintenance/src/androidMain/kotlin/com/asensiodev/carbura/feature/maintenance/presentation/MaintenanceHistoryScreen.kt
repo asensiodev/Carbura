@@ -92,6 +92,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.time.format.FormatStyle
 import java.util.Currency
 import java.util.Locale
@@ -928,13 +929,15 @@ internal fun Int.localizedCost(
         }.format(this / 100.0)
 
 private fun String.toUtcMillisOrNull(): Long? =
-    runCatching {
+    try {
         LocalDate
             .parse(this)
             .atStartOfDay()
             .toInstant(ZoneOffset.UTC)
             .toEpochMilli()
-    }.getOrNull()
+    } catch (_: DateTimeParseException) {
+        null
+    }
 
 private fun Long.toIsoDate(): String =
     Instant

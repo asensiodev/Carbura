@@ -21,6 +21,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -46,6 +47,8 @@ import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.featureonboarding.R
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.koin.core.context.GlobalContext
 
@@ -57,6 +60,7 @@ fun OnboardingRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val credentialRequestJob = remember { mutableStateOf<Job?>(null) }
     val credentialManager = remember { CredentialManager.create(context) }
     val googleClientId =
         remember {
@@ -66,52 +70,66 @@ fun OnboardingRoute(
     OnboardingScreen(
         state = state,
         onGoogleSignIn = {
-            scope.launch {
-                viewModel.onEvent(OnboardingEvent.GoogleCredentialRequestStarted)
-                try {
-                    if (googleClientId.isBlank()) {
+            if (credentialRequestJob.value?.isActive == true) return@OnboardingScreen
+            credentialRequestJob.value =
+                scope.launch {
+                    viewModel.onEvent(OnboardingEvent.GoogleCredentialRequestStarted)
+                    try {
+                        if (googleClientId.isBlank()) {
+                            viewModel.onEvent(
+                                OnboardingEvent.GoogleSignInError(
+                                    "GOOGLE_CLIENT_ID is not configured in local.properties",
+                                ),
+                            )
+                            return@launch
+                        }
+                        val googleIdOption =
+                            GetSignInWithGoogleOption
+                                .Builder(googleClientId)
+                                .build()
+                        val request =
+                            GetCredentialRequest
+                                .Builder()
+                                .addCredentialOption(googleIdOption)
+                                .build()
+                        val result = credentialManager.getCredential(context, request)
+                        val credential = result.credential
+                        if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                            val googleIdTokenCredential =
+                                GoogleIdTokenCredential
+                                    .createFrom(credential.data)
+                            viewModel.onEvent(
+                                OnboardingEvent.GoogleIdTokenReceived(googleIdTokenCredential.idToken),
+                            )
+                        }
+                    } catch (e: NoCredentialException) {
                         viewModel.onEvent(
                             OnboardingEvent.GoogleSignInError(
-                                "GOOGLE_CLIENT_ID is not configured in local.properties",
+                                e.message ?: "No Google credential is available on this device.",
                             ),
                         )
-                        return@launch
+                    } catch (e: CancellationException) {
+                        propagateCredentialCancellation(e) {
+                            viewModel.onEvent(OnboardingEvent.GoogleCredentialRequestCancelled)
+                        }
+                    } catch (e: Exception) {
+                        viewModel.onEvent(OnboardingEvent.GoogleSignInError(e.diagnostic()))
                     }
-                    val googleIdOption =
-                        GetSignInWithGoogleOption
-                            .Builder(googleClientId)
-                            .build()
-                    val request =
-                        GetCredentialRequest
-                            .Builder()
-                            .addCredentialOption(googleIdOption)
-                            .build()
-                    val result = credentialManager.getCredential(context, request)
-                    val credential = result.credential
-                    if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                        val googleIdTokenCredential =
-                            GoogleIdTokenCredential
-                                .createFrom(credential.data)
-                        viewModel.onEvent(
-                            OnboardingEvent.GoogleIdTokenReceived(googleIdTokenCredential.idToken),
-                        )
-                    }
-                } catch (e: NoCredentialException) {
-                    viewModel.onEvent(
-                        OnboardingEvent.GoogleSignInError(
-                            e.message ?: "No Google credential is available on this device.",
-                        ),
-                    )
-                } catch (e: Exception) {
-                    viewModel.onEvent(OnboardingEvent.GoogleSignInError(e.diagnostic()))
                 }
-            }
         },
         modifier = modifier,
     )
 }
 
 private fun Exception.diagnostic(): String = "${this::class.simpleName ?: "Credential error"}: ${message.orEmpty()}"
+
+internal fun propagateCredentialCancellation(
+    error: CancellationException,
+    onCancelled: () -> Unit,
+): Nothing {
+    onCancelled()
+    throw error
+}
 
 @Composable
 internal fun OnboardingScreen(

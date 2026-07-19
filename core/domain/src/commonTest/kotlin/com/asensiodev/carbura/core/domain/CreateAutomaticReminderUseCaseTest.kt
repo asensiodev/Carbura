@@ -8,6 +8,7 @@ import com.asensiodev.carbura.core.model.ReminderId
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class CreateAutomaticReminderUseCaseTest {
@@ -98,7 +99,7 @@ class CreateAutomaticReminderUseCaseTest {
             val scheduler = FakeReminderNotificationScheduler().apply { failSchedules = true }
             val useCase = CreateAutomaticReminderUseCase(repository, scheduler)
             val eligible = testMaintenanceRecord(code = MaintenanceTypeCode.Itv, nextDueDate = "2027-07-01")
-            runCatching { useCase(eligible) }
+            assertFailsWith<IllegalStateException> { useCase(eligible) }
             assertEquals(1, repository.savedReminders.size)
 
             scheduler.failSchedules = false

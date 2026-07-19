@@ -25,7 +25,7 @@ internal fun CreateMaintenanceRecordInput.toMaintenanceRecord(): DomainResult<Ma
     }
 
     val performedOn =
-        runCatching { CalendarDate(this.performedOn.trim()) }.getOrNull()
+        this.performedOn.trim().toCalendarDateOrNull()
             ?: return DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceDate)
     val odometerKm = this.odometerKm.toIntOrNull() ?: -1
     val costCents =
@@ -34,7 +34,7 @@ internal fun CreateMaintenanceRecordInput.toMaintenanceRecord(): DomainResult<Ma
     val nextDueDate =
         if (maintenanceTypeCode == MaintenanceTypeCode.Itv || maintenanceTypeCode == MaintenanceTypeCode.Insurance) {
             this.nextDueDate.trim().ifBlank { null }?.let {
-                runCatching { CalendarDate(it) }.getOrNull()
+                it.toCalendarDateOrNull()
                     ?: return DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceDate)
             }
         } else {
@@ -64,6 +64,13 @@ internal fun CreateMaintenanceRecordInput.toMaintenanceRecord(): DomainResult<Ma
         ),
     )
 }
+
+private fun String.toCalendarDateOrNull(): CalendarDate? =
+    try {
+        CalendarDate(this)
+    } catch (_: IllegalArgumentException) {
+        null
+    }
 
 private fun String.toCostCentsOrNull(): Int? {
     val trimmed = trim()

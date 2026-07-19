@@ -15,6 +15,7 @@ import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.ReminderId
 import com.asensiodev.carbura.core.stringresources.CarburaString
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -51,9 +52,9 @@ class RemindersViewModel(
 
     fun onEvent(event: RemindersEvent) {
         when (event) {
-            RemindersEvent.Started -> scope.launch { loadReminders(showLoading = true) }
-            RemindersEvent.Retry -> scope.launch { loadReminders(showLoading = true) }
-            RemindersEvent.Refresh -> scope.launch { loadReminders(showLoading = false) }
+            RemindersEvent.Started -> launchLoad(showLoading = true)
+            RemindersEvent.Retry -> launchLoad(showLoading = true)
+            RemindersEvent.Refresh -> launchLoad(showLoading = false)
             RemindersEvent.GarageRequested -> scope.launch { _effects.send(RemindersEffect.NavigateToGarage) }
             is RemindersEvent.TitleChanged -> updateForm { it.copy(title = event.value, errorMessage = null, hasPersistenceError = false) }
             is RemindersEvent.VehicleSelected ->
@@ -65,6 +66,15 @@ class RemindersViewModel(
             RemindersEvent.SubmitReminder -> scope.launch { createReminder() }
             is RemindersEvent.CompleteReminder -> scope.launch { completeReminder(event.reminderId) }
             is RemindersEvent.DeleteReminder -> scope.launch { deleteReminder(event.reminderId) }
+        }
+    }
+
+    private fun launchLoad(showLoading: Boolean) {
+        scope.launch { loadReminders(showLoading) }.invokeOnCompletion { cause ->
+            if (cause is CancellationException) {
+                isLoadInProgress = false
+                _uiState.update { it.copy(isLoading = false) }
+            }
         }
     }
 
@@ -90,10 +100,13 @@ class RemindersViewModel(
                             ?: vehicles.firstOrNull()?.id,
                 )
             }
+        } catch (error: CancellationException) {
+            throw error
         } catch (_: Exception) {
-            _uiState.update { it.copy(isLoading = false, hasLoadError = true) }
+            _uiState.update { it.copy(hasLoadError = true) }
         } finally {
             isLoadInProgress = false
+            _uiState.update { it.copy(isLoading = false) }
         }
     }
 
@@ -108,7 +121,7 @@ class RemindersViewModel(
 
         val dueDate =
             state.dueDate.trim().ifBlank { null }?.let { value ->
-                runCatching { CalendarDate(value) }.getOrNull() ?: run {
+                value.toCalendarDateOrNull() ?: run {
                     emitValidation(CarburaString.ValidationInvalidReminderDate)
                     return
                 }
@@ -136,6 +149,8 @@ class RemindersViewModel(
                 is DomainResult.Success -> refreshAfterCreate(result.value.title)
                 is DomainResult.ValidationError -> emitValidation(result.reason.toRemindersMessage())
             }
+        } catch (error: CancellationException) {
+            throw error
         } catch (_: Exception) {
             _uiState.update { it.copy(hasPersistenceError = true) }
         } finally {
@@ -172,6 +187,8 @@ class RemindersViewModel(
             _uiState.update { it.copy(reminders = reminders, errorMessage = null) }
             _effects.send(RemindersEffect.ReminderCompleted(title))
             syncAfterMutation()
+        } catch (error: CancellationException) {
+            throw error
         } catch (_: Exception) {
             _uiState.update { it.copy(hasPersistenceError = true) }
         } finally {
@@ -193,6 +210,8 @@ class RemindersViewModel(
             _uiState.update { it.copy(reminders = reminders, errorMessage = null) }
             _effects.send(RemindersEffect.ReminderDeleted(title))
             syncAfterMutation()
+        } catch (error: CancellationException) {
+            throw error
         } catch (_: Exception) {
             _uiState.update { it.copy(hasPersistenceError = true) }
         } finally {
@@ -211,3 +230,10 @@ class RemindersViewModel(
 }
 
 private fun randomReminderId(): ReminderId = ReminderId("reminder-${Random.nextInt(1, Int.MAX_VALUE)}")
+
+private fun String.toCalendarDateOrNull(): CalendarDate? =
+    try {
+        CalendarDate(this)
+    } catch (_: IllegalArgumentException) {
+        null
+    }
