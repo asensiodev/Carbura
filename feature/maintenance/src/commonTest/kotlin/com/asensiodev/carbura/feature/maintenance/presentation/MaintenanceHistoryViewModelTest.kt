@@ -7,6 +7,7 @@ import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceW
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.GetVehicleHistoryUseCase
+import com.asensiodev.carbura.core.domain.maintenance.usecase.UpdateMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
@@ -442,6 +443,30 @@ class MaintenanceHistoryViewModelTest {
         }
 
     @Test
+    fun editingPrefillsFormAndPersistsThroughSharedUpdateFlow() =
+        runTest {
+            val repository = FakeMaintenanceRecordRepository()
+            val existing = record("record-edit", "2026-06-01").copy(workshop = "Old garage", odometerKm = 12000)
+            repository.savedRecords += existing
+            val viewModel = maintenanceHistoryViewModel(repository = repository)
+            viewModel.onEvent(MaintenanceHistoryEvent.Started)
+            advanceUntilIdle()
+
+            viewModel.onEvent(MaintenanceHistoryEvent.EditMaintenance(existing.id))
+            assertTrue(viewModel.uiState.value.isEditing)
+            assertEquals("Old garage", viewModel.uiState.value.workshop)
+            assertEquals("12000", viewModel.uiState.value.odometerKm)
+
+            viewModel.effects.test {
+                viewModel.onEvent(MaintenanceHistoryEvent.WorkshopChanged("New garage"))
+                viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenanceEdit)
+                assertIs<MaintenanceHistoryEffect.MaintenanceUpdated>(awaitItem())
+            }
+            assertFalse(viewModel.uiState.value.isEditing)
+            assertEquals("New garage", repository.savedRecords.single().workshop)
+        }
+
+    @Test
     fun failedCreationPreservesFieldsAndReusesAllocatedRecordId() =
         runTest {
             val repository = FakeMaintenanceRecordRepository(failSaves = true)
@@ -501,6 +526,7 @@ class MaintenanceHistoryViewModelTest {
                 RemovePlannedMaintenanceReminderUseCase(reminderRepository, notificationScheduler),
             getVehicleHistoryUseCase = GetVehicleHistoryUseCase(repository),
             deleteMaintenanceRecordUseCase = DeleteMaintenanceRecordUseCase(repository, reminderRepository, notificationScheduler),
+            updateMaintenanceRecordUseCase = UpdateMaintenanceRecordUseCase(repository, reminderRepository),
             vehicleRepository = vehicleRepository,
             nextRecordId = nextRecordId,
             localDateProvider = LocalDateProvider { localDate },
@@ -560,6 +586,21 @@ private class FakeMaintenanceRecordRepository(
     override suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord> =
         savedRecords.filter { it.vehicleId == vehicleId }
 
+    override suspend fun updateMaintenanceRecordWithNotifications(
+        record: MaintenanceRecord,
+        expectedFamilyId: FamilyId,
+        expectedVehicleId: VehicleId,
+        mutations: List<ReminderNotificationMutation>,
+    ): Boolean {
+        val index =
+            savedRecords.indexOfFirst {
+                it.id == record.id && it.familyId == expectedFamilyId && it.vehicleId == expectedVehicleId
+            }
+        if (index < 0) return false
+        savedRecords[index] = record
+        return true
+    }
+
     override suspend fun deleteMaintenanceRecord(recordId: MaintenanceRecordId) {
         deleteCalls += 1
         deleteGate?.await()
@@ -616,6 +657,9 @@ private class FakeReminderRepository : ReminderRepository {
         savedReminders.filter { it.familyId == familyId && !it.isCompleted }
 
     override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> = savedReminders.filter { it.vehicleId == vehicleId }
+
+    override suspend fun getActiveReminder(reminderId: ReminderId): Reminder? =
+        savedReminders.firstOrNull { it.id == reminderId && !it.isCompleted }
 
     override suspend fun saveReminder(reminder: Reminder) {
         savedReminders.removeAll { it.id == reminder.id }

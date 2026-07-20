@@ -2,6 +2,7 @@ package com.asensiodev.carbura.core.domain
 
 import com.asensiodev.carbura.core.domain.maintenance.repository.MaintenanceRecordRepository
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
+import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
 import com.asensiodev.carbura.core.model.ReminderId
@@ -20,6 +21,22 @@ internal class FakeMaintenanceRecordRepository : MaintenanceRecordRepository {
 
     override suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord> =
         savedRecords.filter { it.vehicleId == vehicleId }
+
+    override suspend fun updateMaintenanceRecordWithNotifications(
+        record: MaintenanceRecord,
+        expectedFamilyId: FamilyId,
+        expectedVehicleId: VehicleId,
+        mutations: List<ReminderNotificationMutation>,
+    ): Boolean {
+        val index =
+            savedRecords.indexOfFirst {
+                it.id == record.id && it.familyId == expectedFamilyId && it.vehicleId == expectedVehicleId
+            }
+        if (index < 0) return false
+        savedRecords[index] = record
+        notificationMutations += mutations
+        return true
+    }
 
     override suspend fun deleteMaintenanceRecord(recordId: MaintenanceRecordId) {
         if (failDeletes) error("maintenance delete failed")

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -111,6 +114,8 @@ fun MaintenanceHistoryRoute(
     var effectMessage by remember { mutableStateOf<CarburaString?>(null) }
     var effectMessageArg by remember { mutableStateOf<String?>(null) }
     var createdFeedback by remember { mutableStateOf<MaintenanceHistoryEffect.MaintenanceCreated?>(null) }
+    var updatedFeedback by remember { mutableStateOf<MaintenanceHistoryEffect.MaintenanceUpdated?>(null) }
+    var deletedFeedback by remember { mutableStateOf<MaintenanceHistoryEffect.MaintenanceDeleted?>(null) }
     var maintenanceCreatedSignal by remember { mutableStateOf(0) }
     var maintenanceSuccessSignal by remember { mutableStateOf(0) }
 
@@ -129,21 +134,37 @@ fun MaintenanceHistoryRoute(
                     effectMessage = null
                     effectMessageArg = null
                     createdFeedback = effect
+                    updatedFeedback = null
+                    deletedFeedback = null
                     maintenanceCreatedSignal += 1
                     maintenanceSuccessSignal += 1
                 }
 
                 is MaintenanceHistoryEffect.MaintenanceDeleted -> {
                     createdFeedback = null
-                    effectMessage = CarburaString.MaintenanceDeletedMessage
-                    effectMessageArg = effect.type
+                    updatedFeedback = null
+                    deletedFeedback = effect
+                    effectMessage = null
+                    effectMessageArg = null
                     maintenanceSuccessSignal += 1
                 }
 
                 is MaintenanceHistoryEffect.ValidationFailed -> {
                     createdFeedback = null
+                    updatedFeedback = null
+                    deletedFeedback = null
                     effectMessage = effect.message
                     effectMessageArg = null
+                }
+
+                is MaintenanceHistoryEffect.MaintenanceUpdated -> {
+                    createdFeedback = null
+                    updatedFeedback = effect
+                    deletedFeedback = null
+                    effectMessage = null
+                    effectMessageArg = null
+                    maintenanceCreatedSignal += 1
+                    maintenanceSuccessSignal += 1
                 }
             }
         }
@@ -157,6 +178,16 @@ fun MaintenanceHistoryRoute(
                 } else {
                     R.string.maintenance_created_message
                 },
+                feedback.typeCode.localizedLabel(feedback.customTypeLabel),
+            )
+        } ?: updatedFeedback?.let { feedback ->
+            stringResource(
+                R.string.maintenance_updated_message,
+                feedback.typeCode.localizedLabel(feedback.customTypeLabel),
+            )
+        } ?: deletedFeedback?.let { feedback ->
+            stringResource(
+                R.string.maintenance_deleted_message,
                 feedback.typeCode.localizedLabel(feedback.customTypeLabel),
             )
         } ?: effectMessage?.let { message ->
@@ -182,7 +213,13 @@ fun MaintenanceHistoryRoute(
         onCostChange = { viewModel.onEvent(MaintenanceHistoryEvent.CostChanged(it)) },
         onWorkshopChange = { viewModel.onEvent(MaintenanceHistoryEvent.WorkshopChanged(it)) },
         onNotesChange = { viewModel.onEvent(MaintenanceHistoryEvent.NotesChanged(it)) },
-        onSubmitMaintenance = { viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenance) },
+        onSubmitMaintenance = {
+            viewModel.onEvent(
+                if (uiState.isEditing) MaintenanceHistoryEvent.SubmitMaintenanceEdit else MaintenanceHistoryEvent.SubmitMaintenance,
+            )
+        },
+        onEditMaintenance = { viewModel.onEvent(MaintenanceHistoryEvent.EditMaintenance(it.id)) },
+        onCancelMaintenanceEdit = { viewModel.onEvent(MaintenanceHistoryEvent.CancelMaintenanceEdit) },
         onSaveFutureWithReminder = { viewModel.onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceWithReminder) },
         onSaveFutureOnly = { viewModel.onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceOnly) },
         onDismissFutureReminderOffer = { viewModel.onEvent(MaintenanceHistoryEvent.DismissFutureReminderOffer) },
@@ -218,6 +255,8 @@ internal fun MaintenanceHistoryScreen(
     onWorkshopChange: (String) -> Unit,
     onNotesChange: (String) -> Unit,
     onSubmitMaintenance: () -> Unit,
+    onEditMaintenance: (MaintenanceRecord) -> Unit = {},
+    onCancelMaintenanceEdit: () -> Unit = {},
     onSaveFutureWithReminder: () -> Unit,
     onSaveFutureOnly: () -> Unit,
     onDismissFutureReminderOffer: () -> Unit,
@@ -355,6 +394,10 @@ internal fun MaintenanceHistoryScreen(
                                         record = record,
                                         isDeleting = state.activeMutation == MaintenanceMutation.Deleting(record.id),
                                         actionsEnabled = state.activeMutation == null,
+                                        onEditMaintenance = {
+                                            onEditMaintenance(record)
+                                            showMaintenanceForm = true
+                                        },
                                         onDeleteMaintenance = { recordPendingDeletion = record },
                                     )
                                 }
@@ -378,7 +421,12 @@ internal fun MaintenanceHistoryScreen(
     if (showMaintenanceForm) {
         FullScreenMaintenanceForm(
             state = state,
-            onDismissRequest = { if (state.activeMutation == null) showMaintenanceForm = false },
+            onDismissRequest = {
+                if (state.activeMutation == null) {
+                    if (state.isEditing) onCancelMaintenanceEdit()
+                    showMaintenanceForm = false
+                }
+            },
             onTypeSelected = onTypeSelected,
             onCustomTypeLabelChange = onCustomTypeLabelChange,
             onPerformedOnChange = onPerformedOnChange,
@@ -418,7 +466,7 @@ internal fun MaintenanceHistoryScreen(
     }
 
     recordPendingDeletion?.let { record ->
-        val type = record.displayType()
+        val type = record.localizedDisplayType()
         AlertDialog(
             onDismissRequest = { recordPendingDeletion = null },
             title = { Text(stringResource(R.string.delete_maintenance_dialog_title)) },
@@ -495,7 +543,10 @@ private fun FullScreenMaintenanceForm(
                 TopAppBar(
                     title = {
                         Text(
-                            text = stringResource(R.string.maintenance_form_title),
+                            text =
+                                stringResource(
+                                    if (state.isEditing) R.string.maintenance_edit_form_title else R.string.maintenance_form_title,
+                                ),
                             fontWeight = FontWeight.SemiBold,
                         )
                     },
@@ -533,7 +584,9 @@ private fun FullScreenMaintenanceForm(
                                 if (state.isSaving) {
                                     stringResource(R.string.maintenance_saving_status)
                                 } else {
-                                    stringResource(R.string.save_maintenance_button)
+                                    stringResource(
+                                        if (state.isEditing) R.string.update_maintenance_button else R.string.save_maintenance_button,
+                                    )
                                 },
                             )
                         }
@@ -810,6 +863,14 @@ private fun MaintenanceTypeCode.localizedLabel(customLabel: String = ""): String
     }
 
 @Composable
+private fun MaintenanceRecord.localizedDisplayType(): String =
+    when (val code = maintenanceTypeCode) {
+        null -> displayType()
+        MaintenanceTypeCode.Custom -> maintenanceTypeLabel?.takeIf(String::isNotBlank) ?: displayType()
+        else -> code.localizedLabel()
+    }
+
+@Composable
 private fun EmptyHistoryCard(onAddMaintenance: () -> Unit) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -849,9 +910,10 @@ private fun MaintenanceRecordCard(
     record: MaintenanceRecord,
     isDeleting: Boolean,
     actionsEnabled: Boolean,
+    onEditMaintenance: () -> Unit,
     onDeleteMaintenance: (MaintenanceRecord) -> Unit,
 ) {
-    val displayType = record.displayType()
+    val displayType = record.localizedDisplayType()
     SwipeToDeleteContainer(
         actionLabel = stringResource(R.string.delete_maintenance_confirm_button),
         accessibilityLabel = stringResource(R.string.delete_maintenance_content_description, displayType),
@@ -887,6 +949,15 @@ private fun MaintenanceRecordCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+                TextButton(
+                    onClick = onEditMaintenance,
+                    enabled = actionsEnabled && !isDeleting,
+                    modifier = Modifier.testTag("edit_maintenance_${record.id.value}"),
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null)
+                    Spacer(Modifier.width(Spacings.spacing8))
+                    Text(stringResource(R.string.edit_maintenance_content_description, displayType))
                 }
                 if (isDeleting) {
                     Text(

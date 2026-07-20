@@ -22,10 +22,13 @@ data class MaintenanceHistoryUiState(
     val persistenceError: Boolean = false,
     val activeMutation: MaintenanceMutation? = null,
     val showFutureReminderOffer: Boolean = false,
+    val editingRecordId: MaintenanceRecordId? = null,
 ) {
     val isEmpty: Boolean = records.isEmpty() && loadState == MaintenanceLoadState.Content
 
-    val isSaving: Boolean = activeMutation == MaintenanceMutation.Saving
+    val isSaving: Boolean = activeMutation == MaintenanceMutation.Saving || activeMutation is MaintenanceMutation.Updating
+
+    val isEditing: Boolean = editingRecordId != null
 
     val supportsNextDueDate: Boolean =
         maintenanceTypeCode == MaintenanceTypeCode.Itv || maintenanceTypeCode == MaintenanceTypeCode.Insurance
@@ -41,6 +44,10 @@ sealed interface MaintenanceMutation {
     data object Saving : MaintenanceMutation
 
     data class Deleting(
+        val recordId: MaintenanceRecordId,
+    ) : MaintenanceMutation
+
+    data class Updating(
         val recordId: MaintenanceRecordId,
     ) : MaintenanceMutation
 }

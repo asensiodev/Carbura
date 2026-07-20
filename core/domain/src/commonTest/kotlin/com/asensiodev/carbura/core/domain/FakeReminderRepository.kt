@@ -19,6 +19,9 @@ internal class FakeReminderRepository : ReminderRepository {
 
     override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> = savedReminders.filter { it.vehicleId == vehicleId }
 
+    override suspend fun getActiveReminder(reminderId: ReminderId): Reminder? =
+        savedReminders.firstOrNull { it.id == reminderId && !it.isCompleted }
+
     override suspend fun saveReminder(reminder: Reminder) {
         savedReminders.removeAll { it.id == reminder.id }
         savedReminders += reminder

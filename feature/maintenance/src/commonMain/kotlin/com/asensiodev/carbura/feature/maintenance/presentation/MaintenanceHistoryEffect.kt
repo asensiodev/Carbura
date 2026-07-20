@@ -11,7 +11,14 @@ sealed interface MaintenanceHistoryEffect {
     ) : MaintenanceHistoryEffect
 
     data class MaintenanceDeleted(
-        val type: String,
+        val typeCode: MaintenanceTypeCode,
+        val customTypeLabel: String,
+    ) : MaintenanceHistoryEffect
+
+    data class MaintenanceUpdated(
+        val typeCode: MaintenanceTypeCode,
+        val customTypeLabel: String,
+        val reminderRetained: Boolean,
     ) : MaintenanceHistoryEffect
 
     data class ValidationFailed(

@@ -27,6 +27,12 @@ class LocalReminderRepository(
             .executeAsList()
             .map { it.toReminder() }
 
+    override suspend fun getActiveReminder(reminderId: ReminderId): Reminder? =
+        database.carburaDatabaseQueries
+            .selectActiveReminderById(reminderId.value)
+            .executeAsOneOrNull()
+            ?.toReminder()
+
     override suspend fun saveReminder(reminder: Reminder) {
         val now = currentTimeMillis()
         saveReminder(reminder, now)

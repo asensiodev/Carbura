@@ -5,6 +5,7 @@ import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceW
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.GetVehicleHistoryUseCase
+import com.asensiodev.carbura.core.domain.maintenance.usecase.UpdateMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.CreateAutomaticReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.CreatePlannedMaintenanceReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.RemovePlannedMaintenanceReminderUseCase
@@ -23,6 +24,7 @@ val maintenanceModule =
         factory { CreateMaintenanceWithReminderFromInputUseCase(get()) }
         factory { GetVehicleHistoryUseCase(get()) }
         factory { DeleteMaintenanceRecordUseCase(get(), get(), get()) }
+        factory { UpdateMaintenanceRecordUseCase(get(), get()) }
         factory { parameters ->
             MaintenanceHistoryViewModel(
                 vehicleId = parameters.get<VehicleId>(),
@@ -33,6 +35,7 @@ val maintenanceModule =
                 removePlannedMaintenanceReminderUseCase = get(),
                 getVehicleHistoryUseCase = get(),
                 deleteMaintenanceRecordUseCase = get(),
+                updateMaintenanceRecordUseCase = get(),
                 vehicleRepository = get(),
                 syncManager = get(),
             )

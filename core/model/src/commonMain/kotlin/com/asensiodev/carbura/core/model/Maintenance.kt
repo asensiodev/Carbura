@@ -24,6 +24,7 @@ data class MaintenanceRecord(
     val vehicleId: VehicleId,
     val maintenanceTypeId: MaintenanceTypeId,
     val maintenanceTypeCode: MaintenanceTypeCode?,
+    val maintenanceTypeLabel: String? = null,
     val performedOn: CalendarDate,
     val odometerKm: Int? = null,
     val costCents: Int? = null,

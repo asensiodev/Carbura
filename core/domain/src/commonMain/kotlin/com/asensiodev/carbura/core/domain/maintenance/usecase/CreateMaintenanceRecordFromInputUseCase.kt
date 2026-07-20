@@ -55,6 +55,7 @@ internal fun CreateMaintenanceRecordInput.toMaintenanceRecord(): DomainResult<Ma
             vehicleId = vehicleId,
             maintenanceTypeId = maintenanceTypeId,
             maintenanceTypeCode = maintenanceTypeCode,
+            maintenanceTypeLabel = customTypeLabel.takeIf { maintenanceTypeCode == MaintenanceTypeCode.Custom },
             performedOn = performedOn,
             odometerKm = odometerKm,
             costCents = costCents,

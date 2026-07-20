@@ -79,6 +79,7 @@ CREATE TABLE maintenanceRecords (
     vehicleId TEXT NOT NULL,
     maintenanceTypeId TEXT NOT NULL,
     maintenanceTypeCode TEXT,
+    maintenanceTypeLabel TEXT,
     performedOn TEXT NOT NULL,
     odometerKm INTEGER,
     costCents INTEGER,
@@ -97,6 +98,14 @@ FROM maintenanceRecords
 WHERE vehicleId = ?
 AND deletedAt IS NULL
 ORDER BY performedOn DESC;
+
+selectActiveMaintenanceRecord:
+SELECT *
+FROM maintenanceRecords
+WHERE id = ?
+AND familyId = ?
+AND vehicleId = ?
+AND deletedAt IS NULL;
 
 selectPendingSyncMaintenanceRecords:
 SELECT *
@@ -119,6 +128,7 @@ INSERT OR REPLACE INTO maintenanceRecords(
     vehicleId,
     maintenanceTypeId,
     maintenanceTypeCode,
+    maintenanceTypeLabel,
     performedOn,
     odometerKm,
     costCents,
@@ -129,7 +139,25 @@ INSERT OR REPLACE INTO maintenanceRecords(
     updatedAt,
     pendingSync,
     deletedAt
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateMaintenanceRecord:
+UPDATE maintenanceRecords
+SET maintenanceTypeId = ?,
+    maintenanceTypeCode = ?,
+    maintenanceTypeLabel = ?,
+    performedOn = ?,
+    odometerKm = ?,
+    costCents = ?,
+    workshop = ?,
+    notes = ?,
+    nextDueDate = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE id = ?
+AND familyId = ?
+AND vehicleId = ?
+AND deletedAt IS NULL;
 
 deleteMaintenanceRecordsByVehicle:
 UPDATE maintenanceRecords
@@ -237,6 +265,13 @@ selectReminderById:
 SELECT *
 FROM reminders
 WHERE id = ?;
+
+selectActiveReminderById:
+SELECT *
+FROM reminders
+WHERE id = ?
+AND isCompleted = 0
+AND deletedAt IS NULL;
 
 selectAllReminders:
 SELECT *

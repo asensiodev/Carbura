@@ -8,6 +8,9 @@ import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceR
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderFromInputUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.DeleteMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.GetVehicleHistoryUseCase
+import com.asensiodev.carbura.core.domain.maintenance.usecase.UpdateMaintenanceRecordInput
+import com.asensiodev.carbura.core.domain.maintenance.usecase.UpdateMaintenanceRecordResult
+import com.asensiodev.carbura.core.domain.maintenance.usecase.UpdateMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.CreatePlannedMaintenanceReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.RemovePlannedMaintenanceReminderUseCase
 import com.asensiodev.carbura.core.domain.sync.SyncManager
@@ -42,6 +45,7 @@ class MaintenanceHistoryViewModel(
     private val removePlannedMaintenanceReminderUseCase: RemovePlannedMaintenanceReminderUseCase,
     private val getVehicleHistoryUseCase: GetVehicleHistoryUseCase,
     private val deleteMaintenanceRecordUseCase: DeleteMaintenanceRecordUseCase,
+    private val updateMaintenanceRecordUseCase: UpdateMaintenanceRecordUseCase? = null,
     private val vehicleRepository: VehicleRepository,
     private val syncManager: SyncManager? = null,
     private val nextRecordId: () -> MaintenanceRecordId = ::randomMaintenanceRecordId,
@@ -67,6 +71,21 @@ class MaintenanceHistoryViewModel(
             MaintenanceHistoryEvent.Retry,
             -> launchLoad(showLoading = true)
             MaintenanceHistoryEvent.Refresh -> launchLoad(showLoading = false)
+            MaintenanceHistoryEvent.SubmitMaintenance -> submitMaintenance()
+            is MaintenanceHistoryEvent.EditMaintenance -> startEditing(event.recordId)
+            MaintenanceHistoryEvent.CancelMaintenanceEdit -> clearEditState()
+            MaintenanceHistoryEvent.SubmitMaintenanceEdit -> scope.launch { updateMaintenance() }
+            MaintenanceHistoryEvent.SaveFutureMaintenanceWithReminder -> saveFutureMaintenance(createReminder = true)
+            MaintenanceHistoryEvent.SaveFutureMaintenanceOnly -> saveFutureMaintenance(createReminder = false)
+            MaintenanceHistoryEvent.DismissFutureReminderOffer ->
+                _uiState.update { it.copy(showFutureReminderOffer = false) }
+            is MaintenanceHistoryEvent.DeleteMaintenance -> scope.launch { deleteMaintenance(event.recordId) }
+            else -> handleFormEvent(event)
+        }
+    }
+
+    private fun handleFormEvent(event: MaintenanceHistoryEvent) {
+        when (event) {
             is MaintenanceHistoryEvent.TypeSelected ->
                 updateForm {
                     it.copy(
@@ -89,17 +108,37 @@ class MaintenanceHistoryViewModel(
             is MaintenanceHistoryEvent.CostChanged -> updateForm { it.copy(cost = event.value, validationError = null) }
             is MaintenanceHistoryEvent.WorkshopChanged -> updateForm { it.copy(workshop = event.value, validationError = null) }
             is MaintenanceHistoryEvent.NotesChanged -> updateForm { it.copy(notes = event.value, validationError = null) }
-            MaintenanceHistoryEvent.SubmitMaintenance -> submitMaintenance()
-            MaintenanceHistoryEvent.SaveFutureMaintenanceWithReminder -> saveFutureMaintenance(createReminder = true)
-            MaintenanceHistoryEvent.SaveFutureMaintenanceOnly -> saveFutureMaintenance(createReminder = false)
-            MaintenanceHistoryEvent.DismissFutureReminderOffer ->
-                _uiState.update { it.copy(showFutureReminderOffer = false) }
-            is MaintenanceHistoryEvent.DeleteMaintenance -> scope.launch { deleteMaintenance(event.recordId) }
+            else -> Unit
         }
     }
 
     private fun updateForm(transform: (MaintenanceHistoryUiState) -> MaintenanceHistoryUiState) {
         _uiState.update(transform)
+    }
+
+    private fun startEditing(recordId: MaintenanceRecordId) {
+        if (_uiState.value.activeMutation != null) return
+        val record = _uiState.value.records.firstOrNull { it.id == recordId } ?: return
+        val typeCode = record.maintenanceTypeCode ?: MaintenanceTypeCode.Custom
+        _uiState.update {
+            it.copy(
+                maintenanceTypeCode = typeCode,
+                customTypeLabel = if (typeCode == MaintenanceTypeCode.Custom) record.displayType() else "",
+                performedOn = record.performedOn.iso8601,
+                nextDueDate = record.nextDueDate?.iso8601.orEmpty(),
+                odometerKm = record.odometerKm?.toString().orEmpty(),
+                cost = record.costCents.toEditableCost(),
+                workshop = record.workshop.orEmpty(),
+                notes = record.notes.orEmpty(),
+                validationError = null,
+                persistenceError = false,
+                editingRecordId = record.id,
+            )
+        }
+    }
+
+    private fun clearEditState() {
+        _uiState.update { it.resetForm(localDateProvider.currentDate()) }
     }
 
     private fun launchLoad(showLoading: Boolean) {
@@ -239,6 +278,58 @@ class MaintenanceHistoryViewModel(
         }
     }
 
+    private suspend fun updateMaintenance() {
+        val state = _uiState.value
+        val recordId = state.editingRecordId ?: return
+        if (state.activeMutation != null) return
+        val mutation = MaintenanceMutation.Updating(recordId)
+        _uiState.update { it.copy(activeMutation = mutation, persistenceError = false) }
+        try {
+            val input =
+                UpdateMaintenanceRecordInput(
+                    recordId = recordId,
+                    expectedFamilyId = familyId,
+                    expectedVehicleId = vehicleId,
+                    maintenanceTypeCode = state.maintenanceTypeCode,
+                    customTypeLabel = state.customTypeLabel,
+                    performedOn = state.performedOn,
+                    odometerKm = state.odometerKm,
+                    cost = state.cost,
+                    workshop = state.workshop,
+                    notes = state.notes,
+                    nextDueDate = state.nextDueDate,
+                    currentDate = localDateProvider.currentDate(),
+                )
+            when (val result = withContext(dispatchers.io) { requireNotNull(updateMaintenanceRecordUseCase)(input) }) {
+                is UpdateMaintenanceRecordResult.Success -> {
+                    val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
+                    _uiState.update { it.resetForm(localDateProvider.currentDate()).copy(records = records) }
+                    _effects.send(
+                        MaintenanceHistoryEffect.MaintenanceUpdated(
+                            typeCode = result.record.maintenanceTypeCode ?: MaintenanceTypeCode.Custom,
+                            customTypeLabel = result.record.displayType(),
+                            reminderRetained = result.reminderRetained,
+                        ),
+                    )
+                    syncAfterMutation()
+                }
+                is UpdateMaintenanceRecordResult.ValidationError -> emitValidation(result.reason.toMaintenanceMessage())
+                UpdateMaintenanceRecordResult.NotFound -> {
+                    val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
+                    _uiState.update {
+                        it.resetForm(localDateProvider.currentDate()).copy(records = records, persistenceError = true)
+                    }
+                }
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            _uiState.update { it.copy(persistenceError = true) }
+        } finally {
+            _uiState.update { if (it.activeMutation == mutation) it.copy(activeMutation = null) else it }
+        }
+    }
+
     private suspend fun emitValidation(message: CarburaString) {
         _uiState.update { it.copy(validationError = message) }
         _effects.send(MaintenanceHistoryEffect.ValidationFailed(message))
@@ -252,16 +343,21 @@ class MaintenanceHistoryViewModel(
                 persistenceError = false,
             )
         }
-        val type =
+        val record =
             _uiState.value.records
                 .firstOrNull { it.id == recordId }
-                ?.displayType()
-                .orEmpty()
         try {
             withContext(dispatchers.io) { deleteMaintenanceRecordUseCase(recordId) }
             val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
             _uiState.update { it.copy(records = records, validationError = null) }
-            _effects.send(MaintenanceHistoryEffect.MaintenanceDeleted(type))
+            record?.let {
+                _effects.send(
+                    MaintenanceHistoryEffect.MaintenanceDeleted(
+                        typeCode = it.maintenanceTypeCode ?: MaintenanceTypeCode.Custom,
+                        customTypeLabel = it.displayType(),
+                    ),
+                )
+            }
             syncAfterMutation()
         } catch (error: CancellationException) {
             throw error
@@ -277,7 +373,33 @@ class MaintenanceHistoryViewModel(
     }
 }
 
-internal fun MaintenanceRecord.displayType(): String = maintenanceTypeId.value.removePrefix("type-").replace('-', ' ')
+internal fun MaintenanceRecord.displayType(): String =
+    maintenanceTypeLabel?.takeIf(String::isNotBlank)
+        ?: maintenanceTypeId.value
+            .removePrefix("type-")
+            .replace('-', ' ')
+            .replaceFirstChar(Char::uppercase)
+
+private fun Int?.toEditableCost(): String {
+    val cents = this ?: return ""
+    return "${cents / 100}.${(cents % 100).toString().padStart(2, '0')}"
+}
+
+private fun MaintenanceHistoryUiState.resetForm(currentDate: CalendarDate): MaintenanceHistoryUiState =
+    copy(
+        maintenanceTypeCode = MaintenanceTypeCode.Itv,
+        customTypeLabel = "",
+        performedOn = currentDate.iso8601,
+        nextDueDate = "",
+        odometerKm = "0",
+        cost = "",
+        workshop = "",
+        notes = "",
+        validationError = null,
+        persistenceError = false,
+        showFutureReminderOffer = false,
+        editingRecordId = null,
+    )
 
 private fun randomMaintenanceRecordId(): MaintenanceRecordId = MaintenanceRecordId("maintenance-${Random.nextInt(1, Int.MAX_VALUE)}")
 

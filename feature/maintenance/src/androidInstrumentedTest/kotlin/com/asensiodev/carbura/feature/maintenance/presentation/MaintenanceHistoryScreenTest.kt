@@ -61,6 +61,39 @@ class MaintenanceHistoryScreenTest {
     }
 
     @Test
+    fun cardsUseLocalizedCanonicalAndExactCustomLabels() {
+        val custom = record().copy(maintenanceTypeLabel = "eBike ECU Check")
+        val itv =
+            record().copy(
+                id = MaintenanceRecordId("record-itv"),
+                maintenanceTypeId = MaintenanceTypeId("type-itv"),
+                maintenanceTypeCode = MaintenanceTypeCode.Itv,
+                maintenanceTypeLabel = null,
+            )
+
+        setScreen(state = state(records = listOf(custom, itv)))
+
+        composeRule.onNodeWithText("eBike ECU Check").assertIsDisplayed()
+        composeRule.onNodeWithText("ITV").assertIsDisplayed()
+    }
+
+    @Test
+    fun editActionOpensUpdateFormForExactRecord() {
+        val record = record()
+        var editedRecord: MaintenanceRecord? = null
+        setScreen(
+            state = state(records = listOf(record)).copy(editingRecordId = record.id),
+            onEditMaintenance = { editedRecord = it },
+        )
+
+        composeRule.onNodeWithTag("edit_maintenance_${record.id.value}").assertIsEnabled().performClick()
+
+        composeRule.runOnIdle { check(editedRecord === record) }
+        composeRule.onNodeWithText("Editar mantenimiento").assertIsDisplayed()
+        composeRule.onNodeWithText("Guardar cambios").assertIsDisplayed()
+    }
+
+    @Test
     fun deleteDispatchesOnlyAfterItemSpecificConfirmation() {
         val record = record()
         var deletedRecord: MaintenanceRecord? = null
@@ -186,6 +219,7 @@ class MaintenanceHistoryScreenTest {
         state: MaintenanceHistoryUiState,
         onRetry: () -> Unit = {},
         onDeleteMaintenance: (MaintenanceRecord) -> Unit = {},
+        onEditMaintenance: (MaintenanceRecord) -> Unit = {},
         onTypeSelected: (MaintenanceTypeCode) -> Unit = {},
         onSaveFutureWithReminder: () -> Unit = {},
         onSaveFutureOnly: () -> Unit = {},
@@ -211,6 +245,7 @@ class MaintenanceHistoryScreenTest {
                         onWorkshopChange = {},
                         onNotesChange = {},
                         onSubmitMaintenance = {},
+                        onEditMaintenance = onEditMaintenance,
                         onSaveFutureWithReminder = onSaveFutureWithReminder,
                         onSaveFutureOnly = onSaveFutureOnly,
                         onDismissFutureReminderOffer = onDismissFutureReminderOffer,

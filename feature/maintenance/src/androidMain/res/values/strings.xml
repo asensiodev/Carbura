@@ -3,6 +3,7 @@
     <string name="maintenance_back_button">Volver</string>
     <string name="maintenance_title">Mantenimiento</string>
     <string name="maintenance_form_title">Nuevo mantenimiento</string>
+    <string name="maintenance_edit_form_title">Editar mantenimiento</string>
     <string name="close_maintenance_form">Cerrar nuevo mantenimiento</string>
     <string name="add_maintenance_button">Añadir</string>
     <string name="add_maintenance_fab">Añadir mantenimiento</string>
@@ -26,6 +27,8 @@
     <string name="maintenance_workshop_label">Taller (opcional)</string>
     <string name="maintenance_notes_label">Notas (opcional)</string>
     <string name="save_maintenance_button">Guardar mantenimiento</string>
+    <string name="update_maintenance_button">Guardar cambios</string>
+    <string name="edit_maintenance_content_description">Editar mantenimiento %1$s</string>
     <string name="maintenance_history_title">Historial</string>
     <string name="maintenance_loading_message">Cargando historial...</string>
     <string name="maintenance_load_error_title">No se pudo cargar el historial</string>
@@ -51,6 +54,7 @@
     <string name="future_maintenance_reminder_confirm">Guardar y crear recordatorio</string>
     <string name="future_maintenance_reminder_save_only">Guardar sin este recordatorio</string>
     <string name="maintenance_deleted_message">%1$s eliminado del historial.</string>
+    <string name="maintenance_updated_message">%1$s actualizado.</string>
     <string name="delete_maintenance_content_description">Borrar mantenimiento %1$s</string>
     <string name="delete_maintenance_dialog_title">Borrar mantenimiento</string>
     <string name="delete_maintenance_dialog_description">Se eliminará este mantenimiento del historial:</string>

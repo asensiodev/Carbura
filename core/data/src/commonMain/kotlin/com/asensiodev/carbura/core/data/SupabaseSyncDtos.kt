@@ -28,6 +28,7 @@ internal data class RemoteMaintenanceRecordDto(
     @SerialName("maintenance_type_id") val maintenanceTypeId: String? = null,
     @SerialName("maintenance_type_key") val maintenanceTypeKey: String? = null,
     @SerialName("maintenance_type_code") val maintenanceTypeCode: String? = null,
+    @SerialName("maintenance_type_label") val maintenanceTypeLabel: String? = null,
     @SerialName("performed_on") val performedOn: String,
     @SerialName("odometer_km") val odometerKm: Int? = null,
     @SerialName("cost_cents") val costCents: Int? = null,

@@ -1,6 +1,7 @@
 package com.asensiodev.carbura.core.domain.maintenance.repository
 
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
+import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
 import com.asensiodev.carbura.core.model.ReminderId
@@ -17,6 +18,19 @@ interface MaintenanceRecordRepository {
     }
 
     suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord>
+
+    suspend fun getActiveMaintenanceRecord(
+        recordId: MaintenanceRecordId,
+        familyId: FamilyId,
+        vehicleId: VehicleId,
+    ): MaintenanceRecord? = getVehicleHistory(vehicleId).firstOrNull { it.id == recordId && it.familyId == familyId }
+
+    suspend fun updateMaintenanceRecordWithNotifications(
+        record: MaintenanceRecord,
+        expectedFamilyId: FamilyId,
+        expectedVehicleId: VehicleId,
+        mutations: List<ReminderNotificationMutation>,
+    ): Boolean = false
 
     suspend fun deleteMaintenanceRecord(recordId: MaintenanceRecordId)
 

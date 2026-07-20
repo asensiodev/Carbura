@@ -37,6 +37,7 @@ class SyncDtosTest {
                 vehicleId = "vehicle-1",
                 maintenanceTypeId = "type-oil-change",
                 maintenanceTypeCode = "OilChange",
+                maintenanceTypeLabel = "eBike ECU Check",
                 performedOn = "2026-07-08",
                 odometerKm = 1000,
                 costCents = null,
@@ -54,6 +55,7 @@ class SyncDtosTest {
         assertEquals(null, dto.maintenanceTypeId)
         assertEquals("type-oil-change", dto.maintenanceTypeKey)
         assertEquals("oil_change", dto.maintenanceTypeCode)
+        assertEquals("eBike ECU Check", dto.maintenanceTypeLabel)
         assertEquals(record.copy(pendingSync = false), dto.toSyncMaintenanceRecord())
     }
 

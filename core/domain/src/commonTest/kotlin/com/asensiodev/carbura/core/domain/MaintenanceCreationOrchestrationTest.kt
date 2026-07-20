@@ -61,6 +61,19 @@ class MaintenanceCreationOrchestrationTest {
         }
 
     @Test
+    fun customTypePreservesDisplayCasingSeparatelyFromTechnicalId() =
+        runTest {
+            val result =
+                CreateMaintenanceRecordFromInputUseCase(CreateMaintenanceRecordUseCase(FakeMaintenanceRecordRepository()))(
+                    input(MaintenanceTypeCode.Custom, customTypeLabel = "  eBike ECU Check  "),
+                )
+
+            val record = assertIs<DomainResult.Success<*>>(result).value as com.asensiodev.carbura.core.model.MaintenanceRecord
+            assertEquals("eBike ECU Check", record.maintenanceTypeLabel)
+            assertEquals("type-ebike-ecu-check", record.maintenanceTypeId.value)
+        }
+
+    @Test
     fun impossiblePerformedDateIsRejectedBeforePersistence() =
         runTest {
             val repository = FakeMaintenanceRecordRepository()

@@ -11,6 +11,8 @@ interface ReminderRepository {
 
     suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder>
 
+    suspend fun getActiveReminder(reminderId: ReminderId): Reminder? = null
+
     suspend fun saveReminder(reminder: Reminder)
 
     suspend fun saveReminderWithNotification(

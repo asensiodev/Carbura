@@ -107,6 +107,7 @@ internal class SqlDelightLocalSyncDataSource(
             vehicleId = record.vehicleId,
             maintenanceTypeId = record.maintenanceTypeId,
             maintenanceTypeCode = record.maintenanceTypeCode,
+            maintenanceTypeLabel = record.maintenanceTypeLabel,
             performedOn = record.performedOn,
             odometerKm = record.odometerKm?.toLong(),
             costCents = record.costCents?.toLong(),

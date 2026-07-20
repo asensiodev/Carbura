@@ -25,6 +25,7 @@ internal data class SyncMaintenanceRecord(
     val vehicleId: String,
     val maintenanceTypeId: String,
     val maintenanceTypeCode: String?,
+    val maintenanceTypeLabel: String? = null,
     val performedOn: String,
     val odometerKm: Int?,
     val costCents: Int?,
