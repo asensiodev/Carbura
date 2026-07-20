@@ -8,6 +8,7 @@ kotlin {
         implementation(projects.core.model)
         implementation(projects.core.stringResources)
         api(libs.androidx.lifecycle.viewmodel)
+        implementation(libs.compose.multiplatform.runtime)
         implementation(libs.koin.core)
         implementation(libs.kotlinx.coroutines.core)
     }

@@ -10,12 +10,21 @@ dependencies {
     implementation(projects.core.data)
     implementation(projects.core.domain)
     implementation(projects.core.model)
+    implementation(projects.core.stringResources)
+    implementation(projects.feature.garage)
+    implementation(projects.feature.maintenance)
+    implementation(projects.feature.reminders)
+    implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.koin.core)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.swing)
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation(compose.materialIconsExtended)
 
     testImplementation(kotlin("test"))
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.sqldelight.sqlite.driver)
 }
 
 compose.desktop {

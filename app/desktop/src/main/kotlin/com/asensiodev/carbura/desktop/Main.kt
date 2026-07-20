@@ -51,20 +51,24 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.asensiodev.carbura.core.data.dataModule
+import com.asensiodev.carbura.core.model.VehicleId
+import com.asensiodev.carbura.feature.garage.di.garageModule
+import com.asensiodev.carbura.feature.maintenance.di.maintenanceModule
+import com.asensiodev.carbura.feature.reminders.di.remindersModule
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 
-private val Canvas = Color(0xFFF2F7FD)
-private val Ink = Color(0xFF142238)
-private val Navy = Color(0xFF17345A)
-private val Blue = Color(0xFF2867B2)
-private val PaleBlue = Color(0xFFDCEBFA)
-private val Muted = Color(0xFF607086)
-private val Line = Color(0xFFD8E3F0)
-private val Success = Color(0xFF2F7666)
+internal val Canvas = Color(0xFFF2F7FD)
+internal val Ink = Color(0xFF142238)
+internal val Navy = Color(0xFF17345A)
+internal val Blue = Color(0xFF2867B2)
+internal val PaleBlue = Color(0xFFDCEBFA)
+internal val Muted = Color(0xFF607086)
+internal val Line = Color(0xFFD8E3F0)
+internal val Success = Color(0xFF2F7666)
 
 fun main() {
-    startKoin { modules(dataModule) }
+    startKoin { modules(dataModule, garageModule, maintenanceModule, remindersModule, desktopLocalModeModule) }
     application {
         val windowState = rememberWindowState(size = DpSize(1180.dp, 760.dp))
         Window(
@@ -119,6 +123,7 @@ private fun CarburaDesktopApp(windowWidthDp: Float = 1180f) {
 @Composable
 private fun DesktopShell(compact: Boolean) {
     var destination by remember { mutableStateOf(DesktopDestination.Garage) }
+    var selectedMaintenanceVehicleId by remember { mutableStateOf<VehicleId?>(null) }
     Row(modifier = Modifier.fillMaxSize()) {
         DesktopNavigation(
             compact = compact,
@@ -128,6 +133,12 @@ private fun DesktopShell(compact: Boolean) {
         DestinationContent(
             destination = destination,
             compact = compact,
+            selectedMaintenanceVehicleId = selectedMaintenanceVehicleId,
+            onNavigate = { destination = it },
+            onOpenMaintenance = { vehicleId ->
+                selectedMaintenanceVehicleId = vehicleId
+                destination = DesktopDestination.Maintenance
+            },
             modifier = Modifier.weight(1f),
         )
     }
@@ -198,8 +209,36 @@ private fun DesktopNavigation(
 private fun DestinationContent(
     destination: DesktopDestination,
     compact: Boolean,
+    selectedMaintenanceVehicleId: VehicleId?,
+    onNavigate: (DesktopDestination) -> Unit,
+    onOpenMaintenance: (VehicleId) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (destination == DesktopDestination.Garage) {
+        GarageWorkspace(
+            compact = compact,
+            onOpenMaintenance = onOpenMaintenance,
+            modifier = modifier,
+        )
+        return
+    }
+    if (destination == DesktopDestination.Maintenance) {
+        MaintenanceWorkspace(
+            compact = compact,
+            initialVehicleId = selectedMaintenanceVehicleId,
+            onNavigateToGarage = { onNavigate(DesktopDestination.Garage) },
+            modifier = modifier,
+        )
+        return
+    }
+    if (destination == DesktopDestination.Reminders) {
+        RemindersWorkspace(
+            compact = compact,
+            onNavigateToGarage = { onNavigate(DesktopDestination.Garage) },
+            modifier = modifier,
+        )
+        return
+    }
     Column(
         modifier = modifier.fillMaxHeight().padding(if (compact) 32.dp else 56.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
