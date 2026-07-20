@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
@@ -86,11 +87,8 @@ import com.asensiodev.carbura.feature.onboarding.presentation.OnboardingEvent
 import com.asensiodev.carbura.feature.onboarding.presentation.OnboardingRoute
 import com.asensiodev.carbura.feature.onboarding.presentation.OnboardingViewModel
 import com.asensiodev.carbura.feature.reminders.presentation.RemindersRoute
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.yield
 import org.koin.core.context.GlobalContext
 import java.time.Instant
 import java.time.ZoneId
@@ -184,7 +182,7 @@ private fun CarburaApp(
     LaunchedEffect(familyId) {
         notificationRecoveryTrigger.onAuthenticatedStartup(System.currentTimeMillis())
         try {
-            syncManager.syncNow()
+            syncManager.syncNowSilently()
         } finally {
             initialSyncCompleted = true
         }
@@ -204,7 +202,7 @@ private fun CarburaApp(
     LaunchedEffect(onboardingState.isAuthenticated) {
         while (onboardingState.isAuthenticated) {
             delay(IN_APP_SYNC_INTERVAL_MILLIS)
-            syncManager.syncNow()
+            syncManager.syncNowSilently()
         }
     }
 
@@ -216,7 +214,7 @@ private fun CarburaApp(
                     notificationRecoveryTrigger.onForeground(now)
                     if (now - lastForegroundSyncAttempt.longValue >= FOREGROUND_SYNC_THROTTLE_MILLIS) {
                         lastForegroundSyncAttempt.longValue = now
-                        syncScope.launch { syncManager.syncNow() }
+                        syncScope.launch { syncManager.syncNowSilently() }
                     }
                 }
             }
@@ -348,28 +346,16 @@ private fun CarburaMainScaffold(
         when (val feedback = feedbackTracker.update(syncStatus)) {
             SyncFeedbackEvent.None -> Unit
             is SyncFeedbackEvent.ShowFailure -> {
-                coroutineScope {
-                    val previousSnackbar = snackbarHostState.currentSnackbarData
-                    previousSnackbar?.dismiss()
-                    val delivery =
-                        async {
-                            snackbarHostState.showSnackbar(
-                                message = failureMessage,
-                                actionLabel = retryLabel,
-                                duration = SnackbarDuration.Indefinite,
-                            )
-                        }
-                    while (delivery.isActive) {
-                        val displayedSnackbar = snackbarHostState.currentSnackbarData
-                        if (displayedSnackbar != null && displayedSnackbar !== previousSnackbar) {
-                            onSyncFailureShown(feedback.id)
-                            break
-                        }
-                        yield()
-                    }
-                    if (delivery.await() == SnackbarResult.ActionPerformed) {
-                        onRetrySync()
-                    }
+                onSyncFailureShown(feedback.id)
+                snackbarHostState.currentSnackbarData?.dismiss()
+                val result =
+                    snackbarHostState.showSnackbar(
+                        message = failureMessage,
+                        actionLabel = retryLabel,
+                        duration = SnackbarDuration.Indefinite,
+                    )
+                if (result == SnackbarResult.ActionPerformed) {
+                    onRetrySync()
                 }
             }
         }
@@ -388,7 +374,15 @@ private fun CarburaMainScaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier =
+                    Modifier
+                        .navigationBarsPadding()
+                        .padding(horizontal = Spacings.spacing16, vertical = Spacings.spacing8),
+            )
+        },
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(

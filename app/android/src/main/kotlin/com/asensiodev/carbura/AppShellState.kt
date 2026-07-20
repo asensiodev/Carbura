@@ -26,14 +26,21 @@ internal sealed interface SyncFeedbackEvent {
 }
 
 internal class SyncFeedbackTracker {
+    private var deliveredFailureId: Long? = null
+
     fun update(status: SyncStatus): SyncFeedbackEvent {
         val failure = status.lastErrorMessage
         val failureId = status.failureId
         if (status.isSyncing) return SyncFeedbackEvent.None
-        if (failure == null || failureId == null || failureId == status.acknowledgedFailureId) {
+        if (failure == null || failureId == null) {
+            deliveredFailureId = null
+            return SyncFeedbackEvent.None
+        }
+        if (failureId == status.acknowledgedFailureId || failureId == deliveredFailureId) {
             return SyncFeedbackEvent.None
         }
 
+        deliveredFailureId = failureId
         return SyncFeedbackEvent.ShowFailure(failureId, failure)
     }
 }

@@ -19,5 +19,7 @@ private object DesktopLocalSyncManager : SyncManager {
 
     override suspend fun syncNow(): SyncResult = SyncResult.Success(System.currentTimeMillis())
 
+    override suspend fun syncNowSilently(): SyncResult = syncNow()
+
     override fun acknowledgeFailure(failureId: Long) = Unit
 }

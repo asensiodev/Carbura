@@ -53,7 +53,7 @@ class AppShellStateTest {
 
         assertEquals(SyncFeedbackEvent.ShowFailure(1L, "timeout"), tracker.update(failure))
         assertEquals(SyncFeedbackEvent.None, tracker.update(SyncStatus(isSyncing = true)))
-        assertEquals(SyncFeedbackEvent.ShowFailure(1L, "timeout"), tracker.update(failure))
+        assertEquals(SyncFeedbackEvent.None, tracker.update(failure))
         assertEquals(
             SyncFeedbackEvent.ShowFailure(2L, "timeout"),
             tracker.update(failure.copy(failureId = 2L)),

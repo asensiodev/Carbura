@@ -25,7 +25,11 @@ internal class LocalFirstSyncManager(
 
     override val status: StateFlow<SyncStatus> = _status
 
-    override suspend fun syncNow(): SyncResult =
+    override suspend fun syncNow(): SyncResult = syncNow(reportFailure = true)
+
+    override suspend fun syncNowSilently(): SyncResult = syncNow(reportFailure = false)
+
+    private suspend fun syncNow(reportFailure: Boolean): SyncResult =
         operationLock.mutex.withLock {
             _status.update { it.copy(isSyncing = true) }
             try {
@@ -45,12 +49,12 @@ internal class LocalFirstSyncManager(
                 throw error
             } catch (error: Throwable) {
                 val message = error.message ?: error::class.simpleName ?: "Sync failed"
-                nextFailureId += 1L
+                if (reportFailure) nextFailureId += 1L
                 _status.update {
                     it.copy(
                         isSyncing = false,
                         lastErrorMessage = message,
-                        failureId = nextFailureId,
+                        failureId = nextFailureId.takeIf { reportFailure },
                         acknowledgedFailureId = null,
                     )
                 }

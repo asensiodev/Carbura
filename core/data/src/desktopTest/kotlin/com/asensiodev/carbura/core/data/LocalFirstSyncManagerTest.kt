@@ -156,6 +156,21 @@ class LocalFirstSyncManagerTest {
         }
 
     @Test
+    fun silentSyncFailureKeepsDiagnosticWithoutRequestingGlobalFeedback() =
+        runTest {
+            val syncManager = syncManager(FakeLocalSyncDataSource(), FakeRemoteSyncDataSource(shouldFail = true))
+
+            val result = syncManager.syncNowSilently()
+
+            assertIs<SyncResult.Failure>(result)
+            assertTrue(
+                syncManager.status.value.lastErrorMessage
+                    ?.isNotBlank() == true,
+            )
+            assertNull(syncManager.status.value.failureId)
+        }
+
+    @Test
     fun acknowledgedFailureRetainsDiagnosticWithoutReplayingFeedback() =
         runTest {
             val syncManager = syncManager(FakeLocalSyncDataSource(), FakeRemoteSyncDataSource(shouldFail = true))

@@ -25,5 +25,7 @@ interface SyncManager {
 
     suspend fun syncNow(): SyncResult
 
+    suspend fun syncNowSilently(): SyncResult = syncNow()
+
     fun acknowledgeFailure(failureId: Long)
 }
