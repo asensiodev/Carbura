@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -29,8 +28,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -43,18 +40,21 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -77,7 +77,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.heading
@@ -747,48 +746,46 @@ private fun ReminderDatePickerField(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VehicleSelector(
     vehicles: List<Vehicle>,
     selectedVehicleId: String?,
     onVehicleSelected: (Vehicle) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
-        Text(
-            text = stringResource(R.string.select_vehicle_title),
-            style = MaterialTheme.typography.titleSmall,
-        )
-        LazyColumn(
+    var expanded by remember { mutableStateOf(false) }
+    val selectedVehicle = vehicles.firstOrNull { it.id.value == selectedVehicleId }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        OutlinedTextField(
+            value = selectedVehicle?.name.orEmpty(),
+            onValueChange = {},
             modifier =
                 Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     .fillMaxWidth()
-                    .heightIn(max = 200.dp)
-                    .selectableGroup(),
-            verticalArrangement = Arrangement.spacedBy(Spacings.spacing4),
+                    .testTag("reminder_vehicle_dropdown"),
+            readOnly = true,
+            label = { Text(stringResource(R.string.select_vehicle_title)) },
+            placeholder = { Text(stringResource(R.string.select_vehicle_placeholder)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
         ) {
-            items(vehicles, key = { it.id.value }) { vehicle ->
-                val isSelected = vehicle.id.value == selectedVehicleId
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .selectable(
-                                selected = isSelected,
-                                role = Role.RadioButton,
-                                onClick = { onVehicleSelected(vehicle) },
-                            ).padding(vertical = Spacings.spacing8),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacings.spacing8),
-                ) {
-                    RadioButton(
-                        selected = isSelected,
-                        onClick = null,
-                    )
-                    Text(
-                        text = vehicle.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
+            vehicles.forEach { vehicle ->
+                DropdownMenuItem(
+                    text = { Text(vehicle.name) },
+                    onClick = {
+                        onVehicleSelected(vehicle)
+                        expanded = false
+                    },
+                    modifier = Modifier.testTag("reminder_vehicle_option_${vehicle.id.value}"),
+                )
             }
         }
     }

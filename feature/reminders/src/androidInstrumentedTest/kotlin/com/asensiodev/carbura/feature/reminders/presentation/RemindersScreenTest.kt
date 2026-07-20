@@ -132,13 +132,18 @@ class RemindersScreenTest {
     }
 
     @Test
-    fun manyVehicleSelectorIsSingleChoiceAndSaveRemainsReachable() {
+    fun manyVehicleSelectorUsesScrollableDropdownAndSaveRemainsReachable() {
         val vehicles = (1..20).map { vehicle("vehicle-$it", "Vehículo $it") }
-        composeRule.setRemindersContent(state = loadedState(vehicles = vehicles))
+        var selectedVehicle: Vehicle? = null
+        composeRule.setRemindersContent(
+            state = loadedState(vehicles = vehicles),
+            onVehicleSelected = { selectedVehicle = it },
+        )
 
         composeRule.onNodeWithText("Añadir recordatorio").performClick()
-
-        composeRule.onNodeWithText("Vehículo 1").assertIsSelected()
+        composeRule.onNodeWithTag("reminder_vehicle_dropdown").assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag("reminder_vehicle_option_vehicle-20").performScrollTo().performClick()
+        composeRule.runOnIdle { assertTrue(selectedVehicle === vehicles.last()) }
         composeRule.onNodeWithText("Guardar recordatorio").performScrollTo().assertIsDisplayed()
     }
 
@@ -247,6 +252,7 @@ class RemindersScreenTest {
         onRetry: () -> Unit = {},
         onNavigateToGarage: () -> Unit = {},
         onDeleteReminder: (Reminder) -> Unit = {},
+        onVehicleSelected: (Vehicle) -> Unit = {},
         onVehicleFilterToggled: (Vehicle) -> Unit = {},
         onVehicleFiltersCleared: () -> Unit = {},
     ) {
@@ -258,6 +264,7 @@ class RemindersScreenTest {
                     onRetry = onRetry,
                     onNavigateToGarage = onNavigateToGarage,
                     onDeleteReminder = onDeleteReminder,
+                    onVehicleSelected = onVehicleSelected,
                     onVehicleFilterToggled = onVehicleFilterToggled,
                     onVehicleFiltersCleared = onVehicleFiltersCleared,
                 )
@@ -272,6 +279,7 @@ class RemindersScreenTest {
         onRetry: () -> Unit = {},
         onNavigateToGarage: () -> Unit = {},
         onDeleteReminder: (Reminder) -> Unit = {},
+        onVehicleSelected: (Vehicle) -> Unit = {},
         onVehicleFilterToggled: (Vehicle) -> Unit = {},
         onVehicleFiltersCleared: () -> Unit = {},
     ) {
@@ -281,7 +289,7 @@ class RemindersScreenTest {
             reminderCreatedSignal = 0,
             reminderSuccessSignal = 0,
             onTitleChange = {},
-            onVehicleSelected = {},
+            onVehicleSelected = onVehicleSelected,
             onVehicleFilterToggled = onVehicleFilterToggled,
             onVehicleFiltersCleared = onVehicleFiltersCleared,
             onDueDateChange = {},

@@ -29,6 +29,7 @@
     <string name="no_matching_reminders_title">No hay recordatorios para estos vehículos</string>
     <string name="no_matching_reminders_description">Prueba con otros vehículos o selecciona Todos.</string>
     <string name="select_vehicle_title">Vehículo</string>
+    <string name="select_vehicle_placeholder">Selecciona un vehículo</string>
     <string name="no_vehicles_title">Primero añade un vehículo</string>
     <string name="no_vehicles_description">Necesitas un vehículo para crear recordatorios.</string>
     <string name="go_to_garage_button">Ir al garaje</string>
