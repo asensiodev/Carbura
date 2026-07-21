@@ -20,9 +20,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -231,7 +233,34 @@ private fun MaintenanceVehicleContent(
 
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (state.loadState == MaintenanceLoadState.Content) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (state.records.isNotEmpty()) {
+                    OutlinedTextField(
+                        value = state.searchQuery,
+                        onValueChange = { viewModel.onEvent(MaintenanceHistoryEvent.SearchQueryChanged(it)) },
+                        modifier = Modifier.weight(1f),
+                        label = { Text("Search history") },
+                        placeholder = { Text("Type, workshop, notes or date") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon =
+                            if (state.searchQuery.isNotEmpty()) {
+                                {
+                                    IconButton(onClick = { viewModel.onEvent(MaintenanceHistoryEvent.SearchCleared) }) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear maintenance search")
+                                    }
+                                }
+                            } else {
+                                null
+                            },
+                        singleLine = true,
+                    )
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
                 Button(onClick = { showForm = true }, enabled = state.activeMutation == null) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
@@ -252,6 +281,7 @@ private fun MaintenanceVehicleContent(
             state = state,
             onRetry = { viewModel.onEvent(MaintenanceHistoryEvent.Retry) },
             onCreate = { showForm = true },
+            onClearSearch = { viewModel.onEvent(MaintenanceHistoryEvent.SearchCleared) },
             onEdit = {
                 viewModel.onEvent(MaintenanceHistoryEvent.EditMaintenance(it.id))
                 showForm = true
@@ -300,6 +330,7 @@ private fun MaintenanceHistoryBody(
     state: MaintenanceHistoryUiState,
     onRetry: () -> Unit,
     onCreate: () -> Unit,
+    onClearSearch: () -> Unit,
     onEdit: (MaintenanceRecord) -> Unit,
     onDelete: (MaintenanceRecord) -> Unit,
 ) {
@@ -320,9 +351,16 @@ private fun MaintenanceHistoryBody(
                     actionLabel = "Add maintenance",
                     onAction = onCreate,
                 )
+            } else if (state.hasNoMatchingRecords) {
+                MaintenanceMessagePanel(
+                    title = "No maintenance matches this search",
+                    detail = "Try another type, workshop, note or date.",
+                    actionLabel = "Clear search",
+                    onAction = onClearSearch,
+                )
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(state.records, key = { it.id.value }) { record ->
+                    items(state.visibleRecords, key = { it.id.value }) { record ->
                         MaintenanceRecordCard(
                             record = record,
                             isDeleting = state.activeMutation == MaintenanceMutation.Deleting(record.id),

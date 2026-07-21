@@ -9,6 +9,7 @@ import com.asensiodev.carbura.core.stringresources.CarburaString
 data class MaintenanceHistoryUiState(
     val vehicle: Vehicle? = null,
     val records: List<MaintenanceRecord> = emptyList(),
+    val searchQuery: String = "",
     val maintenanceTypeCode: MaintenanceTypeCode = MaintenanceTypeCode.Itv,
     val customTypeLabel: String = "",
     val performedOn: String,
@@ -26,6 +27,15 @@ data class MaintenanceHistoryUiState(
 ) {
     val isEmpty: Boolean = records.isEmpty() && loadState == MaintenanceLoadState.Content
 
+    val visibleRecords: List<MaintenanceRecord>
+        get() {
+            val query = searchQuery.trim()
+            return if (query.isEmpty()) records else records.filter { it.matchesSearch(query) }
+        }
+
+    val hasNoMatchingRecords: Boolean
+        get() = records.isNotEmpty() && searchQuery.isNotBlank() && visibleRecords.isEmpty()
+
     val isSaving: Boolean = activeMutation == MaintenanceMutation.Saving || activeMutation is MaintenanceMutation.Updating
 
     val isEditing: Boolean = editingRecordId != null
@@ -33,6 +43,28 @@ data class MaintenanceHistoryUiState(
     val supportsNextDueDate: Boolean =
         maintenanceTypeCode == MaintenanceTypeCode.Itv || maintenanceTypeCode == MaintenanceTypeCode.Insurance
 }
+
+private fun MaintenanceRecord.matchesSearch(query: String): Boolean =
+    listOfNotNull(
+        maintenanceTypeCode?.searchLabel(),
+        maintenanceTypeLabel,
+        maintenanceTypeId.value,
+        workshop,
+        notes,
+        performedOn.iso8601,
+        nextDueDate?.iso8601,
+    ).any { it.contains(query, ignoreCase = true) }
+
+private fun MaintenanceTypeCode.searchLabel(): String =
+    when (this) {
+        MaintenanceTypeCode.Itv -> "ITV"
+        MaintenanceTypeCode.Insurance -> "Insurance"
+        MaintenanceTypeCode.OilChange -> "Oil change"
+        MaintenanceTypeCode.Tires -> "Tires"
+        MaintenanceTypeCode.GeneralReview -> "General review"
+        MaintenanceTypeCode.Repair -> "Repair"
+        MaintenanceTypeCode.Custom -> "Custom"
+    }
 
 enum class MaintenanceLoadState {
     Loading,

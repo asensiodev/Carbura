@@ -71,6 +71,10 @@ class MaintenanceHistoryViewModel(
             MaintenanceHistoryEvent.Retry,
             -> launchLoad(showLoading = true)
             MaintenanceHistoryEvent.Refresh -> launchLoad(showLoading = false)
+            is MaintenanceHistoryEvent.SearchQueryChanged ->
+                _uiState.update { it.copy(searchQuery = event.value) }
+            MaintenanceHistoryEvent.SearchCleared ->
+                _uiState.update { it.copy(searchQuery = "") }
             MaintenanceHistoryEvent.SubmitMaintenance -> submitMaintenance()
             is MaintenanceHistoryEvent.EditMaintenance -> startEditing(event.recordId)
             MaintenanceHistoryEvent.CancelMaintenanceEdit -> clearEditState()

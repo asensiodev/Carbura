@@ -10,6 +10,12 @@ sealed interface MaintenanceHistoryEvent {
 
     data object Refresh : MaintenanceHistoryEvent
 
+    data class SearchQueryChanged(
+        val value: String,
+    ) : MaintenanceHistoryEvent
+
+    data object SearchCleared : MaintenanceHistoryEvent
+
     data class TypeSelected(
         val value: MaintenanceTypeCode,
     ) : MaintenanceHistoryEvent

@@ -125,6 +125,11 @@ class DesktopMaintenanceIntegrationTest {
             assertEquals("Passed inspection", itvRecord.notes)
             assertEquals("2027-01-10", itvRecord.nextDueDate?.iso8601)
 
+            journey.maintenance.onEvent(MaintenanceHistoryEvent.SearchQueryChanged("CENTRAL"))
+            assertEquals(listOf(itvRecord), journey.maintenance.uiState.value.visibleRecords)
+            journey.maintenance.onEvent(MaintenanceHistoryEvent.SearchCleared)
+            assertEquals(history, journey.maintenance.uiState.value.visibleRecords)
+
             val reloaded = koin.get<MaintenanceHistoryViewModel> { parametersOf(journey.vehicleId, journey.familyId) }
             reloaded.onEvent(MaintenanceHistoryEvent.Started)
             assertEquals(
