@@ -57,14 +57,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.DialogWindow
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.desktop.resources.Res
-import com.asensiodev.carbura.desktop.resources.garage_add_to_garage_title
 import com.asensiodev.carbura.desktop.resources.garage_add_vehicle_button
 import com.asensiodev.carbura.desktop.resources.garage_add_vehicle_description_text
 import com.asensiodev.carbura.desktop.resources.garage_cancel_button
@@ -113,7 +111,6 @@ import com.asensiodev.carbura.desktop.resources.garage_search_vehicles_placehold
 import com.asensiodev.carbura.desktop.resources.garage_update_odometer_description
 import com.asensiodev.carbura.desktop.resources.garage_update_odometer_help
 import com.asensiodev.carbura.desktop.resources.garage_update_odometer_title
-import com.asensiodev.carbura.desktop.resources.garage_update_vehicle_title
 import com.asensiodev.carbura.desktop.resources.garage_validation_blank_vehicle_name
 import com.asensiodev.carbura.desktop.resources.garage_validation_generic
 import com.asensiodev.carbura.desktop.resources.garage_validation_negative_vehicle_odometer
@@ -570,113 +567,99 @@ private fun VehicleFormDialog(
         } else {
             stringResource(Res.string.garage_add_vehicle_button)
         }
-    DialogWindow(onCloseRequest = { if (!mutationActive) onDismiss() }, title = windowTitle) {
-        Surface(
-            modifier = Modifier.width(560.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = Color.White,
-            shadowElevation = 12.dp,
-        ) {
-            Column(modifier = Modifier.padding(28.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                Text(
-                    if (isEditing) {
-                        stringResource(Res.string.garage_update_vehicle_title)
-                    } else {
-                        stringResource(Res.string.garage_add_to_garage_title)
-                    },
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Ink,
-                )
-                Text(
-                    if (isEditing) {
-                        stringResource(Res.string.garage_edit_vehicle_description_text)
-                    } else {
-                        stringResource(Res.string.garage_add_vehicle_description_text)
-                    },
-                    color = Muted,
-                )
-                OutlinedTextField(
-                    value = if (isEditing) state.editName else state.name,
-                    onValueChange = {
-                        onEvent(if (isEditing) VehicleFormEvent.EditNameChanged(it) else VehicleFormEvent.NameChanged(it))
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(Res.string.garage_vehicle_name_label)) },
-                    singleLine = true,
-                )
-                if (isEditing) {
-                    OutlinedTextField(
-                        value = state.editLicensePlate,
-                        onValueChange = { onEvent(VehicleFormEvent.EditLicensePlateChanged(it)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(Res.string.garage_license_plate_label)) },
-                        singleLine = true,
-                    )
-                }
-                OutlinedTextField(
-                    value = if (isEditing) state.editOdometerKm else state.odometerKm,
-                    onValueChange = {
-                        onEvent(if (isEditing) VehicleFormEvent.EditOdometerChanged(it) else VehicleFormEvent.OdometerChanged(it))
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(Res.string.garage_current_odometer_label)) },
-                    singleLine = true,
-                )
-                Text(stringResource(Res.string.garage_vehicle_type_label), color = Ink, fontWeight = FontWeight.SemiBold)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    VehicleType.entries.forEach { type ->
-                        FilterChip(
-                            selected = type == if (isEditing) state.editType else state.selectedType,
-                            onClick = {
-                                onEvent(
-                                    if (isEditing) {
-                                        VehicleFormEvent.EditTypeSelected(type)
-                                    } else {
-                                        VehicleFormEvent.TypeSelected(type)
-                                    },
-                                )
-                            },
-                            label = { Text(type.displayName()) },
-                        )
-                    }
-                }
-                VehiclePlanningFields(
-                    state = state,
-                    isEditing = isEditing,
-                    enabled = !mutationActive,
-                    onEvent = onEvent,
-                )
-                validationError?.let {
-                    Text(it.garageMessage(), color = MaterialTheme.colorScheme.error)
-                }
-                if (state.persistenceError) {
-                    Text(stringResource(Res.string.garage_vehicle_save_error), color = MaterialTheme.colorScheme.error)
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss, enabled = !mutationActive) {
-                        Text(stringResource(Res.string.garage_cancel_button))
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            onEvent(if (isEditing) VehicleFormEvent.SubmitVehicleEdit else VehicleFormEvent.SubmitVehicle)
-                        },
-                        enabled = !mutationActive && (!isEditing || state.isEditDirty),
-                    ) {
-                        if (mutationActive) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
-                            Spacer(Modifier.width(8.dp))
-                        }
-                        Text(
-                            if (isEditing) {
-                                stringResource(Res.string.garage_save_changes_button)
-                            } else {
-                                stringResource(Res.string.garage_add_vehicle_button)
-                            },
-                        )
-                    }
-                }
+    DesktopFormDialog(
+        title = windowTitle,
+        onDismissRequest = onDismiss,
+        dismissEnabled = !mutationActive,
+        actions = {
+            TextButton(onClick = onDismiss, enabled = !mutationActive) {
+                Text(stringResource(Res.string.garage_cancel_button))
             }
+            Spacer(Modifier.width(8.dp))
+            Button(
+                onClick = {
+                    onEvent(if (isEditing) VehicleFormEvent.SubmitVehicleEdit else VehicleFormEvent.SubmitVehicle)
+                },
+                enabled = !mutationActive && (!isEditing || state.isEditDirty),
+            ) {
+                if (mutationActive) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(
+                    if (isEditing) {
+                        stringResource(Res.string.garage_save_changes_button)
+                    } else {
+                        stringResource(Res.string.garage_add_vehicle_button)
+                    },
+                )
+            }
+        },
+    ) {
+        Text(
+            if (isEditing) {
+                stringResource(Res.string.garage_edit_vehicle_description_text)
+            } else {
+                stringResource(Res.string.garage_add_vehicle_description_text)
+            },
+            color = Muted,
+        )
+        OutlinedTextField(
+            value = if (isEditing) state.editName else state.name,
+            onValueChange = {
+                onEvent(if (isEditing) VehicleFormEvent.EditNameChanged(it) else VehicleFormEvent.NameChanged(it))
+            },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(Res.string.garage_vehicle_name_label)) },
+            singleLine = true,
+        )
+        if (isEditing) {
+            OutlinedTextField(
+                value = state.editLicensePlate,
+                onValueChange = { onEvent(VehicleFormEvent.EditLicensePlateChanged(it)) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(Res.string.garage_license_plate_label)) },
+                singleLine = true,
+            )
+        }
+        OutlinedTextField(
+            value = if (isEditing) state.editOdometerKm else state.odometerKm,
+            onValueChange = {
+                onEvent(if (isEditing) VehicleFormEvent.EditOdometerChanged(it) else VehicleFormEvent.OdometerChanged(it))
+            },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(Res.string.garage_current_odometer_label)) },
+            singleLine = true,
+        )
+        Text(stringResource(Res.string.garage_vehicle_type_label), color = Ink, fontWeight = FontWeight.SemiBold)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            VehicleType.entries.forEach { type ->
+                FilterChip(
+                    selected = type == if (isEditing) state.editType else state.selectedType,
+                    onClick = {
+                        onEvent(
+                            if (isEditing) {
+                                VehicleFormEvent.EditTypeSelected(type)
+                            } else {
+                                VehicleFormEvent.TypeSelected(type)
+                            },
+                        )
+                    },
+                    label = { Text(type.displayName()) },
+                )
+            }
+        }
+        VehiclePlanningFields(
+            state = state,
+            isEditing = isEditing,
+            enabled = !mutationActive,
+            onEvent = onEvent,
+        )
+        validationError?.let {
+            Text(it.garageMessage(), color = MaterialTheme.colorScheme.error)
+        }
+        if (state.persistenceError) {
+            Text(stringResource(Res.string.garage_vehicle_save_error), color = MaterialTheme.colorScheme.error)
         }
     }
 }

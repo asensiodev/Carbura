@@ -54,7 +54,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.DialogWindow
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
@@ -112,6 +111,8 @@ import com.asensiodev.carbura.desktop.resources.maintenance_retry_button
 import com.asensiodev.carbura.desktop.resources.maintenance_save_button
 import com.asensiodev.carbura.desktop.resources.maintenance_search_label
 import com.asensiodev.carbura.desktop.resources.maintenance_search_placeholder
+import com.asensiodev.carbura.desktop.resources.maintenance_select_vehicle_description
+import com.asensiodev.carbura.desktop.resources.maintenance_select_vehicle_title
 import com.asensiodev.carbura.desktop.resources.maintenance_type_custom
 import com.asensiodev.carbura.desktop.resources.maintenance_type_general_review
 import com.asensiodev.carbura.desktop.resources.maintenance_type_insurance
@@ -166,9 +167,11 @@ internal fun MaintenanceWorkspace(
     LaunchedEffect(overviewState.vehicles, overviewState.loadState, initialVehicleId) {
         if (overviewState.loadState == GarageLoadState.Loaded) {
             selectedVehicleId =
-                selectedVehicleId?.takeIf { id -> overviewState.vehicles.any { it.id == id } }
-                    ?: initialVehicleId?.takeIf { id -> overviewState.vehicles.any { it.id == id } }
-                    ?: overviewState.vehicles.firstOrNull()?.id
+                resolveMaintenanceVehicleSelection(
+                    currentVehicleId = selectedVehicleId,
+                    initialVehicleId = initialVehicleId,
+                    availableVehicleIds = overviewState.vehicles.mapTo(mutableSetOf()) { it.id },
+                )
         }
     }
 
@@ -208,7 +211,13 @@ internal fun MaintenanceWorkspace(
                             selectedVehicleId = selectedVehicleId,
                             onSelected = { selectedVehicleId = it },
                         )
-                        selectedVehicleId?.let { vehicleId ->
+                        val vehicleId = selectedVehicleId
+                        if (vehicleId == null) {
+                            MaintenanceMessagePanel(
+                                title = stringResource(Res.string.maintenance_select_vehicle_title),
+                                detail = stringResource(Res.string.maintenance_select_vehicle_description),
+                            )
+                        } else {
                             MaintenanceVehicleContent(
                                 vehicleId = vehicleId,
                                 familyId = familyId,
@@ -223,6 +232,14 @@ internal fun MaintenanceWorkspace(
         SnackbarHost(snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(20.dp))
     }
 }
+
+internal fun resolveMaintenanceVehicleSelection(
+    currentVehicleId: VehicleId?,
+    initialVehicleId: VehicleId?,
+    availableVehicleIds: Set<VehicleId>,
+): VehicleId? =
+    currentVehicleId?.takeIf(availableVehicleIds::contains)
+        ?: initialVehicleId?.takeIf(availableVehicleIds::contains)
 
 @Composable
 private fun MaintenanceHeader(
@@ -573,121 +590,111 @@ private fun MaintenanceFormDialog(
         stringResource(
             if (state.isEditing) Res.string.maintenance_edit_form_title else Res.string.maintenance_form_title,
         )
-    DialogWindow(onCloseRequest = onDismiss, title = dialogTitle) {
-        Surface(
-            modifier = Modifier.width(680.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = Color.White,
-            shadowElevation = 12.dp,
-        ) {
-            Column(modifier = Modifier.padding(28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text(
-                    dialogTitle,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Ink,
-                )
-                Text(stringResource(Res.string.maintenance_form_description), color = Muted)
-                Text(stringResource(Res.string.maintenance_type_label), color = Ink, fontWeight = FontWeight.SemiBold)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MaintenanceTypeCode.entries.forEach { type ->
-                        FilterChip(
-                            selected = state.maintenanceTypeCode == type,
-                            onClick = { onEvent(MaintenanceHistoryEvent.TypeSelected(type)) },
-                            label = { Text(type.localizedDisplayName()) },
-                        )
-                    }
-                }
-                if (state.maintenanceTypeCode == MaintenanceTypeCode.Custom) {
-                    OutlinedTextField(
-                        value = state.customTypeLabel,
-                        onValueChange = { onEvent(MaintenanceHistoryEvent.CustomTypeLabelChanged(it)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(Res.string.maintenance_custom_type_label)) },
-                        singleLine = true,
-                    )
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = state.performedOn,
-                        onValueChange = { onEvent(MaintenanceHistoryEvent.PerformedOnChanged(it)) },
-                        modifier = Modifier.weight(1f),
-                        label = { Text(stringResource(Res.string.maintenance_date_label)) },
-                        singleLine = true,
-                    )
-                    OutlinedTextField(
-                        value = state.odometerKm,
-                        onValueChange = { onEvent(MaintenanceHistoryEvent.OdometerChanged(it)) },
-                        modifier = Modifier.weight(1f),
-                        label = { Text(stringResource(Res.string.maintenance_odometer_label)) },
-                        singleLine = true,
-                    )
-                }
-                if (state.supportsNextDueDate) {
-                    OutlinedTextField(
-                        value = state.nextDueDate,
-                        onValueChange = { onEvent(MaintenanceHistoryEvent.NextDueDateChanged(it)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(Res.string.maintenance_next_due_label)) },
-                        singleLine = true,
-                    )
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = state.cost,
-                        onValueChange = { onEvent(MaintenanceHistoryEvent.CostChanged(it)) },
-                        modifier = Modifier.weight(1f),
-                        label = { Text(stringResource(Res.string.maintenance_cost_label)) },
-                        singleLine = true,
-                    )
-                    OutlinedTextField(
-                        value = state.workshop,
-                        onValueChange = { onEvent(MaintenanceHistoryEvent.WorkshopChanged(it)) },
-                        modifier = Modifier.weight(1f),
-                        label = { Text(stringResource(Res.string.maintenance_workshop_label)) },
-                        singleLine = true,
-                    )
-                }
-                OutlinedTextField(
-                    value = state.notes,
-                    onValueChange = { onEvent(MaintenanceHistoryEvent.NotesChanged(it)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(Res.string.maintenance_notes_label)) },
-                    minLines = 2,
-                    maxLines = 3,
-                )
-                state.validationError?.let { Text(it.localizedMaintenanceMessage(), color = MaterialTheme.colorScheme.error) }
-                if (state.persistenceError) {
-                    Text(stringResource(Res.string.maintenance_record_save_error), color = MaterialTheme.colorScheme.error)
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss, enabled = state.activeMutation == null) {
-                        Text(stringResource(Res.string.maintenance_cancel_button))
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            onEvent(
-                                if (state.isEditing) {
-                                    MaintenanceHistoryEvent.SubmitMaintenanceEdit
-                                } else {
-                                    MaintenanceHistoryEvent.SubmitMaintenance
-                                },
-                            )
-                        },
-                        enabled = state.activeMutation == null,
-                    ) {
-                        if (state.isSaving) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
-                            Spacer(Modifier.width(8.dp))
-                        }
-                        Text(
-                            stringResource(
-                                if (state.isEditing) Res.string.maintenance_update_button else Res.string.maintenance_save_button,
-                            ),
-                        )
-                    }
-                }
+    DesktopFormDialog(
+        title = dialogTitle,
+        onDismissRequest = onDismiss,
+        dismissEnabled = state.activeMutation == null,
+        actions = {
+            TextButton(onClick = onDismiss, enabled = state.activeMutation == null) {
+                Text(stringResource(Res.string.maintenance_cancel_button))
             }
+            Spacer(Modifier.width(8.dp))
+            Button(
+                onClick = {
+                    onEvent(
+                        if (state.isEditing) {
+                            MaintenanceHistoryEvent.SubmitMaintenanceEdit
+                        } else {
+                            MaintenanceHistoryEvent.SubmitMaintenance
+                        },
+                    )
+                },
+                enabled = state.activeMutation == null,
+            ) {
+                if (state.isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(
+                    stringResource(
+                        if (state.isEditing) Res.string.maintenance_update_button else Res.string.maintenance_save_button,
+                    ),
+                )
+            }
+        },
+    ) {
+        Text(stringResource(Res.string.maintenance_form_description), color = Muted)
+        Text(stringResource(Res.string.maintenance_type_label), color = Ink, fontWeight = FontWeight.SemiBold)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            MaintenanceTypeCode.entries.forEach { type ->
+                FilterChip(
+                    selected = state.maintenanceTypeCode == type,
+                    onClick = { onEvent(MaintenanceHistoryEvent.TypeSelected(type)) },
+                    label = { Text(type.localizedDisplayName()) },
+                )
+            }
+        }
+        if (state.maintenanceTypeCode == MaintenanceTypeCode.Custom) {
+            OutlinedTextField(
+                value = state.customTypeLabel,
+                onValueChange = { onEvent(MaintenanceHistoryEvent.CustomTypeLabelChanged(it)) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(Res.string.maintenance_custom_type_label)) },
+                singleLine = true,
+            )
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(
+                value = state.performedOn,
+                onValueChange = { onEvent(MaintenanceHistoryEvent.PerformedOnChanged(it)) },
+                modifier = Modifier.weight(1f),
+                label = { Text(stringResource(Res.string.maintenance_date_label)) },
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = state.odometerKm,
+                onValueChange = { onEvent(MaintenanceHistoryEvent.OdometerChanged(it)) },
+                modifier = Modifier.weight(1f),
+                label = { Text(stringResource(Res.string.maintenance_odometer_label)) },
+                singleLine = true,
+            )
+        }
+        if (state.supportsNextDueDate) {
+            OutlinedTextField(
+                value = state.nextDueDate,
+                onValueChange = { onEvent(MaintenanceHistoryEvent.NextDueDateChanged(it)) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(Res.string.maintenance_next_due_label)) },
+                singleLine = true,
+            )
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(
+                value = state.cost,
+                onValueChange = { onEvent(MaintenanceHistoryEvent.CostChanged(it)) },
+                modifier = Modifier.weight(1f),
+                label = { Text(stringResource(Res.string.maintenance_cost_label)) },
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = state.workshop,
+                onValueChange = { onEvent(MaintenanceHistoryEvent.WorkshopChanged(it)) },
+                modifier = Modifier.weight(1f),
+                label = { Text(stringResource(Res.string.maintenance_workshop_label)) },
+                singleLine = true,
+            )
+        }
+        OutlinedTextField(
+            value = state.notes,
+            onValueChange = { onEvent(MaintenanceHistoryEvent.NotesChanged(it)) },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(Res.string.maintenance_notes_label)) },
+            minLines = 2,
+            maxLines = 3,
+        )
+        state.validationError?.let { Text(it.localizedMaintenanceMessage(), color = MaterialTheme.colorScheme.error) }
+        if (state.persistenceError) {
+            Text(stringResource(Res.string.maintenance_record_save_error), color = MaterialTheme.colorScheme.error)
         }
     }
 }

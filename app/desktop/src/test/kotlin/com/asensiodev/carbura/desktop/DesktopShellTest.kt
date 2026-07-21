@@ -3,6 +3,7 @@ package com.asensiodev.carbura.desktop
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.desktop.resources.Res
 import com.asensiodev.carbura.desktop.resources.account_action_unsupported
+import com.asensiodev.carbura.desktop.resources.maintenance_select_vehicle_title
 import com.asensiodev.carbura.desktop.resources.shell_account_description
 import com.asensiodev.carbura.desktop.resources.shell_account_eyebrow
 import com.asensiodev.carbura.desktop.resources.shell_account_headline
@@ -17,6 +18,7 @@ import org.jetbrains.compose.resources.getString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DesktopShellTest {
@@ -50,11 +52,32 @@ class DesktopShellTest {
     fun desktopResourcesResolveSpanishCopyAndFormatArguments() =
         runTest {
             assertEquals("Garaje", getString(Res.string.shell_destination_garage))
+            assertEquals("Selecciona un vehículo", getString(Res.string.maintenance_select_vehicle_title))
             assertEquals(
                 "Carpeta de datos no es compatible con este sistema.",
                 getString(Res.string.account_action_unsupported, "Carpeta de datos"),
             )
         }
+
+    @Test
+    fun sidebarMaintenanceNavigationClearsRoutedVehicleContext() {
+        val vehicleId = VehicleId("vehicle-route")
+
+        assertNull(maintenanceVehicleAfterSidebarNavigation(DesktopDestination.Maintenance, vehicleId))
+        assertEquals(vehicleId, maintenanceVehicleAfterSidebarNavigation(DesktopDestination.Garage, vehicleId))
+    }
+
+    @Test
+    fun maintenanceSelectionRequiresCurrentOrRoutedVehicleContext() {
+        val currentVehicleId = VehicleId("vehicle-current")
+        val routedVehicleId = VehicleId("vehicle-routed")
+        val availableVehicleIds = setOf(currentVehicleId, routedVehicleId)
+
+        assertNull(resolveMaintenanceVehicleSelection(null, null, availableVehicleIds))
+        assertEquals(routedVehicleId, resolveMaintenanceVehicleSelection(null, routedVehicleId, availableVehicleIds))
+        assertEquals(currentVehicleId, resolveMaintenanceVehicleSelection(currentVehicleId, routedVehicleId, availableVehicleIds))
+        assertNull(resolveMaintenanceVehicleSelection(VehicleId("missing"), null, availableVehicleIds))
+    }
 
     @Test
     fun reminderGarageRequestTargetsGarageInTheExistingShell() {

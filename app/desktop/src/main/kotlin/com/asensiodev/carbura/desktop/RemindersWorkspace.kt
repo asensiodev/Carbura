@@ -58,7 +58,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.DialogWindow
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.Vehicle
@@ -84,7 +83,6 @@ import com.asensiodev.carbura.desktop.resources.reminders_empty_description
 import com.asensiodev.carbura.desktop.resources.reminders_empty_title
 import com.asensiodev.carbura.desktop.resources.reminders_form_description
 import com.asensiodev.carbura.desktop.resources.reminders_form_title
-import com.asensiodev.carbura.desktop.resources.reminders_form_window_title
 import com.asensiodev.carbura.desktop.resources.reminders_go_to_garage
 import com.asensiodev.carbura.desktop.resources.reminders_header_eyebrow
 import com.asensiodev.carbura.desktop.resources.reminders_header_title
@@ -507,89 +505,80 @@ private fun ReminderFormDialog(
     val isSaving = state.activeAction == ReminderAction.Create
     var vehicleMenuExpanded by remember { mutableStateOf(false) }
     val selectedVehicle = state.vehicles.firstOrNull { it.id == state.selectedVehicleId }
-    DialogWindow(
-        onCloseRequest = { if (!isSaving) onDismiss() },
-        title = stringResource(Res.string.reminders_form_window_title),
-    ) {
-        Surface(
-            modifier = Modifier.width(580.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = Color.White,
-            shadowElevation = 12.dp,
-        ) {
-            Column(modifier = Modifier.padding(28.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                Text(stringResource(Res.string.reminders_form_title), style = MaterialTheme.typography.headlineMedium, color = Ink)
-                Text(stringResource(Res.string.reminders_form_description), color = Muted)
-                OutlinedTextField(
-                    value = state.title,
-                    onValueChange = { onEvent(RemindersEvent.TitleChanged(it)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(Res.string.reminders_title_label)) },
-                    singleLine = true,
-                )
-                ExposedDropdownMenuBox(
-                    expanded = vehicleMenuExpanded,
-                    onExpandedChange = { vehicleMenuExpanded = it },
-                ) {
-                    OutlinedTextField(
-                        value = selectedVehicle?.name.orEmpty(),
-                        onValueChange = {},
-                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
-                        readOnly = true,
-                        label = { Text(stringResource(Res.string.reminders_vehicle_label)) },
-                        placeholder = { Text(stringResource(Res.string.reminders_vehicle_placeholder)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = vehicleMenuExpanded) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                    )
-                    ExposedDropdownMenu(
-                        expanded = vehicleMenuExpanded,
-                        onDismissRequest = { vehicleMenuExpanded = false },
-                    ) {
-                        state.vehicles.forEach { vehicle ->
-                            DropdownMenuItem(
-                                text = { Text(vehicle.name) },
-                                onClick = {
-                                    onEvent(RemindersEvent.VehicleSelected(vehicle.id))
-                                    vehicleMenuExpanded = false
-                                },
-                            )
-                        }
-                    }
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = state.dueDate,
-                        onValueChange = { onEvent(RemindersEvent.DueDateChanged(it)) },
-                        modifier = Modifier.weight(1f),
-                        label = { Text(stringResource(Res.string.reminders_due_date_label)) },
-                        singleLine = true,
-                    )
-                    OutlinedTextField(
-                        value = state.dueOdometerKm,
-                        onValueChange = { onEvent(RemindersEvent.DueOdometerChanged(it)) },
-                        modifier = Modifier.weight(1f),
-                        label = { Text(stringResource(Res.string.reminders_due_odometer_label)) },
-                        singleLine = true,
-                    )
-                }
-                state.errorMessage?.let { Text(it.remindersMessage(), color = MaterialTheme.colorScheme.error) }
-                if (state.hasPersistenceError) {
-                    Text(stringResource(Res.string.reminders_save_error), color = MaterialTheme.colorScheme.error)
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss, enabled = !isSaving) {
-                        Text(stringResource(Res.string.reminders_cancel))
-                    }
+    DesktopFormDialog(
+        title = stringResource(Res.string.reminders_form_title),
+        onDismissRequest = onDismiss,
+        dismissEnabled = !isSaving,
+        actions = {
+            TextButton(onClick = onDismiss, enabled = !isSaving) {
+                Text(stringResource(Res.string.reminders_cancel))
+            }
+            Spacer(Modifier.width(8.dp))
+            Button(onClick = { onEvent(RemindersEvent.SubmitReminder) }, enabled = !isSaving) {
+                if (isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
                     Spacer(Modifier.width(8.dp))
-                    Button(onClick = { onEvent(RemindersEvent.SubmitReminder) }, enabled = !isSaving) {
-                        if (isSaving) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
-                            Spacer(Modifier.width(8.dp))
-                        }
-                        Text(stringResource(Res.string.reminders_add))
-                    }
+                }
+                Text(stringResource(Res.string.reminders_add))
+            }
+        },
+    ) {
+        Text(stringResource(Res.string.reminders_form_description), color = Muted)
+        OutlinedTextField(
+            value = state.title,
+            onValueChange = { onEvent(RemindersEvent.TitleChanged(it)) },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(Res.string.reminders_title_label)) },
+            singleLine = true,
+        )
+        ExposedDropdownMenuBox(
+            expanded = vehicleMenuExpanded,
+            onExpandedChange = { vehicleMenuExpanded = it },
+        ) {
+            OutlinedTextField(
+                value = selectedVehicle?.name.orEmpty(),
+                onValueChange = {},
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+                readOnly = true,
+                label = { Text(stringResource(Res.string.reminders_vehicle_label)) },
+                placeholder = { Text(stringResource(Res.string.reminders_vehicle_placeholder)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = vehicleMenuExpanded) },
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            )
+            ExposedDropdownMenu(
+                expanded = vehicleMenuExpanded,
+                onDismissRequest = { vehicleMenuExpanded = false },
+            ) {
+                state.vehicles.forEach { vehicle ->
+                    DropdownMenuItem(
+                        text = { Text(vehicle.name) },
+                        onClick = {
+                            onEvent(RemindersEvent.VehicleSelected(vehicle.id))
+                            vehicleMenuExpanded = false
+                        },
+                    )
                 }
             }
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(
+                value = state.dueDate,
+                onValueChange = { onEvent(RemindersEvent.DueDateChanged(it)) },
+                modifier = Modifier.weight(1f),
+                label = { Text(stringResource(Res.string.reminders_due_date_label)) },
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = state.dueOdometerKm,
+                onValueChange = { onEvent(RemindersEvent.DueOdometerChanged(it)) },
+                modifier = Modifier.weight(1f),
+                label = { Text(stringResource(Res.string.reminders_due_odometer_label)) },
+                singleLine = true,
+            )
+        }
+        state.errorMessage?.let { Text(it.remindersMessage(), color = MaterialTheme.colorScheme.error) }
+        if (state.hasPersistenceError) {
+            Text(stringResource(Res.string.reminders_save_error), color = MaterialTheme.colorScheme.error)
         }
     }
 }

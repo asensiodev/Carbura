@@ -4,6 +4,8 @@
     <string name="maintenance_header_subtitle">Todos los mantenimientos, en una sola cronología.</string>
     <string name="maintenance_header_history_for">Historial de %1$s</string>
     <string name="maintenance_header_select_vehicle">Selecciona un vehículo</string>
+    <string name="maintenance_select_vehicle_title">Selecciona un vehículo</string>
+    <string name="maintenance_select_vehicle_description">Elige el vehículo cuyo historial de mantenimiento quieres consultar o actualizar.</string>
     <string name="maintenance_reminders_unavailable">Recordatorios guardados localmente; avisos nativos no disponibles</string>
     <string name="maintenance_loading_vehicles">Cargando vehículos...</string>
     <string name="maintenance_vehicles_load_error_title">No se pudieron cargar los vehículos</string>

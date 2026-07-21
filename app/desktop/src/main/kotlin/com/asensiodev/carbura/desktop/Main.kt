@@ -129,7 +129,10 @@ private fun DesktopShell(compact: Boolean) {
         DesktopNavigation(
             compact = compact,
             selected = destination,
-            onSelected = { destination = it },
+            onSelected = {
+                selectedMaintenanceVehicleId = maintenanceVehicleAfterSidebarNavigation(it, selectedMaintenanceVehicleId)
+                destination = it
+            },
         )
         DestinationContent(
             destination = destination,
@@ -144,6 +147,11 @@ private fun DesktopShell(compact: Boolean) {
         )
     }
 }
+
+internal fun maintenanceVehicleAfterSidebarNavigation(
+    destination: DesktopDestination,
+    currentVehicleId: VehicleId?,
+): VehicleId? = if (destination == DesktopDestination.Maintenance) null else currentVehicleId
 
 @Composable
 private fun DesktopNavigation(
