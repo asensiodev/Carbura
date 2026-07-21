@@ -46,9 +46,15 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.asensiodev.carbura.core.data.dataModule
 import com.asensiodev.carbura.core.model.VehicleId
+import com.asensiodev.carbura.desktop.resources.Res
+import com.asensiodev.carbura.desktop.resources.shell_app_name
+import com.asensiodev.carbura.desktop.resources.shell_brand
+import com.asensiodev.carbura.desktop.resources.shell_desktop_preview
+import com.asensiodev.carbura.desktop.resources.shell_supported_systems
 import com.asensiodev.carbura.feature.garage.di.garageModule
 import com.asensiodev.carbura.feature.maintenance.di.maintenanceModule
 import com.asensiodev.carbura.feature.reminders.di.remindersModule
+import org.jetbrains.compose.resources.stringResource
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 
@@ -65,13 +71,14 @@ fun main() {
     startKoin { modules(dataModule, garageModule, maintenanceModule, remindersModule, desktopLocalModeModule) }
     application {
         val windowState = rememberWindowState(size = DpSize(1180.dp, 760.dp))
+        val appName = stringResource(Res.string.shell_app_name)
         Window(
             onCloseRequest = {
                 stopKoin()
                 exitApplication()
             },
             state = windowState,
-            title = "Carbura",
+            title = appName,
         ) {
             CarburaDesktopApp(windowWidthDp = with(LocalDensity.current) { window.width.toDp().value })
         }
@@ -166,18 +173,19 @@ private fun DesktopNavigation(
             }
             if (!compact) {
                 Spacer(Modifier.width(12.dp))
-                Text("CARBURA", color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+                Text(stringResource(Res.string.shell_brand), color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
             }
         }
         Spacer(Modifier.height(48.dp))
         DesktopDestination.entries.forEach { item ->
+            val label = stringResource(item.label)
             NavigationRailItem(
                 selected = selected == item,
                 onClick = { onSelected(item) },
                 icon = {
                     Icon(
                         imageVector = destinationIcon(item),
-                        contentDescription = item.label,
+                        contentDescription = label,
                         tint = if (selected == item) Navy else Color(0xFFBCD0E8),
                     )
                 },
@@ -185,16 +193,16 @@ private fun DesktopNavigation(
                     if (compact) {
                         null
                     } else {
-                        { Text(item.label, color = Color.White) }
+                        { Text(label, color = Color.White) }
                     },
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             )
         }
         Spacer(Modifier.weight(1f))
         if (!compact) {
-            Text("DESKTOP PREVIEW", color = Color(0xFF9EB7D5), fontSize = 11.sp, letterSpacing = 1.2.sp)
+            Text(stringResource(Res.string.shell_desktop_preview), color = Color(0xFF9EB7D5), fontSize = 11.sp, letterSpacing = 1.2.sp)
             Spacer(Modifier.height(6.dp))
-            Text("macOS + Windows", color = Color.White, fontSize = 13.sp)
+            Text(stringResource(Res.string.shell_supported_systems), color = Color.White, fontSize = 13.sp)
         }
     }
 }

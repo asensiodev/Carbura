@@ -42,7 +42,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.asensiodev.carbura.core.data.desktopDataDirectory
 import com.asensiodev.carbura.core.data.desktopDatabasePath
+import com.asensiodev.carbura.desktop.resources.Res
+import com.asensiodev.carbura.desktop.resources.account_action_failed
+import com.asensiodev.carbura.desktop.resources.account_action_unsupported
+import com.asensiodev.carbura.desktop.resources.account_application_data_label
+import com.asensiodev.carbura.desktop.resources.account_data_folder_action
+import com.asensiodev.carbura.desktop.resources.account_data_folder_action_name
+import com.asensiodev.carbura.desktop.resources.account_database_label
+import com.asensiodev.carbura.desktop.resources.account_header_description
+import com.asensiodev.carbura.desktop.resources.account_header_eyebrow
+import com.asensiodev.carbura.desktop.resources.account_header_title
+import com.asensiodev.carbura.desktop.resources.account_local_mode_available
+import com.asensiodev.carbura.desktop.resources.account_local_mode_description
+import com.asensiodev.carbura.desktop.resources.account_local_mode_title
+import com.asensiodev.carbura.desktop.resources.account_project_action
+import com.asensiodev.carbura.desktop.resources.account_project_action_name
+import com.asensiodev.carbura.desktop.resources.account_project_description
+import com.asensiodev.carbura.desktop.resources.account_project_title
+import com.asensiodev.carbura.desktop.resources.account_storage_description
+import com.asensiodev.carbura.desktop.resources.account_storage_title
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import java.net.URI
 import java.nio.file.Path
 
@@ -58,8 +78,17 @@ internal fun AccountWorkspace(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val unsupportedActionMessage = stringResource(Res.string.account_action_unsupported)
+    val failedActionMessage = stringResource(Res.string.account_action_failed)
+    val projectActionName = stringResource(Res.string.account_project_action_name)
     val reportFailure: (String, DesktopActionResult) -> Unit = { action, result ->
-        desktopActionFailureMessage(action, result)?.let { message ->
+        if (result.shouldReportFailure()) {
+            val message =
+                when (result) {
+                    DesktopActionResult.Unsupported -> unsupportedActionMessage.format(action)
+                    DesktopActionResult.Failed -> failedActionMessage.format(action)
+                    DesktopActionResult.Success -> error("A successful action must not report a failure")
+                }
             scope.launch { snackbarHostState.showSnackbar(message) }
         }
     }
@@ -77,10 +106,16 @@ internal fun AccountWorkspace(
                     .padding(if (compact) 28.dp else 48.dp),
             verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
-            Text("LOCAL ACCOUNT", color = Blue, fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 1.6.sp)
-            Text("Your data, on this device.", style = MaterialTheme.typography.displaySmall, color = Ink)
             Text(
-                "Carbura Desktop currently works without sign-in. Vehicles, maintenance and reminders stay in local storage.",
+                stringResource(Res.string.account_header_eyebrow),
+                color = Blue,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                letterSpacing = 1.6.sp,
+            )
+            Text(stringResource(Res.string.account_header_title), style = MaterialTheme.typography.displaySmall, color = Ink)
+            Text(
+                stringResource(Res.string.account_header_description),
                 color = Muted,
                 style = MaterialTheme.typography.bodyLarge,
             )
@@ -105,16 +140,21 @@ internal fun AccountWorkspace(
                 ) {
                     WorkspaceIcon(Icons.AutoMirrored.Filled.OpenInNew)
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Carbura Desktop", color = Ink, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(stringResource(Res.string.account_project_title), color = Ink, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Spacer(Modifier.height(4.dp))
-                        Text("View the source project, documentation and release history.", color = Muted)
+                        Text(stringResource(Res.string.account_project_description), color = Muted)
                     }
                     OutlinedButton(
-                        onClick = { reportFailure("Project website", openAccountProject(platformActions)) },
+                        onClick = {
+                            reportFailure(
+                                projectActionName,
+                                openAccountProject(platformActions),
+                            )
+                        },
                     ) {
                         Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Open project")
+                        Text(stringResource(Res.string.account_project_action))
                     }
                 }
             }
@@ -126,11 +166,11 @@ internal fun AccountWorkspace(
 private fun LocalModeCard(modifier: Modifier) {
     AccountCard(modifier) {
         WorkspaceIcon(Icons.Default.CloudOff)
-        Text("Local mode", color = Ink, fontWeight = FontWeight.Bold, fontSize = 19.sp)
-        Text("No account is connected and cloud synchronization is not active on Desktop.", color = Muted)
+        Text(stringResource(Res.string.account_local_mode_title), color = Ink, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+        Text(stringResource(Res.string.account_local_mode_description), color = Muted)
         Surface(color = Color(0xFFE6F3EF), shape = RoundedCornerShape(12.dp)) {
             Text(
-                "Your local workflows remain fully available.",
+                stringResource(Res.string.account_local_mode_available),
                 color = Success,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                 fontWeight = FontWeight.SemiBold,
@@ -147,22 +187,28 @@ private fun StorageCard(
     reportFailure: (String, DesktopActionResult) -> Unit,
     modifier: Modifier,
 ) {
+    val dataFolderActionName = stringResource(Res.string.account_data_folder_action_name)
     AccountCard(modifier) {
         WorkspaceIcon(Icons.Default.Storage)
-        Text("Local storage", color = Ink, fontWeight = FontWeight.Bold, fontSize = 19.sp)
-        PathLabel("Application data", dataDirectory)
-        PathLabel("Database", databasePath)
+        Text(stringResource(Res.string.account_storage_title), color = Ink, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+        PathLabel(stringResource(Res.string.account_application_data_label), dataDirectory)
+        PathLabel(stringResource(Res.string.account_database_label), databasePath)
         Text(
-            "Carbura manages this database. Close the app before making an external backup.",
+            stringResource(Res.string.account_storage_description),
             color = Muted,
             style = MaterialTheme.typography.bodySmall,
         )
         Button(
-            onClick = { reportFailure("Data folder", openAccountDataDirectory(platformActions, dataDirectory)) },
+            onClick = {
+                reportFailure(
+                    dataFolderActionName,
+                    openAccountDataDirectory(platformActions, dataDirectory),
+                )
+            },
         ) {
             Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Open data folder")
+            Text(stringResource(Res.string.account_data_folder_action))
         }
     }
 }

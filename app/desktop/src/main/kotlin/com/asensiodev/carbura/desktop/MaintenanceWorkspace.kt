@@ -60,6 +60,76 @@ import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
+import com.asensiodev.carbura.core.stringresources.CarburaString
+import com.asensiodev.carbura.desktop.resources.Res
+import com.asensiodev.carbura.desktop.resources.maintenance_add_button
+import com.asensiodev.carbura.desktop.resources.maintenance_add_vehicle_description
+import com.asensiodev.carbura.desktop.resources.maintenance_add_vehicle_title
+import com.asensiodev.carbura.desktop.resources.maintenance_cancel_button
+import com.asensiodev.carbura.desktop.resources.maintenance_clear_search_button
+import com.asensiodev.carbura.desktop.resources.maintenance_clear_search_content_description
+import com.asensiodev.carbura.desktop.resources.maintenance_cost_label
+import com.asensiodev.carbura.desktop.resources.maintenance_cost_value
+import com.asensiodev.carbura.desktop.resources.maintenance_created_message
+import com.asensiodev.carbura.desktop.resources.maintenance_custom_type_label
+import com.asensiodev.carbura.desktop.resources.maintenance_date_label
+import com.asensiodev.carbura.desktop.resources.maintenance_delete_content_description
+import com.asensiodev.carbura.desktop.resources.maintenance_delete_dialog_description
+import com.asensiodev.carbura.desktop.resources.maintenance_delete_dialog_title
+import com.asensiodev.carbura.desktop.resources.maintenance_delete_record_button
+import com.asensiodev.carbura.desktop.resources.maintenance_deleted_message
+import com.asensiodev.carbura.desktop.resources.maintenance_edit_content_description
+import com.asensiodev.carbura.desktop.resources.maintenance_edit_form_title
+import com.asensiodev.carbura.desktop.resources.maintenance_empty_description
+import com.asensiodev.carbura.desktop.resources.maintenance_empty_title
+import com.asensiodev.carbura.desktop.resources.maintenance_form_description
+import com.asensiodev.carbura.desktop.resources.maintenance_form_title
+import com.asensiodev.carbura.desktop.resources.maintenance_future_reminder_confirm
+import com.asensiodev.carbura.desktop.resources.maintenance_future_reminder_description
+import com.asensiodev.carbura.desktop.resources.maintenance_future_reminder_save_only
+import com.asensiodev.carbura.desktop.resources.maintenance_future_reminder_title
+import com.asensiodev.carbura.desktop.resources.maintenance_header_history_for
+import com.asensiodev.carbura.desktop.resources.maintenance_header_kicker
+import com.asensiodev.carbura.desktop.resources.maintenance_header_select_vehicle
+import com.asensiodev.carbura.desktop.resources.maintenance_header_subtitle
+import com.asensiodev.carbura.desktop.resources.maintenance_history_load_error_description
+import com.asensiodev.carbura.desktop.resources.maintenance_history_load_error_title
+import com.asensiodev.carbura.desktop.resources.maintenance_loading_history
+import com.asensiodev.carbura.desktop.resources.maintenance_loading_vehicles
+import com.asensiodev.carbura.desktop.resources.maintenance_next_due_label
+import com.asensiodev.carbura.desktop.resources.maintenance_next_due_value
+import com.asensiodev.carbura.desktop.resources.maintenance_no_search_results_description
+import com.asensiodev.carbura.desktop.resources.maintenance_no_search_results_title
+import com.asensiodev.carbura.desktop.resources.maintenance_notes_label
+import com.asensiodev.carbura.desktop.resources.maintenance_odometer_label
+import com.asensiodev.carbura.desktop.resources.maintenance_odometer_value
+import com.asensiodev.carbura.desktop.resources.maintenance_performed_value
+import com.asensiodev.carbura.desktop.resources.maintenance_persistence_error
+import com.asensiodev.carbura.desktop.resources.maintenance_record_save_error
+import com.asensiodev.carbura.desktop.resources.maintenance_reminder_created_message
+import com.asensiodev.carbura.desktop.resources.maintenance_reminders_unavailable
+import com.asensiodev.carbura.desktop.resources.maintenance_retry_button
+import com.asensiodev.carbura.desktop.resources.maintenance_save_button
+import com.asensiodev.carbura.desktop.resources.maintenance_search_label
+import com.asensiodev.carbura.desktop.resources.maintenance_search_placeholder
+import com.asensiodev.carbura.desktop.resources.maintenance_type_custom
+import com.asensiodev.carbura.desktop.resources.maintenance_type_general_review
+import com.asensiodev.carbura.desktop.resources.maintenance_type_insurance
+import com.asensiodev.carbura.desktop.resources.maintenance_type_itv
+import com.asensiodev.carbura.desktop.resources.maintenance_type_label
+import com.asensiodev.carbura.desktop.resources.maintenance_type_oil_change
+import com.asensiodev.carbura.desktop.resources.maintenance_type_repair
+import com.asensiodev.carbura.desktop.resources.maintenance_type_tires
+import com.asensiodev.carbura.desktop.resources.maintenance_update_button
+import com.asensiodev.carbura.desktop.resources.maintenance_updated_message
+import com.asensiodev.carbura.desktop.resources.maintenance_validation_blank_type
+import com.asensiodev.carbura.desktop.resources.maintenance_validation_generic
+import com.asensiodev.carbura.desktop.resources.maintenance_validation_invalid_date
+import com.asensiodev.carbura.desktop.resources.maintenance_validation_negative_cost
+import com.asensiodev.carbura.desktop.resources.maintenance_validation_negative_odometer
+import com.asensiodev.carbura.desktop.resources.maintenance_vehicles_load_error_description
+import com.asensiodev.carbura.desktop.resources.maintenance_vehicles_load_error_title
+import com.asensiodev.carbura.desktop.resources.maintenance_workshop_label
 import com.asensiodev.carbura.feature.garage.presentation.overview.GarageLoadState
 import com.asensiodev.carbura.feature.garage.presentation.overview.GarageOverviewEvent
 import com.asensiodev.carbura.feature.garage.presentation.overview.GarageOverviewViewModel
@@ -69,6 +139,7 @@ import com.asensiodev.carbura.feature.maintenance.presentation.MaintenanceHistor
 import com.asensiodev.carbura.feature.maintenance.presentation.MaintenanceHistoryViewModel
 import com.asensiodev.carbura.feature.maintenance.presentation.MaintenanceLoadState
 import com.asensiodev.carbura.feature.maintenance.presentation.MaintenanceMutation
+import org.jetbrains.compose.resources.stringResource
 import org.koin.core.context.GlobalContext
 import org.koin.core.parameter.parametersOf
 import java.util.Locale
@@ -111,20 +182,24 @@ internal fun MaintenanceWorkspace(
                 compact = compact,
             )
             when (overviewState.loadState) {
-                GarageLoadState.Loading -> MaintenanceMessagePanel("Loading vehicles...", showProgress = true)
+                GarageLoadState.Loading ->
+                    MaintenanceMessagePanel(
+                        stringResource(Res.string.maintenance_loading_vehicles),
+                        showProgress = true,
+                    )
                 GarageLoadState.Error ->
                     MaintenanceMessagePanel(
-                        title = "Vehicles could not be loaded",
-                        detail = "Your local data is unchanged. Try opening Maintenance again.",
-                        actionLabel = "Retry",
+                        title = stringResource(Res.string.maintenance_vehicles_load_error_title),
+                        detail = stringResource(Res.string.maintenance_vehicles_load_error_description),
+                        actionLabel = stringResource(Res.string.maintenance_retry_button),
                         onAction = { overviewViewModel.onEvent(GarageOverviewEvent.Retry) },
                     )
                 GarageLoadState.Loaded -> {
                     if (overviewState.vehicles.isEmpty()) {
                         MaintenanceMessagePanel(
-                            title = "Add a vehicle first",
-                            detail = "Maintenance history needs a vehicle to organize its records.",
-                            actionLabel = "Go to Garage",
+                            title = stringResource(Res.string.maintenance_add_vehicle_title),
+                            detail = stringResource(Res.string.maintenance_add_vehicle_description),
+                            actionLabel = stringResource(Res.string.maintenance_add_button),
                             onAction = onNavigateToGarage,
                         )
                     } else {
@@ -156,11 +231,21 @@ private fun MaintenanceHeader(
 ) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
         Column(modifier = Modifier.weight(1f)) {
-            Text("SERVICE LOG", color = Blue, fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 1.6.sp)
+            Text(
+                stringResource(Res.string.maintenance_header_kicker),
+                color = Blue,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                letterSpacing = 1.6.sp,
+            )
             Spacer(Modifier.height(8.dp))
-            Text("Every service, in one timeline.", style = MaterialTheme.typography.displaySmall, color = Ink)
+            Text(stringResource(Res.string.maintenance_header_subtitle), style = MaterialTheme.typography.displaySmall, color = Ink)
             Spacer(Modifier.height(6.dp))
-            Text(selectedVehicle?.let { "History for ${it.name}" } ?: "Choose a vehicle", color = Muted)
+            Text(
+                selectedVehicle?.let { stringResource(Res.string.maintenance_header_history_for, it.name) }
+                    ?: stringResource(Res.string.maintenance_header_select_vehicle),
+                color = Muted,
+            )
         }
         if (!compact) {
             Surface(color = PaleBlue, shape = RoundedCornerShape(14.dp)) {
@@ -170,7 +255,7 @@ private fun MaintenanceHeader(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(Icons.Default.NotificationsOff, contentDescription = null, tint = Blue, modifier = Modifier.size(18.dp))
-                    Text("Reminders stored locally; native alerts unavailable", color = Muted, fontSize = 12.sp)
+                    Text(stringResource(Res.string.maintenance_reminders_unavailable), color = Muted, fontSize = 12.sp)
                 }
             }
         }
@@ -208,6 +293,11 @@ private fun MaintenanceVehicleContent(
     val state by viewModel.uiState.collectAsState()
     var showForm by remember(vehicleId) { mutableStateOf(false) }
     var pendingDeletion by remember(vehicleId) { mutableStateOf<MaintenanceRecord?>(null) }
+    val typeNames = MaintenanceTypeCode.entries.associateWith { it.localizedDisplayName() }
+    val createdMessage = stringResource(Res.string.maintenance_created_message)
+    val reminderCreatedMessage = stringResource(Res.string.maintenance_reminder_created_message)
+    val deletedMessage = stringResource(Res.string.maintenance_deleted_message)
+    val updatedMessage = stringResource(Res.string.maintenance_updated_message)
 
     LaunchedEffect(viewModel) {
         viewModel.onEvent(MaintenanceHistoryEvent.Started)
@@ -215,16 +305,17 @@ private fun MaintenanceVehicleContent(
             when (effect) {
                 is MaintenanceHistoryEffect.MaintenanceCreated -> {
                     showForm = false
-                    val type = effect.typeCode.displayName(effect.customTypeLabel)
-                    val reminder = if (effect.reminderCreated) " Reminder stored in Carbura." else ""
-                    snackbarHostState.showSnackbar("$type added.$reminder")
+                    val type = effect.typeCode.displayName(typeNames, effect.customTypeLabel)
+                    snackbarHostState.showSnackbar(
+                        if (effect.reminderCreated) reminderCreatedMessage.format(type) else createdMessage.format(type),
+                    )
                 }
                 is MaintenanceHistoryEffect.MaintenanceDeleted -> {
-                    snackbarHostState.showSnackbar("${effect.typeCode.displayName(effect.customTypeLabel)} deleted")
+                    snackbarHostState.showSnackbar(deletedMessage.format(effect.typeCode.displayName(typeNames, effect.customTypeLabel)))
                 }
                 is MaintenanceHistoryEffect.MaintenanceUpdated -> {
                     showForm = false
-                    snackbarHostState.showSnackbar("${effect.typeCode.displayName(effect.customTypeLabel)} updated")
+                    snackbarHostState.showSnackbar(updatedMessage.format(effect.typeCode.displayName(typeNames, effect.customTypeLabel)))
                 }
                 is MaintenanceHistoryEffect.ValidationFailed -> Unit
             }
@@ -243,14 +334,17 @@ private fun MaintenanceVehicleContent(
                         value = state.searchQuery,
                         onValueChange = { viewModel.onEvent(MaintenanceHistoryEvent.SearchQueryChanged(it)) },
                         modifier = Modifier.weight(1f),
-                        label = { Text("Search history") },
-                        placeholder = { Text("Type, workshop, notes or date") },
+                        label = { Text(stringResource(Res.string.maintenance_search_label)) },
+                        placeholder = { Text(stringResource(Res.string.maintenance_search_placeholder)) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         trailingIcon =
                             if (state.searchQuery.isNotEmpty()) {
                                 {
                                     IconButton(onClick = { viewModel.onEvent(MaintenanceHistoryEvent.SearchCleared) }) {
-                                        Icon(Icons.Default.Close, contentDescription = "Clear maintenance search")
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = stringResource(Res.string.maintenance_clear_search_content_description),
+                                        )
                                     }
                                 }
                             } else {
@@ -264,14 +358,14 @@ private fun MaintenanceVehicleContent(
                 Button(onClick = { showForm = true }, enabled = state.activeMutation == null) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Add maintenance")
+                    Text(stringResource(Res.string.maintenance_form_title))
                 }
             }
         }
         if (state.persistenceError) {
             Surface(color = Color(0xFFFFE9E7), shape = RoundedCornerShape(14.dp)) {
                 Text(
-                    "The maintenance action could not be completed. Please try again.",
+                    stringResource(Res.string.maintenance_persistence_error),
                     color = Color(0xFF8A2D27),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp),
                 )
@@ -308,8 +402,8 @@ private fun MaintenanceVehicleContent(
     pendingDeletion?.let { record ->
         AlertDialog(
             onDismissRequest = { pendingDeletion = null },
-            title = { Text("Delete maintenance record?") },
-            text = { Text("The record and reminders generated from it will be removed from this device.") },
+            title = { Text(stringResource(Res.string.maintenance_delete_dialog_title)) },
+            text = { Text(stringResource(Res.string.maintenance_delete_dialog_description)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -317,10 +411,12 @@ private fun MaintenanceVehicleContent(
                         viewModel.onEvent(MaintenanceHistoryEvent.DeleteMaintenance(record.id))
                     },
                 ) {
-                    Text("Delete record")
+                    Text(stringResource(Res.string.maintenance_delete_record_button))
                 }
             },
-            dismissButton = { TextButton(onClick = { pendingDeletion = null }) { Text("Cancel") } },
+            dismissButton = {
+                TextButton(onClick = { pendingDeletion = null }) { Text(stringResource(Res.string.maintenance_cancel_button)) }
+            },
         )
     }
 }
@@ -335,27 +431,27 @@ private fun MaintenanceHistoryBody(
     onDelete: (MaintenanceRecord) -> Unit,
 ) {
     when (state.loadState) {
-        MaintenanceLoadState.Loading -> MaintenanceMessagePanel("Loading maintenance history...", showProgress = true)
+        MaintenanceLoadState.Loading -> MaintenanceMessagePanel(stringResource(Res.string.maintenance_loading_history), showProgress = true)
         MaintenanceLoadState.Error ->
             MaintenanceMessagePanel(
-                title = "History could not be loaded",
-                detail = "Your local records are unchanged.",
-                actionLabel = "Retry",
+                title = stringResource(Res.string.maintenance_history_load_error_title),
+                detail = stringResource(Res.string.maintenance_history_load_error_description),
+                actionLabel = stringResource(Res.string.maintenance_retry_button),
                 onAction = onRetry,
             )
         MaintenanceLoadState.Content -> {
             if (state.isEmpty) {
                 MaintenanceMessagePanel(
-                    title = "No maintenance recorded yet",
-                    detail = "Add the first service, inspection, or repair to start this vehicle's timeline.",
-                    actionLabel = "Add maintenance",
+                    title = stringResource(Res.string.maintenance_empty_title),
+                    detail = stringResource(Res.string.maintenance_empty_description),
+                    actionLabel = stringResource(Res.string.maintenance_form_title),
                     onAction = onCreate,
                 )
             } else if (state.hasNoMatchingRecords) {
                 MaintenanceMessagePanel(
-                    title = "No maintenance matches this search",
-                    detail = "Try another type, workshop, note or date.",
-                    actionLabel = "Clear search",
+                    title = stringResource(Res.string.maintenance_no_search_results_title),
+                    detail = stringResource(Res.string.maintenance_no_search_results_description),
+                    actionLabel = stringResource(Res.string.maintenance_clear_search_button),
                     onAction = onClearSearch,
                 )
             } else {
@@ -383,6 +479,7 @@ private fun MaintenanceRecordCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val displayTypeName = record.localizedDisplayTypeName()
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -398,10 +495,15 @@ private fun MaintenanceRecordCard(
             }
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(record.displayTypeName(), color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text(displayTypeName, color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 Spacer(Modifier.height(4.dp))
-                Text("Performed ${record.performedOn.iso8601}", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                val details = record.details()
+                Text(
+                    stringResource(Res.string.maintenance_performed_value, record.performedOn.iso8601),
+                    color = Blue,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                )
+                val details = record.localizedDetails()
                 if (details.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
                     Text(details.joinToString("  |  "), color = Muted, fontSize = 13.sp)
@@ -415,10 +517,18 @@ private fun MaintenanceRecordCard(
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
             } else {
                 IconButton(onClick = onEdit, enabled = actionsEnabled) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit ${record.displayTypeName()}", tint = Blue)
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = stringResource(Res.string.maintenance_edit_content_description, displayTypeName),
+                        tint = Blue,
+                    )
                 }
                 IconButton(onClick = onDelete, enabled = actionsEnabled) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete ${record.displayTypeName()}", tint = Muted)
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = stringResource(Res.string.maintenance_delete_content_description, displayTypeName),
+                        tint = Muted,
+                    )
                 }
             }
         }
@@ -459,7 +569,11 @@ private fun MaintenanceFormDialog(
     onEvent: (MaintenanceHistoryEvent) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    DialogWindow(onCloseRequest = onDismiss, title = "Add maintenance") {
+    val dialogTitle =
+        stringResource(
+            if (state.isEditing) Res.string.maintenance_edit_form_title else Res.string.maintenance_form_title,
+        )
+    DialogWindow(onCloseRequest = onDismiss, title = dialogTitle) {
         Surface(
             modifier = Modifier.width(680.dp),
             shape = RoundedCornerShape(24.dp),
@@ -468,18 +582,18 @@ private fun MaintenanceFormDialog(
         ) {
             Column(modifier = Modifier.padding(28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(
-                    if (state.isEditing) "Edit maintenance" else "Add maintenance",
+                    dialogTitle,
                     style = MaterialTheme.typography.headlineMedium,
                     color = Ink,
                 )
-                Text("Record the work exactly once; Carbura handles related reminders atomically.", color = Muted)
-                Text("Maintenance type", color = Ink, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(Res.string.maintenance_form_description), color = Muted)
+                Text(stringResource(Res.string.maintenance_type_label), color = Ink, fontWeight = FontWeight.SemiBold)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MaintenanceTypeCode.entries.forEach { type ->
                         FilterChip(
                             selected = state.maintenanceTypeCode == type,
                             onClick = { onEvent(MaintenanceHistoryEvent.TypeSelected(type)) },
-                            label = { Text(type.displayName()) },
+                            label = { Text(type.localizedDisplayName()) },
                         )
                     }
                 }
@@ -488,7 +602,7 @@ private fun MaintenanceFormDialog(
                         value = state.customTypeLabel,
                         onValueChange = { onEvent(MaintenanceHistoryEvent.CustomTypeLabelChanged(it)) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Custom type") },
+                        label = { Text(stringResource(Res.string.maintenance_custom_type_label)) },
                         singleLine = true,
                     )
                 }
@@ -497,14 +611,14 @@ private fun MaintenanceFormDialog(
                         value = state.performedOn,
                         onValueChange = { onEvent(MaintenanceHistoryEvent.PerformedOnChanged(it)) },
                         modifier = Modifier.weight(1f),
-                        label = { Text("Performed date (YYYY-MM-DD)") },
+                        label = { Text(stringResource(Res.string.maintenance_date_label)) },
                         singleLine = true,
                     )
                     OutlinedTextField(
                         value = state.odometerKm,
                         onValueChange = { onEvent(MaintenanceHistoryEvent.OdometerChanged(it)) },
                         modifier = Modifier.weight(1f),
-                        label = { Text("Odometer (km)") },
+                        label = { Text(stringResource(Res.string.maintenance_odometer_label)) },
                         singleLine = true,
                     )
                 }
@@ -513,7 +627,7 @@ private fun MaintenanceFormDialog(
                         value = state.nextDueDate,
                         onValueChange = { onEvent(MaintenanceHistoryEvent.NextDueDateChanged(it)) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Next due date (optional, YYYY-MM-DD)") },
+                        label = { Text(stringResource(Res.string.maintenance_next_due_label)) },
                         singleLine = true,
                     )
                 }
@@ -522,14 +636,14 @@ private fun MaintenanceFormDialog(
                         value = state.cost,
                         onValueChange = { onEvent(MaintenanceHistoryEvent.CostChanged(it)) },
                         modifier = Modifier.weight(1f),
-                        label = { Text("Cost in EUR (optional)") },
+                        label = { Text(stringResource(Res.string.maintenance_cost_label)) },
                         singleLine = true,
                     )
                     OutlinedTextField(
                         value = state.workshop,
                         onValueChange = { onEvent(MaintenanceHistoryEvent.WorkshopChanged(it)) },
                         modifier = Modifier.weight(1f),
-                        label = { Text("Workshop (optional)") },
+                        label = { Text(stringResource(Res.string.maintenance_workshop_label)) },
                         singleLine = true,
                     )
                 }
@@ -537,16 +651,18 @@ private fun MaintenanceFormDialog(
                     value = state.notes,
                     onValueChange = { onEvent(MaintenanceHistoryEvent.NotesChanged(it)) },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Notes (optional)") },
+                    label = { Text(stringResource(Res.string.maintenance_notes_label)) },
                     minLines = 2,
                     maxLines = 3,
                 )
-                state.validationError?.let { Text(it.desktopMessage(), color = MaterialTheme.colorScheme.error) }
+                state.validationError?.let { Text(it.localizedMaintenanceMessage(), color = MaterialTheme.colorScheme.error) }
                 if (state.persistenceError) {
-                    Text("The record could not be saved. Your entries are still here.", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(Res.string.maintenance_record_save_error), color = MaterialTheme.colorScheme.error)
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss, enabled = state.activeMutation == null) { Text("Cancel") }
+                    TextButton(onClick = onDismiss, enabled = state.activeMutation == null) {
+                        Text(stringResource(Res.string.maintenance_cancel_button))
+                    }
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
@@ -564,7 +680,11 @@ private fun MaintenanceFormDialog(
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
                             Spacer(Modifier.width(8.dp))
                         }
-                        Text(if (state.isEditing) "Save changes" else "Save record")
+                        Text(
+                            stringResource(
+                                if (state.isEditing) Res.string.maintenance_update_button else Res.string.maintenance_save_button,
+                            ),
+                        )
                     }
                 }
             }
@@ -576,49 +696,78 @@ private fun MaintenanceFormDialog(
 private fun FutureMaintenanceDialog(onEvent: (MaintenanceHistoryEvent) -> Unit) {
     AlertDialog(
         onDismissRequest = { onEvent(MaintenanceHistoryEvent.DismissFutureReminderOffer) },
-        title = { Text("Future maintenance date") },
+        title = { Text(stringResource(Res.string.maintenance_future_reminder_title)) },
         text = {
-            Text(
-                "Would you like Carbura to store a reminder for this future service? " +
-                    "Native macOS and Windows alerts are not enabled in this version.",
-            )
+            Text(stringResource(Res.string.maintenance_future_reminder_description))
         },
         confirmButton = {
             Button(onClick = { onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceWithReminder) }) {
-                Text("Save with reminder")
+                Text(stringResource(Res.string.maintenance_future_reminder_confirm))
             }
         },
         dismissButton = {
             Row {
-                TextButton(onClick = { onEvent(MaintenanceHistoryEvent.DismissFutureReminderOffer) }) { Text("Cancel") }
-                TextButton(onClick = { onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceOnly) }) { Text("Save only") }
+                TextButton(onClick = { onEvent(MaintenanceHistoryEvent.DismissFutureReminderOffer) }) {
+                    Text(stringResource(Res.string.maintenance_cancel_button))
+                }
+                TextButton(onClick = { onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceOnly) }) {
+                    Text(stringResource(Res.string.maintenance_future_reminder_save_only))
+                }
             }
         },
     )
 }
 
-private fun MaintenanceTypeCode.displayName(customLabel: String = ""): String =
+@Composable
+private fun MaintenanceTypeCode.localizedDisplayName(): String =
     when (this) {
-        MaintenanceTypeCode.Itv -> "ITV"
-        MaintenanceTypeCode.Insurance -> "Insurance"
-        MaintenanceTypeCode.OilChange -> "Oil change"
-        MaintenanceTypeCode.Tires -> "Tires"
-        MaintenanceTypeCode.GeneralReview -> "General review"
-        MaintenanceTypeCode.Repair -> "Repair"
-        MaintenanceTypeCode.Custom -> customLabel.ifBlank { "Custom" }
+        MaintenanceTypeCode.Itv -> stringResource(Res.string.maintenance_type_itv)
+        MaintenanceTypeCode.Insurance -> stringResource(Res.string.maintenance_type_insurance)
+        MaintenanceTypeCode.OilChange -> stringResource(Res.string.maintenance_type_oil_change)
+        MaintenanceTypeCode.Tires -> stringResource(Res.string.maintenance_type_tires)
+        MaintenanceTypeCode.GeneralReview -> stringResource(Res.string.maintenance_type_general_review)
+        MaintenanceTypeCode.Repair -> stringResource(Res.string.maintenance_type_repair)
+        MaintenanceTypeCode.Custom -> stringResource(Res.string.maintenance_type_custom)
     }
 
-private fun MaintenanceRecord.displayTypeName(): String =
-    maintenanceTypeCode?.displayName(maintenanceTypeLabel.orEmpty())
+private fun MaintenanceTypeCode.displayName(
+    typeNames: Map<MaintenanceTypeCode, String>,
+    customLabel: String = "",
+): String = if (this == MaintenanceTypeCode.Custom) customLabel.ifBlank { typeNames.getValue(this) } else typeNames.getValue(this)
+
+@Composable
+private fun MaintenanceRecord.localizedDisplayTypeName(): String {
+    val typeNames = MaintenanceTypeCode.entries.associateWith { it.localizedDisplayName() }
+    return maintenanceTypeCode?.displayName(typeNames, maintenanceTypeLabel.orEmpty())
         ?: maintenanceTypeId.value
             .removePrefix("type-")
             .replace('-', ' ')
             .replaceFirstChar(Char::uppercase)
+}
 
-private fun MaintenanceRecord.details(): List<String> =
+@Composable
+private fun MaintenanceRecord.localizedDetails(): List<String> =
     listOfNotNull(
-        odometerKm?.let { "%,d km".format(it) },
-        costCents?.let { String.format(Locale.ROOT, "%.2f %s", it / 100.0, currency) },
+        odometerKm?.let { stringResource(Res.string.maintenance_odometer_value, it) },
+        costCents?.let {
+            stringResource(
+                Res.string.maintenance_cost_value,
+                String.format(Locale.ROOT, "%.2f", it / 100.0),
+                currency,
+            )
+        },
         workshop?.takeIf(String::isNotBlank),
-        nextDueDate?.let { "Next due ${it.iso8601}" },
+        nextDueDate?.let { stringResource(Res.string.maintenance_next_due_value, it.iso8601) },
+    )
+
+@Composable
+private fun CarburaString.localizedMaintenanceMessage(): String =
+    stringResource(
+        when (this) {
+            CarburaString.ValidationBlankMaintenanceType -> Res.string.maintenance_validation_blank_type
+            CarburaString.ValidationInvalidMaintenanceDate -> Res.string.maintenance_validation_invalid_date
+            CarburaString.ValidationNegativeMaintenanceOdometer -> Res.string.maintenance_validation_negative_odometer
+            CarburaString.ValidationNegativeMaintenanceCost -> Res.string.maintenance_validation_negative_cost
+            else -> Res.string.maintenance_validation_generic
+        },
     )

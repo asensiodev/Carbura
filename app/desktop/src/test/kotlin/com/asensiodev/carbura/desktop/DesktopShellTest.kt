@@ -1,8 +1,19 @@
 package com.asensiodev.carbura.desktop
 
 import com.asensiodev.carbura.core.model.VehicleId
+import com.asensiodev.carbura.desktop.resources.Res
+import com.asensiodev.carbura.desktop.resources.account_action_unsupported
+import com.asensiodev.carbura.desktop.resources.shell_account_description
+import com.asensiodev.carbura.desktop.resources.shell_account_eyebrow
+import com.asensiodev.carbura.desktop.resources.shell_account_headline
+import com.asensiodev.carbura.desktop.resources.shell_destination_account
+import com.asensiodev.carbura.desktop.resources.shell_destination_garage
+import com.asensiodev.carbura.desktop.resources.shell_destination_maintenance
+import com.asensiodev.carbura.desktop.resources.shell_destination_reminders
 import com.asensiodev.carbura.feature.garage.presentation.overview.GarageOverviewEffect
 import com.asensiodev.carbura.feature.reminders.presentation.RemindersEffect
+import kotlinx.coroutines.test.runTest
+import org.jetbrains.compose.resources.getString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -12,7 +23,12 @@ class DesktopShellTest {
     @Test
     fun allProductDestinationsAreAvailableFromTheShell() {
         assertEquals(
-            listOf("Garage", "Reminders", "Maintenance", "Account"),
+            listOf(
+                Res.string.shell_destination_garage,
+                Res.string.shell_destination_reminders,
+                Res.string.shell_destination_maintenance,
+                Res.string.shell_destination_account,
+            ),
             DesktopDestination.entries.map { it.label },
         )
     }
@@ -25,10 +41,20 @@ class DesktopShellTest {
 
     @Test
     fun accountDestinationDescribesTheDedicatedLocalWorkspace() {
-        assertEquals("LOCAL ACCOUNT", DesktopDestination.Account.eyebrow)
-        assertEquals("Your data, on this device.", DesktopDestination.Account.headline)
-        assertTrue(DesktopDestination.Account.description.contains("local mode", ignoreCase = true))
+        assertEquals(Res.string.shell_account_eyebrow, DesktopDestination.Account.eyebrow)
+        assertEquals(Res.string.shell_account_headline, DesktopDestination.Account.headline)
+        assertEquals(Res.string.shell_account_description, DesktopDestination.Account.description)
     }
+
+    @Test
+    fun desktopResourcesResolveSpanishCopyAndFormatArguments() =
+        runTest {
+            assertEquals("Garaje", getString(Res.string.shell_destination_garage))
+            assertEquals(
+                "Carpeta de datos no es compatible con este sistema.",
+                getString(Res.string.account_action_unsupported, "Carpeta de datos"),
+            )
+        }
 
     @Test
     fun reminderGarageRequestTargetsGarageInTheExistingShell() {

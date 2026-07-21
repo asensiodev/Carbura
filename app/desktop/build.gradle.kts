@@ -19,12 +19,17 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.swing)
     implementation(compose.desktop.currentOs)
+    implementation(compose.components.resources)
     implementation(compose.material3)
     implementation(compose.materialIconsExtended)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.sqldelight.sqlite.driver)
+}
+
+compose.resources {
+    packageOfResClass = "com.asensiodev.carbura.desktop.resources"
 }
 
 compose.desktop {

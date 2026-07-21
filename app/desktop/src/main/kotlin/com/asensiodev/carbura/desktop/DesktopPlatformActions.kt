@@ -37,12 +37,4 @@ internal object AwtDesktopPlatformActions : DesktopPlatformActions {
     }
 }
 
-internal fun desktopActionFailureMessage(
-    action: String,
-    result: DesktopActionResult,
-): String? =
-    when (result) {
-        DesktopActionResult.Success -> null
-        DesktopActionResult.Unsupported -> "$action is not supported on this system."
-        DesktopActionResult.Failed -> "$action could not be opened."
-    }
+internal fun DesktopActionResult.shouldReportFailure(): Boolean = this != DesktopActionResult.Success

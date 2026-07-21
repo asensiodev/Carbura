@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shell_app_name">Carbura</string>
+    <string name="shell_brand">CARBURA</string>
+    <string name="shell_desktop_preview">VISTA PREVIA DE ESCRITORIO</string>
+    <string name="shell_supported_systems">macOS + Windows</string>
+    <string name="shell_destination_garage">Garaje</string>
+    <string name="shell_destination_reminders">Recordatorios</string>
+    <string name="shell_destination_maintenance">Mantenimiento</string>
+    <string name="shell_destination_account">Cuenta</string>
+    <string name="shell_garage_eyebrow">TUS VEHÍCULOS</string>
+    <string name="shell_garage_headline">Todo lo importante, aparcado en un mismo lugar.</string>
+    <string name="shell_garage_description">Consulta y actualiza los datos, kilómetros y planificación de tus vehículos.</string>
+    <string name="shell_reminders_eyebrow">ANTICÍPATE</string>
+    <string name="shell_reminders_headline">Que el mantenimiento nunca sea una sorpresa.</string>
+    <string name="shell_reminders_description">Organiza recordatorios por fecha o kilometraje y consulta lo que viene después.</string>
+    <string name="shell_maintenance_eyebrow">HISTORIAL DE MANTENIMIENTO</string>
+    <string name="shell_maintenance_headline">Un registro claro de cada kilómetro.</string>
+    <string name="shell_maintenance_description">Consulta y registra el historial de mantenimiento de cada vehículo.</string>
+    <string name="shell_account_eyebrow">CUENTA LOCAL</string>
+    <string name="shell_account_headline">Tus datos, en este dispositivo.</string>
+    <string name="shell_account_description">Consulta el modo local y el almacenamiento que usa Carbura Desktop.</string>
+</resources>

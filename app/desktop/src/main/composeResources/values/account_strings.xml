@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="account_header_eyebrow">CUENTA LOCAL</string>
+    <string name="account_header_title">Tus datos, en este dispositivo.</string>
+    <string name="account_header_description">Carbura Desktop funciona actualmente sin iniciar sesión. Los vehículos, mantenimientos y recordatorios permanecen en el almacenamiento local.</string>
+    <string name="account_project_title">Carbura Desktop</string>
+    <string name="account_project_description">Consulta el proyecto, la documentación y el historial de versiones.</string>
+    <string name="account_project_action">Abrir proyecto</string>
+    <string name="account_project_action_name">Sitio web del proyecto</string>
+    <string name="account_local_mode_title">Modo local</string>
+    <string name="account_local_mode_description">No hay ninguna cuenta conectada y la sincronización en la nube no está activa en Desktop.</string>
+    <string name="account_local_mode_available">Tus funciones locales siguen completamente disponibles.</string>
+    <string name="account_storage_title">Almacenamiento local</string>
+    <string name="account_application_data_label">Datos de la aplicación</string>
+    <string name="account_database_label">Base de datos</string>
+    <string name="account_storage_description">Carbura gestiona esta base de datos. Cierra la aplicación antes de realizar una copia de seguridad externa.</string>
+    <string name="account_data_folder_action">Abrir carpeta de datos</string>
+    <string name="account_data_folder_action_name">Carpeta de datos</string>
+    <string name="account_action_unsupported">%1$s no es compatible con este sistema.</string>
+    <string name="account_action_failed">No se pudo abrir %1$s.</string>
+</resources>

@@ -4,20 +4,15 @@ import java.net.URI
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class DesktopPlatformActionsTest {
     @Test
     fun actionFeedbackOnlyReportsFailures() {
-        assertNull(desktopActionFailureMessage("Data folder", DesktopActionResult.Success))
-        assertEquals(
-            "Data folder is not supported on this system.",
-            desktopActionFailureMessage("Data folder", DesktopActionResult.Unsupported),
-        )
-        assertEquals(
-            "Project website could not be opened.",
-            desktopActionFailureMessage("Project website", DesktopActionResult.Failed),
-        )
+        assertFalse(DesktopActionResult.Success.shouldReportFailure())
+        assertTrue(DesktopActionResult.Unsupported.shouldReportFailure())
+        assertTrue(DesktopActionResult.Failed.shouldReportFailure())
     }
 
     @Test
