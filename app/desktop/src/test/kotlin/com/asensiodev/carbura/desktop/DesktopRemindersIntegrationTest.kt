@@ -14,6 +14,7 @@ import com.asensiodev.carbura.feature.reminders.presentation.RemindersEffect
 import com.asensiodev.carbura.feature.reminders.presentation.RemindersEvent
 import com.asensiodev.carbura.feature.reminders.presentation.RemindersViewModel
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -85,8 +86,7 @@ class DesktopRemindersIntegrationTest {
             vehicleForm.onEvent(VehicleFormEvent.NameChanged("Family car"))
             vehicleForm.onEvent(VehicleFormEvent.OdometerChanged("12000"))
             vehicleForm.onEvent(VehicleFormEvent.SubmitVehicle)
-            assertIs<VehicleFormEffect.VehicleCreated>(firstVehicleCreated.await())
-
+            awaitVehicleCreation(vehicleForm, firstVehicleCreated)
             val secondVehicleCreated =
                 async(start = CoroutineStart.UNDISPATCHED) {
                     vehicleForm.effects.first { it is VehicleFormEffect.VehicleCreated }
@@ -94,7 +94,7 @@ class DesktopRemindersIntegrationTest {
             vehicleForm.onEvent(VehicleFormEvent.NameChanged("Work van"))
             vehicleForm.onEvent(VehicleFormEvent.OdometerChanged("34000"))
             vehicleForm.onEvent(VehicleFormEvent.SubmitVehicle)
-            assertIs<VehicleFormEffect.VehicleCreated>(secondVehicleCreated.await())
+            awaitVehicleCreation(vehicleForm, secondVehicleCreated)
 
             reminders.onEvent(RemindersEvent.Started)
             val loaded = reminders.uiState.first { !it.isLoading && it.vehicles.size == 2 }
@@ -109,7 +109,7 @@ class DesktopRemindersIntegrationTest {
             reminders.onEvent(RemindersEvent.VehicleSelected(familyCar.id))
             reminders.onEvent(RemindersEvent.DueDateChanged("2027-03-14"))
             reminders.onEvent(RemindersEvent.SubmitReminder)
-            assertIs<RemindersEffect.ReminderCreated>(reminderCreated.await())
+            assertIs<RemindersEffect.ReminderCreated>(awaitReminderAction(reminders, reminderCreated))
 
             val createdReminder =
                 reminders.uiState
@@ -131,7 +131,7 @@ class DesktopRemindersIntegrationTest {
                     reminders.effects.first { it is RemindersEffect.ReminderCompleted }
                 }
             reminders.onEvent(RemindersEvent.CompleteReminder(createdReminder.id))
-            assertIs<RemindersEffect.ReminderCompleted>(reminderCompleted.await())
+            assertIs<RemindersEffect.ReminderCompleted>(awaitReminderAction(reminders, reminderCompleted))
             assertEquals(emptyList(), reminders.uiState.first { it.reminders.isEmpty() }.reminders)
 
             val secondReminderCreated =
@@ -142,7 +142,7 @@ class DesktopRemindersIntegrationTest {
             reminders.onEvent(RemindersEvent.VehicleSelected(workVan.id))
             reminders.onEvent(RemindersEvent.DueOdometerChanged("40000"))
             reminders.onEvent(RemindersEvent.SubmitReminder)
-            assertIs<RemindersEffect.ReminderCreated>(secondReminderCreated.await())
+            assertIs<RemindersEffect.ReminderCreated>(awaitReminderAction(reminders, secondReminderCreated))
             val secondReminder =
                 reminders.uiState
                     .first { it.reminders.size == 1 }
@@ -154,7 +154,24 @@ class DesktopRemindersIntegrationTest {
                     reminders.effects.first { it is RemindersEffect.ReminderDeleted }
                 }
             reminders.onEvent(RemindersEvent.DeleteReminder(secondReminder.id))
-            assertIs<RemindersEffect.ReminderDeleted>(reminderDeleted.await())
+            assertIs<RemindersEffect.ReminderDeleted>(awaitReminderAction(reminders, reminderDeleted))
             assertEquals(emptyList(), reminders.uiState.first { it.reminders.isEmpty() }.reminders)
         }
+
+    private suspend fun awaitVehicleCreation(
+        viewModel: VehicleFormViewModel,
+        effect: Deferred<VehicleFormEffect>,
+    ) {
+        assertIs<VehicleFormEffect.VehicleCreated>(effect.await())
+        viewModel.uiState.first { it.activeMutation == null }
+    }
+
+    private suspend fun awaitReminderAction(
+        viewModel: RemindersViewModel,
+        effect: Deferred<RemindersEffect>,
+    ): RemindersEffect {
+        val result = effect.await()
+        viewModel.uiState.first { it.activeAction == null }
+        return result
+    }
 }
