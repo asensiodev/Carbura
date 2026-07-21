@@ -6,7 +6,7 @@ import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import java.nio.file.Files
 import java.nio.file.Path
 
-internal fun desktopDataDirectory(
+fun desktopDataDirectory(
     osName: String = System.getProperty("os.name").orEmpty(),
     userHome: String = System.getProperty("user.home").orEmpty(),
     appData: String? = System.getenv("APPDATA"),
@@ -21,9 +21,11 @@ internal fun desktopDataDirectory(
     }
 }
 
+fun desktopDatabasePath(dataDirectory: Path = desktopDataDirectory()): Path = dataDirectory.resolve(DESKTOP_DATABASE_NAME)
+
 internal fun createDesktopSqlDriver(dataDirectory: Path = desktopDataDirectory()): SqlDriver {
     Files.createDirectories(dataDirectory)
-    val databaseFile = dataDirectory.resolve(DESKTOP_DATABASE_NAME)
+    val databaseFile = desktopDatabasePath(dataDirectory)
     val requiresSchema = Files.notExists(databaseFile)
     return JdbcSqliteDriver("jdbc:sqlite:${databaseFile.toAbsolutePath()}").also { driver ->
         if (requiresSchema) CarburaDatabase.Schema.create(driver)

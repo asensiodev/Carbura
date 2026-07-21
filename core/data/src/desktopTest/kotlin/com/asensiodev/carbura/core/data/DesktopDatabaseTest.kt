@@ -22,6 +22,25 @@ class DesktopDatabaseTest {
             "/home/test/.data/Carbura",
             desktopDataDirectory("Linux", "/home/test", null, "/home/test/.data").toString(),
         )
+        assertEquals(
+            "C:\\Users\\test/AppData/Roaming/Carbura",
+            desktopDataDirectory("Windows 11", "C:\\Users\\test", "", null).toString(),
+        )
+        assertEquals(
+            "/home/test/.local/share/Carbura",
+            desktopDataDirectory("Linux", "/home/test", null, "").toString(),
+        )
+    }
+
+    @Test
+    fun databasePathUsesTheDriverFileName() {
+        assertEquals(
+            "/tmp/Carbura/carbura.db",
+            desktopDatabasePath(
+                java.nio.file.Path
+                    .of("/tmp/Carbura"),
+            ).toString(),
+        )
     }
 
     @Test
@@ -36,7 +55,7 @@ class DesktopDatabaseTest {
             firstDriver.close()
         }
 
-        assertTrue(dataDirectory.resolve("carbura.db").exists())
+        assertTrue(desktopDatabasePath(dataDirectory).exists())
 
         val reopenedDriver = createDesktopSqlDriver(dataDirectory)
         try {

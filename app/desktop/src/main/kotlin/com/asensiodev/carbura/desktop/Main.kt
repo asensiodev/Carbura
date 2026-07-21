@@ -14,18 +14,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRailItem
@@ -214,129 +208,27 @@ private fun DestinationContent(
     onOpenMaintenance: (VehicleId) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (destination == DesktopDestination.Garage) {
-        GarageWorkspace(
-            compact = compact,
-            onOpenMaintenance = onOpenMaintenance,
-            modifier = modifier,
-        )
-        return
-    }
-    if (destination == DesktopDestination.Maintenance) {
-        MaintenanceWorkspace(
-            compact = compact,
-            initialVehicleId = selectedMaintenanceVehicleId,
-            onNavigateToGarage = { onNavigate(DesktopDestination.Garage) },
-            modifier = modifier,
-        )
-        return
-    }
-    if (destination == DesktopDestination.Reminders) {
-        RemindersWorkspace(
-            compact = compact,
-            onNavigateToGarage = { onNavigate(DesktopDestination.Garage) },
-            modifier = modifier,
-        )
-        return
-    }
-    Column(
-        modifier = modifier.fillMaxHeight().padding(if (compact) 32.dp else 56.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(destination.eyebrow, color = Blue, fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 1.6.sp)
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    destination.headline,
-                    style = MaterialTheme.typography.displaySmall,
-                    color = Ink,
-                    lineHeight = 46.sp,
-                    modifier = Modifier.widthIn(max = 720.dp),
-                )
-            }
-            Box(modifier = Modifier.size(12.dp).background(Success, CircleShape))
-        }
-
-        Text(
-            "Carbura Desktop is running on this Mac.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = Muted,
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(18.dp),
-        ) {
-            StatusCard(
-                icon = Icons.Default.CheckCircle,
-                title = "Shared core ready",
-                detail = "Models, SQLDelight and domain rules compile for JVM Desktop.",
-                modifier = Modifier.weight(1f),
+    when (destination) {
+        DesktopDestination.Garage ->
+            GarageWorkspace(
+                compact = compact,
+                onOpenMaintenance = onOpenMaintenance,
+                modifier = modifier,
             )
-            if (!compact) {
-                StatusCard(
-                    icon = Icons.Default.Storage,
-                    title = "Local-first foundation",
-                    detail = "Desktop data is stored in Carbura's application-data directory.",
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-
-        AvailabilityPanel(destination)
-    }
-}
-
-@Composable
-private fun StatusCard(
-    icon: ImageVector,
-    title: String,
-    detail: String,
-    modifier: Modifier,
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-    ) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Box(modifier = Modifier.size(42.dp).background(PaleBlue, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = null, tint = Blue)
-            }
-            Text(title, color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-            Text(detail, color = Muted, lineHeight = 21.sp)
-        }
-    }
-}
-
-@Composable
-private fun AvailabilityPanel(destination: DesktopDestination) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = PaleBlue),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(26.dp),
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(modifier = Modifier.size(48.dp).background(Color.White, RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-                Icon(destinationIcon(destination), contentDescription = null, tint = Navy)
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text("${destination.label} workspace", color = Ink, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Spacer(Modifier.height(5.dp))
-                Text(destination.description, color = Muted, lineHeight = 21.sp)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text("NEXT IN MIGRATION", color = Blue, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp)
-                Spacer(Modifier.height(6.dp))
-                Text("UI extraction", color = Ink, fontWeight = FontWeight.SemiBold)
-            }
-        }
+        DesktopDestination.Reminders ->
+            RemindersWorkspace(
+                compact = compact,
+                onNavigateToGarage = { onNavigate(DesktopDestination.Garage) },
+                modifier = modifier,
+            )
+        DesktopDestination.Maintenance ->
+            MaintenanceWorkspace(
+                compact = compact,
+                initialVehicleId = selectedMaintenanceVehicleId,
+                onNavigateToGarage = { onNavigate(DesktopDestination.Garage) },
+                modifier = modifier,
+            )
+        DesktopDestination.Account -> AccountWorkspace(compact = compact, modifier = modifier)
     }
 }
 

@@ -24,6 +24,13 @@ class DesktopShellTest {
     }
 
     @Test
+    fun accountDestinationDescribesTheDedicatedLocalWorkspace() {
+        assertEquals("LOCAL ACCOUNT", DesktopDestination.Account.eyebrow)
+        assertEquals("Your data, on this device.", DesktopDestination.Account.headline)
+        assertTrue(DesktopDestination.Account.description.contains("local mode", ignoreCase = true))
+    }
+
+    @Test
     fun reminderGarageRequestTargetsGarageInTheExistingShell() {
         assertEquals(
             DesktopDestination.Garage,

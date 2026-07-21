@@ -26,9 +26,9 @@ enum class DesktopDestination(
     ),
     Account(
         label = "Account",
-        eyebrow = "CARBURA DESKTOP",
-        headline = "One account, every vehicle, every screen.",
-        description = "Desktop browser sign-in and secure credential storage are intentionally reserved for the authentication increment.",
+        eyebrow = "LOCAL ACCOUNT",
+        headline = "Your data, on this device.",
+        description = "Review local mode and the application storage used by Carbura Desktop.",
     ),
 }
 
