@@ -4,6 +4,31 @@ Este documento detalla los tickets de trabajo derivados de las historias de usua
 
 Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada bloque de trabajo se creara un cambio en `openspec/changes/` con `proposal.md`, `tasks.md` y spec delta cuando aplique. La implementacion seguira TDD: Red -> Green -> Refactor.
 
+## Scope Entrega 2
+
+- Incluido y validado en Android: login Google real, perfil/familia MVP, garaje persistente, historial de mantenimiento, recordatorios MVP, notificaciones locales, sync v0 con Supabase, UI Android edge-to-edge y smoke visual manual.
+- Recordatorios MVP: crear, listar pendientes, marcar completados y borrar por familia/vehiculo, con fecha mediante date picker y/o kilometraje objetivo.
+- Mantenimiento MVP: crear con date picker, listar historial persistente por vehiculo y borrar registros con confirmacion.
+- Garaje MVP: crear coche/moto, listar y borrar vehiculos con limpieza local de mantenimientos y recordatorios asociados.
+- Sync v0: subida/bajada de vehiculos, mantenimientos y recordatorios; tombstones; `pending_sync`; `last-write-wins`; sync inicial al restaurar sesion; accion manual desde Usuario.
+- Diferido: recordatorios recurrentes/proactivos desde vehiculo, invitaciones familiares completas, Desktop funcional, exportacion PDF/CSV, CI/release final y test E2E completo.
+- Roadmap de sincronizacion: `docs/sync-roadmap.md`.
+
+## Estado actual Entrega 2
+
+- Android MVP local-first + sync v0: ~90-95% completado para demo de Entrega 2.
+- MVP completo final Android + Desktop + CI/E2E/exportacion: ~70% completado.
+- OpenSpec archivados relevantes: `add-sync-v0`, `add-reminders-mvp-edge-to-edge`, `add-user-family-mvp`, `add-date-pickers-delete-mvp`, `add-local-reminder-notifications`, `harden-sync-offline`.
+- No hay cambios OpenSpec activos al cierre de esta revision.
+
+## Sync v0 implementado
+
+- Fuente de alcance: `docs/sync-roadmap.md`.
+- Es funcional end-to-end, no solo preparatorio: sube cambios locales pendientes a Supabase y baja datos remotos de la familia.
+- Alcance v0: vehiculos, mantenimientos y recordatorios; ejecucion manual, tras login/restauracion y durante el uso de app; resolucion simple por `updated_at` con `last-write-wins`.
+- Fuera de v0: realtime, background sync periodico, merge manual de conflictos, colas complejas, adjuntos y notificaciones remotas.
+- La implementacion debe vivir en KMP/shared (`core:domain`/`core:data`) para ser reutilizable por Android y Desktop.
+
 ## Orden de implementacion recomendado
 
 | Orden | Ticket | Area | Historias | Prioridad | Estimacion |
@@ -72,7 +97,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Tipo:** feature / auth.
 
-**Descripcion:** implementar el flujo inicial de autenticacion con Google mediante Supabase Auth y creacion/carga del garaje familiar.
+**Descripcion:** implementar el flujo inicial de autenticacion con Google mediante Supabase Auth y creacion/carga del garaje familiar. En Android, Credential Manager con Google ID sera la opcion principal, con fallback controlado a Google Sign-In/OAuth si no esta disponible.
 
 **Proposito:** permitir que el usuario entre en la app y tenga un espacio de datos aislado antes de registrar vehiculos.
 
@@ -89,6 +114,8 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 **Alcance:**
 
 - Configurar login Google en Supabase Auth.
+- Implementar login Android con Credential Manager y Google ID.
+- Definir fallback a Google Sign-In/OAuth para dispositivos o entornos no compatibles.
 - Crear o cargar `UserProfile` tras login.
 - Crear `Family` si el usuario no tiene garaje.
 - Exponer estado de sesion a la UI.
@@ -98,12 +125,16 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 **Criterios de aceptacion:**
 
 - Dado un usuario sin sesion, cuando inicia sesion con Google, entonces accede autenticado.
+- Dado un dispositivo compatible, cuando el usuario inicia sesion, entonces la app usa Credential Manager como flujo principal.
+- Dado que Credential Manager no devuelve credencial valida o no esta disponible, cuando el usuario intenta iniciar sesion, entonces la app ofrece un fallback controlado sin bloquear el onboarding.
 - Dado un usuario autenticado sin garaje, cuando completa onboarding, entonces se crea su garaje familiar.
 - Dado un usuario autenticado con garaje, cuando abre la app, entonces se carga su garaje activo.
 
 **Tests TDD previstos:**
 
 - Test de creacion de perfil si no existe.
+- Test de seleccion de flujo Credential Manager disponible.
+- Test de fallback cuando no hay credencial disponible.
 - Test de carga de garaje existente.
 - Test de error de autenticacion propagado como estado de UI.
 
@@ -465,7 +496,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Tipo:** tarea tecnica / infraestructura.
 
-**Descripcion:** configurar un pipeline basico de CI/CD con GitHub Actions y preparar la evidencia de despliegue de la entrega final. Al ser Carbura una app KMP (Android + Desktop) sin URL publica, la evidencia se basa en artefactos instalables, el backend Supabase desplegado y un video demo del flujo principal.
+**Descripcion:** configurar un pipeline basico de CI/CD con GitHub Actions y preparar la evidencia de despliegue de la entrega final. Al ser Carbura una app KMP nativa sin URL publica, la evidencia se basa en artefactos instalables, el backend Supabase desplegado y un video demo del flujo principal.
 
 **Proposito:** cumplir el artefacto obligatorio de la entrega final (pipeline CI/CD, gestion de secretos y sistema verificable "en vivo") y detectar regresiones en cada push.
 
@@ -483,7 +514,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 - Workflow de GitHub Actions que compila y ejecuta `./gradlew test` en cada push y PR.
 - Gestion de secretos via GitHub Secrets (sin credenciales en el repositorio).
-- Workflow de release que genera artefactos: APK Android y paquete Desktop.
+- Workflow de release que genera artefactos: APK Android y, solo si entra en alcance final, paquete Desktop.
 - Publicacion de artefactos en GitHub Releases con tag `v1.0-final-AAC`.
 - Evidencia de despliegue: backend Supabase activo, instrucciones de instalacion y video demo de 2-3 minutos del flujo E2E.
 
@@ -493,14 +524,14 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 - Dado un push a una rama con PR, cuando se ejecuta el pipeline, entonces compila el proyecto y ejecuta la suite de tests.
 - Dado un fallo de tests, cuando se ejecuta el pipeline, entonces la PR queda marcada en rojo.
-- Dada la rama final, cuando se genera la release, entonces incluye APK y artefacto Desktop descargables.
+- Dada la rama final, cuando se genera la release, entonces incluye APK Android descargable y paquete Desktop solo si ese target entra en alcance final.
 - Dado el repositorio publico, cuando se inspecciona, entonces no contiene secretos ni credenciales.
 
 **Tests TDD previstos:**
 
 - Verificacion del pipeline en verde sobre un cambio trivial.
 - Verificacion de fallo del pipeline ante un test roto (prueba controlada).
-- Checklist manual de release: instalacion del APK y arranque del Desktop desde artefactos.
+- Checklist manual de release: instalacion del APK y, si aplica, arranque del Desktop desde artefactos.
 
 **Referencias:** instrucciones del proyecto final (artefactos de infra y despliegue), `readme.md` seccion 2.4.
 

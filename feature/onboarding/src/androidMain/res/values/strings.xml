@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_title">Carbura</string>
+    <string name="onboarding_subtitle">Accede para conectar tu garaje familiar con Supabase.</string>
+    <string name="onboarding_google_button">Continuar con Google</string>
+    <string name="onboarding_loading">Preparando tu sesión...</string>
+    <string name="onboarding_error_title">No se pudo iniciar sesión</string>
+    <string name="onboarding_missing_profile_hint">Si acabas de crear el usuario, comprueba que existe una fila en user_profiles.</string>
+</resources>

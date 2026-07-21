@@ -1,0 +1,235 @@
+CREATE TABLE vehicles (
+    id TEXT NOT NULL PRIMARY KEY,
+    familyId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    brand TEXT,
+    model TEXT,
+    licensePlate TEXT,
+    currentOdometerKm INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL DEFAULT 0,
+    pendingSync INTEGER NOT NULL DEFAULT 0,
+    deletedAt INTEGER
+);
+
+selectVehiclesByFamily:
+SELECT *
+FROM vehicles
+WHERE familyId = ?
+AND deletedAt IS NULL
+ORDER BY name ASC;
+
+selectPendingSyncVehicles:
+SELECT *
+FROM vehicles
+WHERE pendingSync = 1;
+
+selectSyncVehiclesByFamily:
+SELECT *
+FROM vehicles
+WHERE familyId = ?;
+
+upsertVehicle:
+INSERT OR REPLACE INTO vehicles(
+    id,
+    familyId,
+    name,
+    type,
+    brand,
+    model,
+    licensePlate,
+    currentOdometerKm,
+    updatedAt,
+    pendingSync,
+    deletedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+markVehicleSynced:
+UPDATE vehicles
+SET pendingSync = 0
+WHERE id = ?;
+
+adoptLocalVehiclesFamily:
+UPDATE vehicles
+SET familyId = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE familyId = 'local-family';
+
+deleteVehicle:
+UPDATE vehicles
+SET deletedAt = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE id = ?;
+
+CREATE TABLE maintenanceRecords (
+    id TEXT NOT NULL PRIMARY KEY,
+    familyId TEXT NOT NULL,
+    vehicleId TEXT NOT NULL,
+    maintenanceTypeId TEXT NOT NULL,
+    maintenanceTypeCode TEXT,
+    performedOn TEXT NOT NULL,
+    odometerKm INTEGER,
+    costCents INTEGER,
+    currency TEXT NOT NULL,
+    workshop TEXT,
+    notes TEXT,
+    nextDueDate TEXT,
+    updatedAt INTEGER NOT NULL DEFAULT 0,
+    pendingSync INTEGER NOT NULL DEFAULT 0,
+    deletedAt INTEGER
+);
+
+selectMaintenanceRecordsByVehicle:
+SELECT *
+FROM maintenanceRecords
+WHERE vehicleId = ?
+AND deletedAt IS NULL
+ORDER BY performedOn DESC;
+
+selectPendingSyncMaintenanceRecords:
+SELECT *
+FROM maintenanceRecords
+WHERE pendingSync = 1;
+
+selectSyncMaintenanceRecordsByFamily:
+SELECT *
+FROM maintenanceRecords
+WHERE familyId = ?;
+
+upsertMaintenanceRecord:
+INSERT OR REPLACE INTO maintenanceRecords(
+    id,
+    familyId,
+    vehicleId,
+    maintenanceTypeId,
+    maintenanceTypeCode,
+    performedOn,
+    odometerKm,
+    costCents,
+    currency,
+    workshop,
+    notes,
+    nextDueDate,
+    updatedAt,
+    pendingSync,
+    deletedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteMaintenanceRecordsByVehicle:
+UPDATE maintenanceRecords
+SET deletedAt = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE vehicleId = ?
+AND deletedAt IS NULL;
+
+deleteMaintenanceRecord:
+UPDATE maintenanceRecords
+SET deletedAt = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE id = ?;
+
+markMaintenanceRecordSynced:
+UPDATE maintenanceRecords
+SET pendingSync = 0
+WHERE id = ?;
+
+adoptLocalMaintenanceRecordsFamily:
+UPDATE maintenanceRecords
+SET familyId = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE familyId = 'local-family';
+
+CREATE TABLE reminders (
+    id TEXT NOT NULL PRIMARY KEY,
+    familyId TEXT NOT NULL,
+    vehicleId TEXT NOT NULL,
+    maintenanceTypeId TEXT,
+    title TEXT NOT NULL,
+    dueDate TEXT,
+    dueOdometerKm INTEGER,
+    notifyDaysBefore INTEGER NOT NULL,
+    isCompleted INTEGER NOT NULL DEFAULT 0,
+    updatedAt INTEGER NOT NULL DEFAULT 0,
+    pendingSync INTEGER NOT NULL DEFAULT 0,
+    deletedAt INTEGER
+);
+
+selectPendingRemindersByFamily:
+SELECT *
+FROM reminders
+WHERE familyId = ?
+AND isCompleted = 0
+AND deletedAt IS NULL
+ORDER BY COALESCE(dueDate, '9999-12-31') ASC,
+         COALESCE(dueOdometerKm, 9223372036854775807) ASC,
+         title ASC;
+
+selectPendingSyncReminders:
+SELECT *
+FROM reminders
+WHERE pendingSync = 1;
+
+selectSyncRemindersByFamily:
+SELECT *
+FROM reminders
+WHERE familyId = ?;
+
+selectSyncRemindersByVehicle:
+SELECT *
+FROM reminders
+WHERE vehicleId = ?;
+
+upsertReminder:
+INSERT OR REPLACE INTO reminders(
+    id,
+    familyId,
+    vehicleId,
+    maintenanceTypeId,
+    title,
+    dueDate,
+    dueOdometerKm,
+    notifyDaysBefore,
+    isCompleted,
+    updatedAt,
+    pendingSync,
+    deletedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+markReminderCompleted:
+UPDATE reminders
+SET isCompleted = 1,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE id = ?;
+
+deleteReminder:
+UPDATE reminders
+SET deletedAt = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE id = ?;
+
+deleteRemindersByVehicle:
+UPDATE reminders
+SET deletedAt = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE vehicleId = ?
+AND deletedAt IS NULL;
+
+markReminderSynced:
+UPDATE reminders
+SET pendingSync = 0
+WHERE id = ?;
+
+adoptLocalRemindersFamily:
+UPDATE reminders
+SET familyId = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE familyId = 'local-family';

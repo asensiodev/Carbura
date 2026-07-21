@@ -114,7 +114,7 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 - **Rendimiento**: la app debe arrancar en menos de 2 segundos en condiciones normales.
 - **Multiplataforma**: Android (API 26+) y Desktop (macOS + Windows) desde la misma base de codigo KMP.
 - **Escalabilidad del backend**: arquitectura Supabase con Row Level Security por `family_id`, preparada para multiples familias independientes desde el dia 1.
-- **Seguridad**: autenticacion OAuth 2.0 via Google. Tokens JWT gestionados por Supabase Auth. Secrets nunca en el repositorio.
+- **Seguridad**: autenticacion OAuth 2.0 via Google. En Android se prioriza Credential Manager con Google ID y fallback controlado a Google Sign-In/OAuth cuando el dispositivo no lo soporte. Tokens JWT gestionados por Supabase Auth. Secrets nunca en el repositorio.
 
 ---
 
@@ -123,11 +123,14 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 | Capa | Tecnologia |
 |---|---|
 | UI Android | Compose for Android |
-| UI Desktop | Compose for Desktop (macOS + Windows) |
-| Logica compartida | Kotlin Multiplatform (commonMain) |
+| UI Desktop | Compose for Desktop opcional, reutilizando design system/componentes compartidos cuando aporte valor |
+| UI iOS futura | SwiftUI o Compose Multiplatform a evaluar; arquitectura preparada, fuera del MVP |
+| Logica compartida | Kotlin Multiplatform (commonMain) para dominio, casos de uso, contratos, modelos, validaciones y UiState |
+| Modularizacion | Modulos Gradle con convention plugins en `build-logic` |
+| Design system | `core:designsystem` con tema, tokens y componentes Compose reutilizables |
 | Base de datos local | SQLDelight |
 | HTTP Client | Ktor Client (KMP) |
-| Autenticacion cliente | KMPAuth (Google Sign-In) |
+| Autenticacion cliente | Contrato KMP comun; Android adapter con Credential Manager + Google ID y fallback Google Sign-In/OAuth; Desktop OAuth opcional; iOS futuro con adapter propio |
 | Inyeccion de dependencias | Koin (KMP) |
 | Serializacion | kotlinx.serialization |
 | Backend / Auth | Supabase (PostgreSQL + Auth + Storage) |
@@ -138,7 +141,7 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 
 ## 9. Arquitectura
 
-Clean Architecture en capas, 100% compartida en `commonMain` salvo la UI:
+Clean Architecture modular. Se comparte en `commonMain` todo lo que sea dominio, contratos, modelos, estado y logica testeable. Las integraciones nativas viven detras de contratos comunes y se implementan por plataforma:
 
 ```text
 Presentation (Compose Android / Compose Desktop)
@@ -147,12 +150,14 @@ ViewModel + UiState (commonMain)
       ↓
 Use Cases / Domain (commonMain)
       ↓
-Repository (commonMain)
+Repository contracts (commonMain)
       ↓
-LocalDataSource (SQLDelight) + RemoteDataSource (Ktor + Supabase)
+Platform adapters + LocalDataSource (SQLDelight) + RemoteDataSource (Ktor + Supabase)
       ↓
 SyncManager (commonMain) - gestiona conflictos last-write-wins
 ```
+
+Patron general para dependencias de plataforma: auth, permisos, notificaciones, secure storage, deep links y APIs del sistema se definen como contratos en KMP y se resuelven con adapters `androidMain`, `desktopMain` o `iosMain` futuro.
 
 ---
 
@@ -185,18 +190,18 @@ SyncManager (commonMain) - gestiona conflictos last-write-wins
 
 | Fecha | Hito |
 |---|---|
-| **12 junio 2026** | Entrega de documentacion (PRD, user stories, tickets, readme.md, prompts.md) |
-| **10 julio 2026** | Codigo funcional: flujo E2E core casi completo (auth, vehiculos, mantenimientos, historial, recordatorios) con backend y base de datos conectados |
-| **29 julio 2026** | Entrega final: flujo E2E completo, tests (unitarios, integracion y E2E), CI/CD, evidencia de despliegue y documentacion cerrada |
+| **12 junio 2026** | Entrega de documentacion (PRD, user stories, tickets, readme.md y toolchain de IA/proceso) |
+| **10 julio 2026** | Codigo funcional: MVP Android con auth, vehiculos, mantenimientos, historial, recordatorios, notificaciones locales y sync con backend/base de datos conectados |
+| **29 julio 2026** | Entrega final refinada: UX pulida, tests (unitarios, integracion y E2E), CI/CD, evidencia de despliegue y documentacion completa |
 
 ### Fases de desarrollo
 
 ```text
 Mayo 2026        -> Documentacion: PRD, specs, user stories, tickets, readme.md
 Junio 2026       -> Implementacion core: auth, vehiculos, mantenimientos, historial
-Julio (1-10)     -> Recordatorios, pantalla de avisos, CI basico, cierre del flujo E2E
+Julio (1-10)     -> Recordatorios, notificaciones locales, sync v0, UX polish, cierre del flujo E2E Android
 Julio (10-29)    -> Tests E2E, CI/CD + release, refinado UX, extendido si hay margen
-                    (notificaciones, Desktop, sync, exportacion), documentacion final
+                    (Desktop, exportacion, invitaciones), documentacion final
 ```
 
 ### Nota sobre dedicacion

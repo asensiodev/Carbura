@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="maintenance_back_button">Volver</string>
+    <string name="maintenance_title">Mantenimiento</string>
+    <string name="maintenance_subtitle">Registra trabajos y consulta el historial del vehículo.</string>
+    <string name="maintenance_form_title">Nuevo mantenimiento</string>
+    <string name="add_maintenance_button">Añadir</string>
+    <string name="maintenance_type_label">Tipo</string>
+    <string name="maintenance_date_label">Fecha</string>
+    <string name="maintenance_odometer_label">Kilómetros</string>
+    <string name="maintenance_cost_label">Coste (opcional)</string>
+    <string name="maintenance_workshop_label">Taller (opcional)</string>
+    <string name="maintenance_notes_label">Notas (opcional)</string>
+    <string name="save_maintenance_button">Guardar mantenimiento</string>
+    <string name="maintenance_history_title">Historial</string>
+    <string name="maintenance_loading_message">Cargando historial...</string>
+    <string name="empty_maintenance_history_title">Historial todavía limpio</string>
+    <string name="empty_maintenance_history_description">Registra el primer mantenimiento para recordar fechas, kilómetros, taller y coste.</string>
+    <string name="empty_maintenance_history_hint">Un buen historial te ayuda a preparar la siguiente revisión y justificar el cuidado del vehículo.</string>
+    <string name="maintenance_created_message">%1$s guardado en el historial.</string>
+    <string name="maintenance_deleted_message">%1$s eliminado del historial.</string>
+    <string name="delete_maintenance_content_description">Borrar mantenimiento</string>
+    <string name="delete_maintenance_dialog_title">Borrar mantenimiento</string>
+    <string name="delete_maintenance_dialog_description">Se eliminará este mantenimiento del historial:</string>
+    <string name="delete_maintenance_confirm_button">Borrar</string>
+    <string name="delete_maintenance_cancel_button">Cancelar</string>
+    <string name="validation_blank_maintenance_type">Introduce un tipo de mantenimiento.</string>
+    <string name="validation_invalid_maintenance_date">Usa una fecha con formato YYYY-MM-DD.</string>
+    <string name="validation_negative_maintenance_odometer">Los kilómetros no pueden ser negativos.</string>
+    <string name="validation_negative_maintenance_cost">El coste no puede ser negativo.</string>
+    <string name="validation_generic">Revisa los datos introducidos.</string>
+</resources>

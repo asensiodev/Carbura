@@ -8,4 +8,4 @@ SUPABASE_URL=https://xxxx.supabase.co
 SUPABASE_ANON_KEY=xxxx
 
 # OAuth de Google configurado en Supabase Auth (Google Cloud Console -> Credentials)
-GOOGLE_CLIENT_ID=xxxx
+GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
