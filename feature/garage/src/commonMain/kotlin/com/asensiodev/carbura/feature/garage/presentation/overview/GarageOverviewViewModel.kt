@@ -45,6 +45,10 @@ class GarageOverviewViewModel(
             GarageOverviewEvent.Retry,
             -> loadVehicles(showLoading = true)
             GarageOverviewEvent.Refresh -> loadVehicles(showLoading = false)
+            is GarageOverviewEvent.SearchQueryChanged ->
+                _uiState.update { it.copy(searchQuery = event.value) }
+            GarageOverviewEvent.SearchCleared ->
+                _uiState.update { it.copy(searchQuery = "") }
             is GarageOverviewEvent.VehicleSelected ->
                 scope.launch {
                     _effects.send(GarageOverviewEffect.NavigateToVehicleHistory(event.vehicleId))

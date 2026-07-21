@@ -9,6 +9,12 @@ sealed interface GarageOverviewEvent {
 
     data object Refresh : GarageOverviewEvent
 
+    data class SearchQueryChanged(
+        val value: String,
+    ) : GarageOverviewEvent
+
+    data object SearchCleared : GarageOverviewEvent
+
     data class VehicleSelected(
         val vehicleId: VehicleId,
     ) : GarageOverviewEvent
