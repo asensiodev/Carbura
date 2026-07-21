@@ -29,11 +29,11 @@ The system SHALL allow the Android user to create a vehicle with the minimum MVP
 - **THEN** the screen shows a validation error and the vehicle is not added to the list
 
 ### Requirement: Garage Vehicle Selection
-The system SHALL allow the Android user to select a vehicle from the garage list to open its maintenance history.
+The system SHALL allow the Android user to select a vehicle from the garage list to open a destination that identifies the selected vehicle and exposes its maintenance history.
 
 #### Scenario: Select vehicle from garage
 - **WHEN** the user selects an existing vehicle in the garage list
-- **THEN** the app navigates to that vehicle's maintenance history screen
+- **THEN** the app opens a destination that shows the vehicle identity and its maintenance history
 
 ### Requirement: Vehicle Editing
 The system SHALL allow the Android user to edit an existing vehicle's name, type, optional license plate, and current odometer while preserving its identity and active family.
@@ -97,3 +97,39 @@ The system SHALL allow the Android user to provide optional next ITV date, insur
 #### Scenario: Clear optional due target
 - **WHEN** the user removes an optional due target and saves the vehicle
 - **THEN** the vehicle stores that target as empty
+
+### Requirement: Canonical Authenticated Navigation Root
+The Android app SHALL keep Garage as the canonical authenticated navigation root for normal launches, reminder-notification launches, top-level tab changes, and session changes.
+
+#### Scenario: Open reminders from notification
+- **WHEN** an authenticated user launches the app from a reminder notification
+- **THEN** Reminders opens above the Garage root and selecting Garage returns to Garage
+
+#### Scenario: Sign out from a protected destination
+- **WHEN** the user signs out while a top-level or vehicle destination is open
+- **THEN** protected navigation entries are cleared before the next authenticated session starts
+
+### Requirement: Vehicle Card Action Hierarchy
+Garage vehicle cards SHALL prioritize opening vehicle context and updating the odometer while keeping destructive actions identifiable and less visually dominant.
+
+#### Scenario: Vehicle card renders on compact width
+- **WHEN** a vehicle has a long name or the device uses large text
+- **THEN** its name, odometer, primary detail action, and odometer action remain visible without overlapping edit or delete controls
+
+### Requirement: Responsive Vehicle Forms
+Vehicle creation and full editing SHALL remain scrollable and operable with compact height, software keyboard, and optional planning fields. Full editing SHALL use a dedicated full-screen presentation on compact Android windows instead of a constrained alert dialog.
+
+#### Scenario: Edit all optional fields in landscape
+- **WHEN** the user edits a vehicle in landscape with the keyboard visible
+- **THEN** every field and save action remains reachable without clipping
+
+#### Scenario: Edit a vehicle on a compact phone
+- **WHEN** the user selects the edit action from a vehicle card
+- **THEN** a full-screen editor identifies the vehicle, provides clear navigation, and keeps the save action reachable above system and IME insets
+
+### Requirement: Adaptive Vehicle Creation Action
+Garage SHALL expose vehicle creation through a thumb-reachable labeled action on compact non-empty screens while retaining an inline action in the empty state.
+
+#### Scenario: Garage contains vehicles on a compact phone
+- **WHEN** the vehicle list is displayed
+- **THEN** a labeled creation action is available near the bottom end and does not obscure the final vehicle card
