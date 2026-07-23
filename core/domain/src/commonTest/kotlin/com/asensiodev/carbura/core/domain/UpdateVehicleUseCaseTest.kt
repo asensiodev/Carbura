@@ -16,12 +16,13 @@ class UpdateVehicleUseCaseTest {
         runTest {
             val repository = FakeVehicleRepository()
             val original = testVehicle(name = "Original", odometerKm = 10_000)
-            repository.saveVehicle(original)
+            repository.saveVehicle(testFamilyScope, original)
             val useCase = UpdateVehicleUseCase(repository)
 
             val result =
                 useCase(
                     UpdateVehicleParams(
+                        scope = testFamilyScope,
                         currentVehicle = original,
                         name = "  Familiar  ",
                         type = VehicleType.Motorcycle,
@@ -130,6 +131,7 @@ class UpdateVehicleUseCaseTest {
         odometerKm: Int = vehicle.currentOdometerKm,
         allowOdometerDecrease: Boolean = false,
     ) = UpdateVehicleParams(
+        scope = testFamilyScope,
         currentVehicle = vehicle,
         name = name,
         type = vehicle.type,

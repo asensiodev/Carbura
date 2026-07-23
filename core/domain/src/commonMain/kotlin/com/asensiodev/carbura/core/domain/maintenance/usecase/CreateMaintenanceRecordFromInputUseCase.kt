@@ -3,6 +3,7 @@ package com.asensiodev.carbura.core.domain.maintenance.usecase
 import com.asensiodev.carbura.core.domain.DomainResult
 import com.asensiodev.carbura.core.domain.SuspendUseCase
 import com.asensiodev.carbura.core.domain.ValidationFailure
+import com.asensiodev.carbura.core.domain.family.FamilyScoped
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
@@ -10,10 +11,10 @@ import com.asensiodev.carbura.core.model.MaintenanceTypeId
 
 class CreateMaintenanceRecordFromInputUseCase(
     private val createMaintenanceRecordUseCase: CreateMaintenanceRecordUseCase,
-) : SuspendUseCase<CreateMaintenanceRecordInput, DomainResult<MaintenanceRecord>> {
-    override suspend fun invoke(params: CreateMaintenanceRecordInput): DomainResult<MaintenanceRecord> =
-        when (val result = params.toMaintenanceRecord()) {
-            is DomainResult.Success -> createMaintenanceRecordUseCase(result.value)
+) : SuspendUseCase<FamilyScoped<CreateMaintenanceRecordInput>, DomainResult<MaintenanceRecord>> {
+    override suspend fun invoke(params: FamilyScoped<CreateMaintenanceRecordInput>): DomainResult<MaintenanceRecord> =
+        when (val result = params.value.toMaintenanceRecord()) {
+            is DomainResult.Success -> createMaintenanceRecordUseCase(FamilyScoped(params.scope, result.value))
             is DomainResult.ValidationError -> result
         }
 }

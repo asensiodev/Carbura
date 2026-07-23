@@ -17,7 +17,7 @@ class CreatePlannedMaintenanceReminderUseCaseTest {
             val useCase = CreatePlannedMaintenanceReminderUseCase(repository, scheduler)
             val record = testMaintenanceRecord(performedOn = "2027-08-14")
 
-            val reminder = useCase(record)
+            val reminder = useCase(record.familyScoped())
 
             assertEquals("planned-maintenance-reminder:record-1", reminder.id.value)
             assertEquals(CalendarDate("2027-08-14"), reminder.dueDate)
@@ -50,8 +50,8 @@ class CreatePlannedMaintenanceReminderUseCaseTest {
             val useCase = CreatePlannedMaintenanceReminderUseCase(repository, scheduler)
             val record = testMaintenanceRecord(performedOn = "2027-08-14")
 
-            useCase(record)
-            useCase(record)
+            useCase(record.familyScoped())
+            useCase(record.familyScoped())
 
             assertEquals(1, repository.savedReminders.size)
             assertEquals(repository.notificationMutations[0], repository.notificationMutations[1])

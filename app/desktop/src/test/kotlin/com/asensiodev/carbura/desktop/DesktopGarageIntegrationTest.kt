@@ -4,6 +4,7 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.asensiodev.carbura.core.data.dataModule
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
+import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Vehicle
@@ -138,6 +139,7 @@ class DesktopGarageIntegrationTest {
         runTest {
             Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
             val familyId = koin.get<FamilyId>()
+            val activeScope = koin.get<ActiveFamilyScopeGateway>().capture(familyId)
             val form = koin.get<VehicleFormViewModel> { parametersOf(familyId) }
             val reminders = koin.get<RemindersViewModel> { parametersOf(familyId) }
             val created = async(start = CoroutineStart.UNDISPATCHED) { form.effects.first { it is VehicleFormEffect.VehicleCreated } }
@@ -160,7 +162,7 @@ class DesktopGarageIntegrationTest {
             val vehicle =
                 koin
                     .get<VehicleRepository>()
-                    .observeVehicles(familyId)
+                    .observeVehicles(activeScope)
                     .single()
             assertEquals("2027-05-10", vehicle.nextItvDate?.iso8601)
             assertEquals("2027-08-15", vehicle.insuranceRenewalDate?.iso8601)
@@ -185,7 +187,7 @@ class DesktopGarageIntegrationTest {
             val edited =
                 koin
                     .get<VehicleRepository>()
-                    .observeVehicles(familyId)
+                    .observeVehicles(activeScope)
                     .single()
             assertEquals("2028-05-10", edited.nextItvDate?.iso8601)
             assertEquals(null, edited.nextServiceOdometerKm)
@@ -203,13 +205,14 @@ class DesktopGarageIntegrationTest {
         runTest {
             Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
             val familyId = koin.get<FamilyId>()
+            val activeScope = koin.get<ActiveFamilyScopeGateway>().capture(familyId)
             val form = koin.get<VehicleFormViewModel> { parametersOf(familyId) }
             createVehicle(form, "Mileage car", "42000")
             val repository = koin.get<VehicleRepository>()
-            val vehicle = repository.observeVehicles(familyId).single()
+            val vehicle = repository.observeVehicles(activeScope).single()
 
             updateOdometer(form, vehicle, "43000")
-            val increased = repository.observeVehicles(familyId).single()
+            val increased = repository.observeVehicles(activeScope).single()
             assertEquals(43000, increased.currentOdometerKm)
 
             form.onEvent(VehicleFormEvent.QuickOdometerUpdateRequested(increased))
@@ -222,7 +225,7 @@ class DesktopGarageIntegrationTest {
             val updated = async(start = CoroutineStart.UNDISPATCHED) { form.effects.first { it is VehicleFormEffect.VehicleUpdated } }
             form.onEvent(VehicleFormEvent.ConfirmOdometerDecrease)
             awaitVehicleEffect(form, updated)
-            assertEquals(41000, repository.observeVehicles(familyId).single().currentOdometerKm)
+            assertEquals(41000, repository.observeVehicles(activeScope).single().currentOdometerKm)
         }
 
     private suspend fun TestScope.createVehicle(

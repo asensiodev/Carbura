@@ -23,7 +23,7 @@ class MaintenanceCreationOrchestrationTest {
             val repository = FakeMaintenanceRecordRepository()
             val useCase = CreateMaintenanceRecordFromInputUseCase(CreateMaintenanceRecordUseCase(repository))
 
-            val result = useCase(input(MaintenanceTypeCode.Itv, nextDueDate = "2027-07-01"))
+            val result = useCase(input(MaintenanceTypeCode.Itv, nextDueDate = "2027-07-01").familyScoped())
 
             val record = assertIs<DomainResult.Success<*>>(result).value as com.asensiodev.carbura.core.model.MaintenanceRecord
             assertEquals(MaintenanceTypeCode.Itv, record.maintenanceTypeCode)
@@ -38,7 +38,7 @@ class MaintenanceCreationOrchestrationTest {
 
             val result =
                 CreateMaintenanceRecordFromInputUseCase(CreateMaintenanceRecordUseCase(repository))(
-                    input(MaintenanceTypeCode.Insurance, nextDueDate = ""),
+                    input(MaintenanceTypeCode.Insurance, nextDueDate = "").familyScoped(),
                 )
 
             val record = assertIs<DomainResult.Success<*>>(result).value as com.asensiodev.carbura.core.model.MaintenanceRecord
@@ -51,7 +51,7 @@ class MaintenanceCreationOrchestrationTest {
         runTest {
             val result =
                 CreateMaintenanceRecordFromInputUseCase(CreateMaintenanceRecordUseCase(FakeMaintenanceRecordRepository()))(
-                    input(MaintenanceTypeCode.Custom, customTypeLabel = ""),
+                    input(MaintenanceTypeCode.Custom, customTypeLabel = "").familyScoped(),
                 )
 
             assertEquals(
@@ -65,7 +65,7 @@ class MaintenanceCreationOrchestrationTest {
         runTest {
             val result =
                 CreateMaintenanceRecordFromInputUseCase(CreateMaintenanceRecordUseCase(FakeMaintenanceRecordRepository()))(
-                    input(MaintenanceTypeCode.Custom, customTypeLabel = "  eBike ECU Check  "),
+                    input(MaintenanceTypeCode.Custom, customTypeLabel = "  eBike ECU Check  ").familyScoped(),
                 )
 
             val record = assertIs<DomainResult.Success<*>>(result).value as com.asensiodev.carbura.core.model.MaintenanceRecord
@@ -79,7 +79,7 @@ class MaintenanceCreationOrchestrationTest {
             val repository = FakeMaintenanceRecordRepository()
             val invalid = input(MaintenanceTypeCode.Itv).copy(performedOn = "2027-02-29")
 
-            val result = CreateMaintenanceRecordFromInputUseCase(CreateMaintenanceRecordUseCase(repository))(invalid)
+            val result = CreateMaintenanceRecordFromInputUseCase(CreateMaintenanceRecordUseCase(repository))(invalid.familyScoped())
 
             assertEquals(DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceDate), result)
             assertEquals(emptyList(), repository.savedRecords)
@@ -91,8 +91,8 @@ class MaintenanceCreationOrchestrationTest {
             val validRepository = FakeMaintenanceRecordRepository()
             val useCase = CreateMaintenanceRecordFromInputUseCase(CreateMaintenanceRecordUseCase(validRepository))
 
-            val valid = useCase(input(MaintenanceTypeCode.Insurance, "2028-02-29"))
-            val invalid = useCase(input(MaintenanceTypeCode.Insurance, "2028-02-30"))
+            val valid = useCase(input(MaintenanceTypeCode.Insurance, "2028-02-29").familyScoped())
+            val invalid = useCase(input(MaintenanceTypeCode.Insurance, "2028-02-30").familyScoped())
 
             assertIs<DomainResult.Success<*>>(valid)
             assertEquals(DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceDate), invalid)
@@ -105,7 +105,7 @@ class MaintenanceCreationOrchestrationTest {
 
             val result =
                 CreateMaintenanceRecordFromInputUseCase(CreateMaintenanceRecordUseCase(repository))(
-                    input(MaintenanceTypeCode.Repair, "2027-07-01"),
+                    input(MaintenanceTypeCode.Repair, "2027-07-01").familyScoped(),
                 )
 
             assertIs<DomainResult.Success<*>>(result)
@@ -125,7 +125,7 @@ class MaintenanceCreationOrchestrationTest {
                 )
             val record = testMaintenanceRecord(code = MaintenanceTypeCode.Itv, nextDueDate = "2027-07-01")
 
-            val result = useCase(record)
+            val result = useCase(record.familyScoped())
 
             val creation = assertIs<DomainResult.Success<*>>(result).value
             assertEquals(listOf(record), maintenanceRepository.savedRecords)
@@ -158,7 +158,7 @@ class MaintenanceCreationOrchestrationTest {
                     ),
                 )
 
-            val result = useCase(input(MaintenanceTypeCode.Insurance, "2027-07-01"))
+            val result = useCase(input(MaintenanceTypeCode.Insurance, "2027-07-01").familyScoped())
 
             assertIs<DomainResult.Success<*>>(result)
             assertEquals(
@@ -192,8 +192,8 @@ class MaintenanceCreationOrchestrationTest {
                 )
             val record = testMaintenanceRecord(code = MaintenanceTypeCode.Insurance, nextDueDate = "2027-07-01")
 
-            useCase(record)
-            useCase(record)
+            useCase(record.familyScoped())
+            useCase(record.familyScoped())
 
             assertEquals(1, maintenanceRepository.savedRecords.size)
             assertEquals(2, maintenanceRepository.notificationMutations.size)

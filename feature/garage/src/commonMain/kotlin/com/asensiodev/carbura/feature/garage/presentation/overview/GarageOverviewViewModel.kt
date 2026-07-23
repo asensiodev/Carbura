@@ -3,10 +3,11 @@ package com.asensiodev.carbura.feature.garage.presentation.overview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.asensiodev.carbura.core.domain.DispatcherProvider
+import com.asensiodev.carbura.core.domain.family.FamilyScoped
 import com.asensiodev.carbura.core.domain.sync.SyncManager
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.domain.vehicle.usecase.DeleteVehicleUseCase
-import com.asensiodev.carbura.core.model.FamilyId
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import kotlinx.coroutines.CancellationException
@@ -22,13 +23,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class GarageOverviewViewModel(
-    private val familyId: FamilyId,
+    scope: ActiveFamilyScope,
     private val vehicleRepository: VehicleRepository,
     private val dispatchers: DispatcherProvider,
     private val deleteVehicleUseCase: DeleteVehicleUseCase,
     private val syncManager: SyncManager? = null,
     private val coroutineScope: CoroutineScope? = null,
 ) : ViewModel() {
+    private val activeScope = scope
     private val _uiState = MutableStateFlow(GarageOverviewUiState())
     val uiState: StateFlow<GarageOverviewUiState> = _uiState.asStateFlow()
 
@@ -65,7 +67,7 @@ class GarageOverviewViewModel(
             var loadSettled = false
             if (showLoading) _uiState.update { it.copy(loadState = GarageLoadState.Loading) }
             try {
-                val vehicles = withContext(dispatchers.io) { vehicleRepository.observeVehicles(familyId) }
+                val vehicles = withContext(dispatchers.io) { vehicleRepository.observeVehicles(activeScope) }
                 _uiState.update {
                     it.copy(
                         vehicles = mergeVehiclesPreservingOrder(it.vehicles, vehicles),
@@ -97,7 +99,7 @@ class GarageOverviewViewModel(
                     ?.name
                     .orEmpty()
             try {
-                withContext(dispatchers.io) { deleteVehicleUseCase(vehicleId) }
+                withContext(dispatchers.io) { deleteVehicleUseCase(FamilyScoped(activeScope, vehicleId)) }
                 _uiState.update {
                     it.copy(
                         vehicles = it.vehicles.filterNot { vehicle -> vehicle.id == vehicleId },

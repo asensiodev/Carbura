@@ -3,6 +3,7 @@ package com.asensiodev.carbura.core.data
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
 import com.asensiodev.carbura.core.domain.reminder.notification.NotificationOutboxDrainResult
 import com.asensiodev.carbura.core.domain.reminder.notification.NotificationOutboxProcessor
 import org.koin.core.context.GlobalContext
@@ -13,8 +14,9 @@ internal class NotificationOutboxWorker(
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val koin = GlobalContext.get()
-        koin.get<NotificationOutboxReconciler>().reconcileExistingReminders()
-        return when (workerResult(koin.get<NotificationOutboxProcessor>().drain())) {
+        val scope = koin.get<ActiveFamilyScopeGateway>().current()
+        koin.get<NotificationOutboxReconciler>().reconcileExistingReminders(scope)
+        return when (workerResult(koin.get<NotificationOutboxProcessor>().drain(scope))) {
             ListenableWorkerResult.Success -> Result.success()
             ListenableWorkerResult.Retry -> Result.retry()
         }

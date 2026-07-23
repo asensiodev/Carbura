@@ -62,6 +62,7 @@ class DeriveVehicleReminderSuggestionsUseCase {
 }
 
 data class SaveVehicleWithRemindersParams(
+    val scope: com.asensiodev.carbura.core.model.ActiveFamilyScope,
     val vehicle: Vehicle,
     val reconcileGeneratedReminders: Boolean,
 )
@@ -93,6 +94,6 @@ class SaveVehicleWithRemindersUseCase(
             } else {
                 emptyList()
             }
-        vehicleRepository.saveVehicleWithNotifications(params.vehicle, mutations)
+        vehicleRepository.saveVehicleWithNotifications(params.scope, params.vehicle, mutations)
     }
 }

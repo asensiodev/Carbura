@@ -6,6 +6,7 @@ import com.asensiodev.carbura.core.domain.auth.AuthUser
 import com.asensiodev.carbura.core.domain.sync.SyncResult
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfile
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import com.asensiodev.carbura.core.model.VehicleType
@@ -317,7 +318,24 @@ class LocalFirstSyncManagerTest {
         }
 
     @Test
-    fun syncPushesDeletedVehicleTombstoneAndMarksItSynced() =
+    fun syncNeverAdoptsOrPushesLegacyLocalFamilyWithoutExplicitConsent() =
+        runTest {
+            val legacy =
+                vehicle(id = "legacy", updatedAt = 20, pendingSync = true)
+                    .copy(familyId = "local-family")
+            val local = FakeLocalSyncDataSource(vehicles = mutableListOf(legacy))
+            val remote = FakeRemoteSyncDataSource()
+
+            val result = syncManager(local, remote).syncNow()
+
+            assertIs<SyncResult.Success>(result)
+            assertTrue(remote.vehicles.isEmpty())
+            assertEquals("local-family", local.vehicles.single().familyId)
+            assertTrue(local.vehicles.single().pendingSync)
+        }
+
+    @Test
+    fun syncAcknowledgementPreservesConcurrentMutationsAndTombstones() =
         runTest {
             val deletedVehicle = vehicle(id = "vehicle-1", updatedAt = 20, pendingSync = true, deletedAt = 20)
             val local = FakeLocalSyncDataSource(vehicles = mutableListOf(deletedVehicle))
@@ -329,6 +347,64 @@ class LocalFirstSyncManagerTest {
             assertIs<SyncResult.Success>(result)
             assertEquals(20, remote.vehicles.single().deletedAt)
             assertFalse(local.vehicles.single().pendingSync)
+
+            val concurrentlyMutatedLocal =
+                FakeLocalSyncDataSource(
+                    vehicles = mutableListOf(vehicle("vehicle-1", updatedAt = 10, pendingSync = true)),
+                    maintenanceRecords =
+                        mutableListOf(maintenanceRecord("maintenance-1", "vehicle-1", updatedAt = 10, pendingSync = true)),
+                    reminders = mutableListOf(reminder("reminder-1", "vehicle-1", updatedAt = 10, pendingSync = true)),
+                )
+            val concurrentlyMutatedRemote = FakeRemoteSyncDataSource()
+            concurrentlyMutatedRemote.afterVehicleUpsert = {
+                concurrentlyMutatedLocal.vehicles[0] =
+                    concurrentlyMutatedLocal.vehicles[0].copy(name = "New vehicle", updatedAt = 20, pendingSync = true)
+            }
+            concurrentlyMutatedRemote.afterMaintenanceUpsert = {
+                concurrentlyMutatedLocal.maintenanceRecords[0] =
+                    concurrentlyMutatedLocal.maintenanceRecords[0].copy(notes = "New notes", updatedAt = 20, pendingSync = true)
+            }
+            concurrentlyMutatedRemote.afterReminderUpsert = {
+                concurrentlyMutatedLocal.reminders[0] =
+                    concurrentlyMutatedLocal.reminders[0].copy(title = "New reminder", updatedAt = 20, pendingSync = true)
+            }
+            val manager = syncManager(concurrentlyMutatedLocal, concurrentlyMutatedRemote)
+
+            assertIs<SyncResult.Success>(manager.syncNow())
+
+            assertTrue(concurrentlyMutatedLocal.vehicles.single().pendingSync)
+            assertTrue(concurrentlyMutatedLocal.maintenanceRecords.single().pendingSync)
+            assertTrue(concurrentlyMutatedLocal.reminders.single().pendingSync)
+
+            concurrentlyMutatedRemote.afterVehicleUpsert = null
+            concurrentlyMutatedRemote.afterMaintenanceUpsert = null
+            concurrentlyMutatedRemote.afterReminderUpsert = null
+            assertIs<SyncResult.Success>(manager.syncNow())
+
+            assertEquals("New vehicle", concurrentlyMutatedRemote.vehicles.single().name)
+            assertEquals("New notes", concurrentlyMutatedRemote.maintenanceRecords.single().notes)
+            assertEquals("New reminder", concurrentlyMutatedRemote.reminders.single().title)
+            assertFalse(concurrentlyMutatedLocal.vehicles.single().pendingSync)
+            assertFalse(concurrentlyMutatedLocal.maintenanceRecords.single().pendingSync)
+            assertFalse(concurrentlyMutatedLocal.reminders.single().pendingSync)
+
+            val tombstoneLocal = FakeLocalSyncDataSource(vehicles = mutableListOf(vehicle("deleted", updatedAt = 10, pendingSync = true)))
+            val tombstoneRemote = FakeRemoteSyncDataSource()
+            tombstoneRemote.afterVehicleUpsert = {
+                tombstoneLocal.vehicles[0] = tombstoneLocal.vehicles[0].copy(updatedAt = 20, pendingSync = true, deletedAt = 20)
+            }
+            val tombstoneManager = syncManager(tombstoneLocal, tombstoneRemote)
+
+            assertIs<SyncResult.Success>(tombstoneManager.syncNow())
+
+            assertEquals(20, tombstoneLocal.vehicles.single().deletedAt)
+            assertTrue(tombstoneLocal.vehicles.single().pendingSync)
+
+            tombstoneRemote.afterVehicleUpsert = null
+            assertIs<SyncResult.Success>(tombstoneManager.syncNow())
+
+            assertEquals(20, tombstoneRemote.vehicles.single().deletedAt)
+            assertFalse(tombstoneLocal.vehicles.single().pendingSync)
         }
 
     @Test
@@ -363,6 +439,7 @@ class LocalFirstSyncManagerTest {
             profileGateway = FakeRemoteUserProfileGateway(familyId),
             local = local,
             remote = remote,
+            familyScope = FakeActiveFamilyScopeGateway(),
         )
 
     private fun vehicle(
@@ -478,58 +555,107 @@ private class FakeLocalSyncDataSource(
     val maintenanceRecords: MutableList<SyncMaintenanceRecord> = mutableListOf(),
     val reminders: MutableList<SyncReminder> = mutableListOf(),
 ) : LocalSyncDataSource {
-    override suspend fun getPendingVehicles(): List<SyncVehicle> = vehicles.filter { it.pendingSync }
+    override suspend fun getPendingVehicles(scope: ActiveFamilyScope): List<SyncVehicle> =
+        vehicles.filter {
+            it.familyId ==
+                scope.familyId.value &&
+                it.pendingSync
+        }
 
-    override suspend fun getPendingMaintenanceRecords(): List<SyncMaintenanceRecord> = maintenanceRecords.filter { it.pendingSync }
+    override suspend fun getPendingMaintenanceRecords(scope: ActiveFamilyScope): List<SyncMaintenanceRecord> =
+        maintenanceRecords.filter {
+            it.familyId ==
+                scope.familyId.value &&
+                it.pendingSync
+        }
 
-    override suspend fun getPendingReminders(): List<SyncReminder> = reminders.filter { it.pendingSync }
+    override suspend fun getPendingReminders(scope: ActiveFamilyScope): List<SyncReminder> =
+        reminders.filter {
+            it.familyId ==
+                scope.familyId.value &&
+                it.pendingSync
+        }
 
-    override suspend fun getVehicles(familyId: FamilyId): List<SyncVehicle> = vehicles.filter { it.familyId == familyId.value }
+    override suspend fun getVehicles(scope: ActiveFamilyScope): List<SyncVehicle> = vehicles.filter { it.familyId == scope.familyId.value }
 
-    override suspend fun getMaintenanceRecords(familyId: FamilyId): List<SyncMaintenanceRecord> =
-        maintenanceRecords.filter { it.familyId == familyId.value }
+    override suspend fun getMaintenanceRecords(scope: ActiveFamilyScope): List<SyncMaintenanceRecord> =
+        maintenanceRecords.filter { it.familyId == scope.familyId.value }
 
-    override suspend fun getReminders(familyId: FamilyId): List<SyncReminder> = reminders.filter { it.familyId == familyId.value }
+    override suspend fun getReminders(scope: ActiveFamilyScope): List<SyncReminder> =
+        reminders.filter { it.familyId == scope.familyId.value }
 
-    override suspend fun upsertSyncedVehicle(vehicle: SyncVehicle) {
-        vehicles.removeAll { it.id == vehicle.id }
+    override suspend fun upsertSyncedVehicle(
+        scope: ActiveFamilyScope,
+        vehicle: SyncVehicle,
+    ) {
+        vehicles.removeAll { it.familyId == scope.familyId.value && it.id == vehicle.id }
         vehicles += vehicle.copy(pendingSync = false)
     }
 
-    override suspend fun upsertSyncedMaintenanceRecord(record: SyncMaintenanceRecord) {
-        maintenanceRecords.removeAll { it.id == record.id }
+    override suspend fun upsertSyncedMaintenanceRecord(
+        scope: ActiveFamilyScope,
+        record: SyncMaintenanceRecord,
+    ) {
+        maintenanceRecords.removeAll { it.familyId == scope.familyId.value && it.id == record.id }
         maintenanceRecords += record.copy(pendingSync = false)
     }
 
-    override suspend fun upsertSyncedReminder(reminder: SyncReminder) {
-        reminders.removeAll { it.id == reminder.id }
+    override suspend fun upsertSyncedReminder(
+        scope: ActiveFamilyScope,
+        reminder: SyncReminder,
+    ) {
+        reminders.removeAll { it.familyId == scope.familyId.value && it.id == reminder.id }
         reminders += reminder.copy(pendingSync = false)
     }
 
-    override suspend fun markVehicleSynced(id: String) {
-        val index = vehicles.indexOfFirst { it.id == id }
-        vehicles[index] = vehicles[index].copy(pendingSync = false)
+    override suspend fun markVehicleSynced(
+        scope: ActiveFamilyScope,
+        id: String,
+        uploadedUpdatedAt: Long,
+    ) {
+        val index = vehicles.indexOfFirst { it.familyId == scope.familyId.value && it.id == id && it.updatedAt == uploadedUpdatedAt }
+        if (index >= 0) vehicles[index] = vehicles[index].copy(pendingSync = false)
     }
 
-    override suspend fun markMaintenanceRecordSynced(id: String) {
-        val index = maintenanceRecords.indexOfFirst { it.id == id }
-        maintenanceRecords[index] = maintenanceRecords[index].copy(pendingSync = false)
-    }
-
-    override suspend fun markReminderSynced(id: String) {
-        val index = reminders.indexOfFirst { it.id == id }
-        reminders[index] = reminders[index].copy(pendingSync = false)
-    }
-
-    override suspend fun adoptLegacyLocalFamily(familyId: FamilyId) {
-        vehicles.replaceAll { vehicle ->
-            if (vehicle.familyId == "local-family") {
-                vehicle.copy(familyId = familyId.value, pendingSync = true)
-            } else {
-                vehicle
+    override suspend fun markMaintenanceRecordSynced(
+        scope: ActiveFamilyScope,
+        id: String,
+        uploadedUpdatedAt: Long,
+    ) {
+        val index =
+            maintenanceRecords.indexOfFirst {
+                it.familyId == scope.familyId.value && it.id == id && it.updatedAt == uploadedUpdatedAt
             }
-        }
+        if (index >= 0) maintenanceRecords[index] = maintenanceRecords[index].copy(pendingSync = false)
     }
+
+    override suspend fun markReminderSynced(
+        scope: ActiveFamilyScope,
+        id: String,
+        uploadedUpdatedAt: Long,
+    ) {
+        val index = reminders.indexOfFirst { it.familyId == scope.familyId.value && it.id == id && it.updatedAt == uploadedUpdatedAt }
+        if (index >= 0) reminders[index] = reminders[index].copy(pendingSync = false)
+    }
+}
+
+private class FakeActiveFamilyScopeGateway : com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway {
+    private var scope = ActiveFamilyScope(null, FamilyId("local-family"), 1)
+
+    override fun activateAuthenticated(
+        userId: UserId,
+        familyId: FamilyId,
+    ): ActiveFamilyScope = ActiveFamilyScope(userId, familyId, scope.generation + 1).also { scope = it }
+
+    override fun activateLocal(): ActiveFamilyScope =
+        ActiveFamilyScope(null, FamilyId("local-family"), scope.generation + 1).also {
+            scope =
+                it
+        }
+
+    override fun current(): ActiveFamilyScope = scope
+
+    override fun requireCurrent(expected: ActiveFamilyScope) = check(scope == expected)
 }
 
 private class FakeRemoteSyncDataSource(
@@ -540,6 +666,9 @@ private class FakeRemoteSyncDataSource(
     var shouldCancel: Boolean = false,
     private val blockFirstVehicleRead: Boolean = false,
 ) : RemoteSyncDataSource {
+    var afterVehicleUpsert: (() -> Unit)? = null
+    var afterMaintenanceUpsert: (() -> Unit)? = null
+    var afterReminderUpsert: (() -> Unit)? = null
     val firstVehicleReadStarted = CompletableDeferred<Unit>()
     val releaseFirstVehicleRead = CompletableDeferred<Unit>()
     var vehicleReadCalls: Int = 0
@@ -551,6 +680,7 @@ private class FakeRemoteSyncDataSource(
             this.vehicles.removeAll { it.id == vehicle.id }
             this.vehicles += vehicle
         }
+        afterVehicleUpsert?.invoke()
     }
 
     override suspend fun upsertMaintenanceRecords(records: List<SyncMaintenanceRecord>) {
@@ -559,6 +689,7 @@ private class FakeRemoteSyncDataSource(
             maintenanceRecords.removeAll { it.id == record.id }
             maintenanceRecords += record
         }
+        afterMaintenanceUpsert?.invoke()
     }
 
     override suspend fun upsertReminders(reminders: List<SyncReminder>) {
@@ -567,6 +698,7 @@ private class FakeRemoteSyncDataSource(
             this.reminders.removeAll { it.id == reminder.id }
             this.reminders += reminder
         }
+        afterReminderUpsert?.invoke()
     }
 
     override suspend fun getVehicles(familyId: FamilyId): List<SyncVehicle> {

@@ -2,6 +2,7 @@ package com.asensiodev.carbura.core.data
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
+import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.ReminderId
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -14,18 +15,18 @@ class DesiredNotificationOutboxQueriesTest {
         runTest {
             withDatabase { database ->
                 val queries = database.carburaDatabaseQueries
-                assertTrue(queries.selectDesiredNotifications().executeAsList().isEmpty())
+                assertTrue(queries.selectDesiredNotifications(FAMILY_ID.value).executeAsList().isEmpty())
 
-                queries.replaceDesiredNotification("reminder-b", "Schedule", "payload-b", 1)
-                queries.replaceDesiredNotification("reminder-a", "Schedule", "payload-a", 1)
+                queries.replaceDesiredNotification(FAMILY_ID.value, "reminder-b", "Schedule", "payload-b", 1)
+                queries.replaceDesiredNotification(FAMILY_ID.value, "reminder-a", "Schedule", "payload-a", 1)
 
                 assertEquals(
                     listOf("reminder-a", "reminder-b"),
-                    queries.selectDesiredNotifications().executeAsList().map { it.reminderId },
+                    queries.selectDesiredNotifications(FAMILY_ID.value).executeAsList().map { it.reminderId },
                 )
 
-                queries.replaceDesiredNotification("reminder-a", "Cancel", null, 2)
-                val replacement = queries.selectDesiredNotifications().executeAsList().first()
+                queries.replaceDesiredNotification(FAMILY_ID.value, "reminder-a", "Cancel", null, 2)
+                val replacement = queries.selectDesiredNotifications(FAMILY_ID.value).executeAsList().first()
                 assertEquals("Cancel", replacement.action)
                 assertEquals(null, replacement.payload)
                 assertEquals(2L, replacement.revision)
@@ -37,11 +38,11 @@ class DesiredNotificationOutboxQueriesTest {
         runTest {
             withDatabase { database ->
                 val queries = database.carburaDatabaseQueries
-                queries.replaceDesiredNotification("reminder-1", "Schedule", "payload", 1)
+                queries.replaceDesiredNotification(FAMILY_ID.value, "reminder-1", "Schedule", "payload", 1)
 
-                queries.replaceDesiredNotification("reminder-1", "Schedule", "payload", 1)
+                queries.replaceDesiredNotification(FAMILY_ID.value, "reminder-1", "Schedule", "payload", 1)
 
-                assertEquals(1L, queries.selectDesiredNotifications().executeAsOne().revision)
+                assertEquals(1L, queries.selectDesiredNotifications(FAMILY_ID.value).executeAsOne().revision)
             }
         }
 
@@ -50,14 +51,14 @@ class DesiredNotificationOutboxQueriesTest {
         runTest {
             withDatabase { database ->
                 val queries = database.carburaDatabaseQueries
-                queries.replaceDesiredNotification("reminder-1", "Schedule", "payload", 1)
-                queries.replaceDesiredNotification("reminder-1", "Cancel", null, 2)
+                queries.replaceDesiredNotification(FAMILY_ID.value, "reminder-1", "Schedule", "payload", 1)
+                queries.replaceDesiredNotification(FAMILY_ID.value, "reminder-1", "Cancel", null, 2)
 
-                queries.acknowledgeDesiredNotification("reminder-1", 1)
-                assertEquals(2L, queries.selectDesiredNotifications().executeAsOne().revision)
+                queries.acknowledgeDesiredNotification(FAMILY_ID.value, "reminder-1", 1)
+                assertEquals(2L, queries.selectDesiredNotifications(FAMILY_ID.value).executeAsOne().revision)
 
-                queries.acknowledgeDesiredNotification("reminder-1", 2)
-                assertTrue(queries.selectDesiredNotifications().executeAsList().isEmpty())
+                queries.acknowledgeDesiredNotification(FAMILY_ID.value, "reminder-1", 2)
+                assertTrue(queries.selectDesiredNotifications(FAMILY_ID.value).executeAsList().isEmpty())
             }
         }
 
@@ -66,17 +67,18 @@ class DesiredNotificationOutboxQueriesTest {
         runTest {
             withDatabase { database ->
                 val outbox = SqlDelightNotificationOutbox(database)
+                val scope = database.activateTestFamily(FAMILY_ID)
                 val reminderId = ReminderId("reminder-1")
-                outbox.recordCancel(reminderId)
-                val first = outbox.pending().single()
-                outbox.acknowledge(reminderId, first.revision)
+                outbox.recordCancel(scope, reminderId)
+                val first = outbox.pending(scope).single()
+                outbox.acknowledge(scope, reminderId, first.revision)
 
-                outbox.recordCancel(reminderId)
+                outbox.recordCancel(scope, reminderId)
 
                 assertEquals(
                     2L,
                     outbox
-                        .pending()
+                        .pending(scope)
                         .single()
                         .revision.value,
                 )
@@ -91,5 +93,9 @@ class DesiredNotificationOutboxQueriesTest {
         } finally {
             driver.close()
         }
+    }
+
+    private companion object {
+        val FAMILY_ID = FamilyId("family")
     }
 }

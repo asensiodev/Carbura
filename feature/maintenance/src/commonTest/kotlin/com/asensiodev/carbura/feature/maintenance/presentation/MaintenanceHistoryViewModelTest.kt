@@ -16,6 +16,7 @@ import com.asensiodev.carbura.core.domain.reminder.usecase.CreateAutomaticRemind
 import com.asensiodev.carbura.core.domain.reminder.usecase.CreatePlannedMaintenanceReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.RemovePlannedMaintenanceReminderUseCase
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
@@ -24,6 +25,7 @@ import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.MaintenanceTypeId
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.ReminderId
+import com.asensiodev.carbura.core.model.UserId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
@@ -48,6 +50,7 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class MaintenanceHistoryViewModelTest {
     private val familyId = FamilyId("family-test")
+    private val activeScope = ActiveFamilyScope(UserId("user-test"), familyId, 1)
     private val vehicleId = VehicleId("vehicle-test")
     private val vehicle =
         Vehicle(
@@ -195,7 +198,7 @@ class MaintenanceHistoryViewModelTest {
             val viewModel = maintenanceHistoryViewModel(repository = repository)
             viewModel.onEvent(MaintenanceHistoryEvent.TypeSelected(MaintenanceTypeCode.Custom))
             viewModel.onEvent(MaintenanceHistoryEvent.CustomTypeLabelChanged("Borrador"))
-            repository.saveMaintenanceRecord(record("remote", "2026-07-17"))
+            repository.saveMaintenanceRecord(activeScope, record("remote", "2026-07-17"))
 
             viewModel.onEvent(MaintenanceHistoryEvent.Refresh)
             advanceUntilIdle()
@@ -309,8 +312,8 @@ class MaintenanceHistoryViewModelTest {
     fun historyIsOrderedByDateDescending() =
         runTest {
             val repository = FakeMaintenanceRecordRepository()
-            repository.saveMaintenanceRecord(record("record-old", "2026-01-01"))
-            repository.saveMaintenanceRecord(record("record-new", "2026-07-04"))
+            repository.saveMaintenanceRecord(activeScope, record("record-old", "2026-01-01"))
+            repository.saveMaintenanceRecord(activeScope, record("record-new", "2026-07-04"))
             val viewModel = maintenanceHistoryViewModel(repository = repository)
 
             viewModel.onEvent(MaintenanceHistoryEvent.Started)
@@ -324,7 +327,7 @@ class MaintenanceHistoryViewModelTest {
     fun deleteMaintenanceRemovesRecordFromHistory() =
         runTest {
             val repository = FakeMaintenanceRecordRepository()
-            repository.saveMaintenanceRecord(record("record-1", "2026-07-04"))
+            repository.saveMaintenanceRecord(activeScope, record("record-1", "2026-07-04"))
             val viewModel = maintenanceHistoryViewModel(repository = repository)
             viewModel.onEvent(MaintenanceHistoryEvent.Started)
             advanceUntilIdle()
@@ -367,7 +370,7 @@ class MaintenanceHistoryViewModelTest {
         runTest {
             val deleteGate = CompletableDeferred<Unit>()
             val repository = FakeMaintenanceRecordRepository(deleteGate = deleteGate)
-            repository.saveMaintenanceRecord(record("record-1", "2026-07-17"))
+            repository.saveMaintenanceRecord(activeScope, record("record-1", "2026-07-17"))
             val viewModel = maintenanceHistoryViewModel(repository = repository)
             viewModel.onEvent(MaintenanceHistoryEvent.Started)
             advanceUntilIdle()
@@ -506,7 +509,7 @@ class MaintenanceHistoryViewModelTest {
         repository.reminderRepository = reminderRepository
         return MaintenanceHistoryViewModel(
             vehicleId = vehicleId,
-            familyId = familyId,
+            scope = activeScope,
             dispatchers =
                 TestDispatcherProvider(
                     io = dispatcher,
@@ -561,7 +564,10 @@ private class FakeMaintenanceRecordRepository(
     var saveCalls = 0
     var deleteCalls = 0
 
-    override suspend fun saveMaintenanceRecord(record: MaintenanceRecord) {
+    override suspend fun saveMaintenanceRecord(
+        scope: ActiveFamilyScope,
+        record: MaintenanceRecord,
+    ) {
         saveCalls += 1
         saveGate?.await()
         saveError?.let { throw it }
@@ -571,37 +577,43 @@ private class FakeMaintenanceRecordRepository(
     }
 
     override suspend fun saveMaintenanceRecordWithNotification(
+        scope: ActiveFamilyScope,
         record: MaintenanceRecord,
         mutation: ReminderNotificationMutation,
     ) {
-        saveMaintenanceRecord(record)
+        saveMaintenanceRecord(scope, record)
         val reminders = requireNotNull(reminderRepository)
         when (mutation) {
             is ReminderNotificationMutation.Upsert ->
-                reminders.saveReminderWithNotification(mutation.reminder, mutation.notificationPlan)
-            is ReminderNotificationMutation.Delete -> reminders.deleteReminderWithNotification(mutation.reminderId)
+                reminders.saveReminderWithNotification(scope, mutation.reminder, mutation.notificationPlan)
+            is ReminderNotificationMutation.Delete -> reminders.deleteReminderWithNotification(scope, mutation.reminderId)
         }
     }
 
-    override suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord> =
-        savedRecords.filter { it.vehicleId == vehicleId }
+    override suspend fun getVehicleHistory(
+        scope: ActiveFamilyScope,
+        vehicleId: VehicleId,
+    ): List<MaintenanceRecord> = savedRecords.filter { it.familyId == scope.familyId && it.vehicleId == vehicleId }
 
     override suspend fun updateMaintenanceRecordWithNotifications(
         record: MaintenanceRecord,
-        expectedFamilyId: FamilyId,
+        scope: ActiveFamilyScope,
         expectedVehicleId: VehicleId,
         mutations: List<ReminderNotificationMutation>,
     ): Boolean {
         val index =
             savedRecords.indexOfFirst {
-                it.id == record.id && it.familyId == expectedFamilyId && it.vehicleId == expectedVehicleId
+                it.id == record.id && it.familyId == scope.familyId && it.vehicleId == expectedVehicleId
             }
         if (index < 0) return false
         savedRecords[index] = record
         return true
     }
 
-    override suspend fun deleteMaintenanceRecord(recordId: MaintenanceRecordId) {
+    override suspend fun deleteMaintenanceRecord(
+        scope: ActiveFamilyScope,
+        recordId: MaintenanceRecordId,
+    ) {
         deleteCalls += 1
         deleteGate?.await()
         deleteError?.let { throw it }
@@ -614,15 +626,21 @@ private class FakeVehicleRepository(
     var failLoads: Boolean = false,
     var loadError: Throwable? = null,
 ) : VehicleRepository {
-    override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> {
+    override suspend fun observeVehicles(scope: ActiveFamilyScope): List<Vehicle> {
         loadError?.let { throw it }
         if (failLoads) error("load failed")
-        return vehicles.filter { it.familyId == familyId }
+        return vehicles.filter { it.familyId == scope.familyId }
     }
 
-    override suspend fun saveVehicle(vehicle: Vehicle) = Unit
+    override suspend fun saveVehicle(
+        scope: ActiveFamilyScope,
+        vehicle: Vehicle,
+    ) = Unit
 
-    override suspend fun deleteVehicle(vehicleId: VehicleId) = Unit
+    override suspend fun deleteVehicle(
+        scope: ActiveFamilyScope,
+        vehicleId: VehicleId,
+    ) = Unit
 }
 
 private class CancellationHostileVehicleRepository(
@@ -633,7 +651,7 @@ private class CancellationHostileVehicleRepository(
 ) : VehicleRepository {
     private var loadCalls = 0
 
-    override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> {
+    override suspend fun observeVehicles(scope: ActiveFamilyScope): List<Vehicle> {
         loadCalls += 1
         if (loadCalls == 1) {
             firstLoadStarted.complete(Unit)
@@ -645,30 +663,55 @@ private class CancellationHostileVehicleRepository(
         return listOf(currentVehicle)
     }
 
-    override suspend fun saveVehicle(vehicle: Vehicle) = Unit
+    override suspend fun saveVehicle(
+        scope: ActiveFamilyScope,
+        vehicle: Vehicle,
+    ) = Unit
 
-    override suspend fun deleteVehicle(vehicleId: VehicleId) = Unit
+    override suspend fun deleteVehicle(
+        scope: ActiveFamilyScope,
+        vehicleId: VehicleId,
+    ) = Unit
 }
 
 private class FakeReminderRepository : ReminderRepository {
     val savedReminders = mutableListOf<Reminder>()
 
-    override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> =
-        savedReminders.filter { it.familyId == familyId && !it.isCompleted }
+    override suspend fun getPendingReminders(scope: ActiveFamilyScope): List<Reminder> =
+        savedReminders.filter { it.familyId == scope.familyId && !it.isCompleted }
 
-    override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> = savedReminders.filter { it.vehicleId == vehicleId }
+    override suspend fun getRemindersByVehicle(
+        scope: ActiveFamilyScope,
+        vehicleId: VehicleId,
+    ): List<Reminder> =
+        savedReminders.filter {
+            it.familyId ==
+                scope.familyId &&
+                it.vehicleId == vehicleId
+        }
 
-    override suspend fun getActiveReminder(reminderId: ReminderId): Reminder? =
-        savedReminders.firstOrNull { it.id == reminderId && !it.isCompleted }
+    override suspend fun getActiveReminder(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ): Reminder? = savedReminders.firstOrNull { it.familyId == scope.familyId && it.id == reminderId && !it.isCompleted }
 
-    override suspend fun saveReminder(reminder: Reminder) {
+    override suspend fun saveReminder(
+        scope: ActiveFamilyScope,
+        reminder: Reminder,
+    ) {
         savedReminders.removeAll { it.id == reminder.id }
         savedReminders += reminder
     }
 
-    override suspend fun markReminderCompleted(reminderId: ReminderId) = Unit
+    override suspend fun markReminderCompleted(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) = Unit
 
-    override suspend fun deleteReminder(reminderId: ReminderId) {
+    override suspend fun deleteReminder(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) {
         savedReminders.removeAll { it.id == reminderId }
     }
 }
@@ -678,10 +721,16 @@ private class FakeNotificationScheduler(
 ) : ReminderNotificationScheduler {
     val scheduledPlans = mutableListOf<ReminderNotificationPlan>()
 
-    override suspend fun schedule(plan: ReminderNotificationPlan) {
+    override suspend fun schedule(
+        scope: ActiveFamilyScope,
+        plan: ReminderNotificationPlan,
+    ) {
         scheduleError?.let { throw it }
         scheduledPlans += plan
     }
 
-    override suspend fun cancel(reminderId: ReminderId) = Unit
+    override suspend fun cancel(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) = Unit
 }

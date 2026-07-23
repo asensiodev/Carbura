@@ -3,11 +3,13 @@ package com.asensiodev.carbura.core.domain.vehicle.usecase
 import com.asensiodev.carbura.core.domain.SuspendUseCase
 import com.asensiodev.carbura.core.domain.ValidationFailure
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleType
 
 data class UpdateVehicleParams(
+    val scope: ActiveFamilyScope,
     val currentVehicle: Vehicle,
     val name: String,
     val type: VehicleType,
@@ -67,7 +69,8 @@ class UpdateVehicleUseCase(
                 insuranceRenewalDate = params.insuranceRenewalDate,
                 nextServiceOdometerKm = params.nextServiceOdometerKm,
             )
-        repository.saveVehicle(updatedVehicle)
+        require(updatedVehicle.familyId == params.scope.familyId)
+        repository.saveVehicle(params.scope, updatedVehicle)
         return UpdateVehicleResult.Success(updatedVehicle)
     }
 }

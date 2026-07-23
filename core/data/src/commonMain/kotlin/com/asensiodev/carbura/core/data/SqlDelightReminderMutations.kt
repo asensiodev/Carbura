@@ -3,28 +3,31 @@ package com.asensiodev.carbura.core.data
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
 import com.asensiodev.carbura.core.model.Reminder
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 
 internal class SqlDelightReminderMutations(
     private val database: CarburaDatabase,
     private val notificationOutbox: SqlDelightNotificationOutbox = SqlDelightNotificationOutbox(database),
 ) {
     fun apply(
+        scope: ActiveFamilyScope,
         mutation: ReminderNotificationMutation,
         now: Long,
     ) {
         when (mutation) {
             is ReminderNotificationMutation.Upsert -> {
                 upsert(mutation.reminder, now)
-                mutation.notificationPlan?.let(notificationOutbox::recordSchedule)
-                    ?: notificationOutbox.recordCancel(mutation.reminder.id)
+                mutation.notificationPlan?.let { notificationOutbox.recordSchedule(scope, it) }
+                    ?: notificationOutbox.recordCancel(scope, mutation.reminder.id)
             }
             is ReminderNotificationMutation.Delete -> {
                 database.carburaDatabaseQueries.deleteReminder(
                     deletedAt = now,
                     updatedAt = now,
                     id = mutation.reminderId.value,
+                    familyId = scope.familyId.value,
                 )
-                notificationOutbox.recordCancel(mutation.reminderId)
+                notificationOutbox.recordCancel(scope, mutation.reminderId)
             }
         }
     }

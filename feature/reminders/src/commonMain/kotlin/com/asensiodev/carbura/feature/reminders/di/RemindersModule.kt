@@ -1,5 +1,6 @@
 package com.asensiodev.carbura.feature.reminders.di
 
+import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
 import com.asensiodev.carbura.core.domain.reminder.usecase.CompleteReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.CreateReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.DeleteReminderUseCase
@@ -16,7 +17,7 @@ val remindersModule =
         factory { DeleteReminderUseCase(get(), get()) }
         factory { parameters ->
             RemindersViewModel(
-                familyId = parameters.get<FamilyId>(),
+                scope = get<ActiveFamilyScopeGateway>().capture(parameters.get<FamilyId>()),
                 vehicleRepository = get(),
                 dispatchers = get(),
                 createReminderUseCase = get(),

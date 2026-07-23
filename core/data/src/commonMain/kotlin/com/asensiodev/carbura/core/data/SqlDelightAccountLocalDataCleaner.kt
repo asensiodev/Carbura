@@ -9,15 +9,18 @@ import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.ReminderId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.withLock
+import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
 
 internal class SqlDelightAccountLocalDataCleaner(
     private val database: CarburaDatabase,
     private val notificationScheduler: ReminderNotificationScheduler,
     private val operationLock: SyncOperationLock = SyncOperationLock(),
     private val notificationRecovery: NotificationOutboxRecovery = NoOpNotificationOutboxRecovery,
+    private val familyScope: ActiveFamilyScopeGateway = SqlDelightActiveFamilyScopeGateway(database),
 ) : AccountLocalDataCleaner {
     private val notificationOutbox = SqlDelightNotificationOutbox(database)
     override suspend fun clear(familyId: FamilyId) {
+        val scope = familyScope.capture(familyId)
         operationLock.mutex.withLock {
             val reminderIds =
                 database.carburaDatabaseQueries
@@ -29,7 +32,7 @@ internal class SqlDelightAccountLocalDataCleaner(
             reminderIds.forEach { reminderId ->
                 if (cancellation != null) return@forEach
                 try {
-                    notificationScheduler.cancel(reminderId)
+                    notificationScheduler.cancel(scope, reminderId)
                 } catch (error: CancellationException) {
                     cancellation = error
                 } catch (_: Exception) {
@@ -38,7 +41,7 @@ internal class SqlDelightAccountLocalDataCleaner(
             }
 
             database.carburaDatabaseQueries.transaction {
-                reminderIds.forEach(notificationOutbox::recordCancel)
+                reminderIds.forEach { notificationOutbox.recordCancel(scope, it) }
                 database.carburaDatabaseQueries.deleteRemindersByFamilyImmediately(familyId.value)
                 database.carburaDatabaseQueries.deleteMaintenanceRecordsByFamilyImmediately(familyId.value)
                 database.carburaDatabaseQueries.deleteVehiclesByFamilyImmediately(familyId.value)

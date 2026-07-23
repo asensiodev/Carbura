@@ -6,6 +6,7 @@ import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.auth.AccountLocalDataCleaner
 import com.asensiodev.carbura.core.domain.auth.AuthGateway
 import com.asensiodev.carbura.core.domain.auth.AuthSession
+import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfile
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.model.FamilyId
@@ -27,6 +28,7 @@ class OnboardingViewModel(
     private val authGateway: AuthGateway,
     private val remoteUserProfileGateway: RemoteUserProfileGateway,
     private val accountLocalDataCleaner: AccountLocalDataCleaner,
+    private val familyScope: ActiveFamilyScopeGateway,
     private val dispatchers: DispatcherProvider,
     private val coroutineScope: CoroutineScope? = null,
 ) : ViewModel() {
@@ -144,6 +146,7 @@ class OnboardingViewModel(
             }
 
         if (session == null) {
+            familyScope.activateLocal()
             _uiState.update {
                 it.copy(
                     isInitializing = false,
@@ -174,6 +177,7 @@ class OnboardingViewModel(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
+                familyScope.activateLocal()
                 _uiState.update {
                     it.copy(
                         isInitializing = false,
@@ -285,6 +289,7 @@ class OnboardingViewModel(
         isInitializing: Boolean = false,
         isLoading: Boolean = false,
     ) {
+        familyScope.activateAuthenticated(profile.userId, profile.familyId)
         _uiState.update {
             it.copy(
                 isInitializing = isInitializing,
@@ -303,6 +308,7 @@ class OnboardingViewModel(
     private suspend fun signOut() {
         try {
             withContext(dispatchers.io) { authGateway.signOut() }
+            familyScope.activateLocal()
             _uiState.update {
                 OnboardingUiState(
                     isInitializing = false,
@@ -334,6 +340,7 @@ class OnboardingViewModel(
         }
 
         withContext(NonCancellable) {
+            familyScope.activateLocal()
             if (familyId != null) {
                 try {
                     withContext(dispatchers.io) { accountLocalDataCleaner.clear(familyId) }

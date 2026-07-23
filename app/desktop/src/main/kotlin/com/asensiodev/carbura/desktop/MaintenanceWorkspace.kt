@@ -148,13 +148,14 @@ import java.util.Locale
 @Composable
 internal fun MaintenanceWorkspace(
     compact: Boolean,
+    familyId: FamilyId,
+    refreshGeneration: Long,
     initialVehicleId: VehicleId?,
     onNavigateToGarage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val familyId = remember { GlobalContext.get().get<FamilyId>() }
     val overviewViewModel =
-        remember {
+        remember(familyId) {
             GlobalContext.get().get<GarageOverviewViewModel> { parametersOf(familyId) }
         }
     val overviewState by overviewViewModel.uiState.collectAsState()
@@ -163,6 +164,9 @@ internal fun MaintenanceWorkspace(
 
     LaunchedEffect(overviewViewModel) {
         overviewViewModel.onEvent(GarageOverviewEvent.Started)
+    }
+    LaunchedEffect(refreshGeneration) {
+        if (refreshGeneration > 0L) overviewViewModel.onEvent(GarageOverviewEvent.Refresh)
     }
     LaunchedEffect(overviewState.vehicles, overviewState.loadState, initialVehicleId) {
         if (overviewState.loadState == GarageLoadState.Loaded) {

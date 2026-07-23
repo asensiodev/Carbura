@@ -1,6 +1,7 @@
 package com.asensiodev.carbura.core.domain.reminder.usecase
 
 import com.asensiodev.carbura.core.domain.SuspendUseCase
+import com.asensiodev.carbura.core.domain.family.FamilyScoped
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
 import com.asensiodev.carbura.core.domain.reminder.notification.maintenanceReminderId
@@ -18,15 +19,15 @@ data class GeneratedMaintenanceReminder(
 class CreateAutomaticReminderUseCase(
     private val repository: ReminderRepository,
     @Suppress("UNUSED_PARAMETER") notificationScheduler: ReminderNotificationScheduler,
-) : SuspendUseCase<MaintenanceRecord, GeneratedMaintenanceReminder?> {
-    override suspend fun invoke(params: MaintenanceRecord): GeneratedMaintenanceReminder? {
-        val reminderId = maintenanceReminderId(params.id)
-        val generated = deriveGeneratedMaintenanceReminder(params)
+) : SuspendUseCase<FamilyScoped<MaintenanceRecord>, GeneratedMaintenanceReminder?> {
+    override suspend fun invoke(params: FamilyScoped<MaintenanceRecord>): GeneratedMaintenanceReminder? {
+        val reminderId = maintenanceReminderId(params.value.id)
+        val generated = deriveGeneratedMaintenanceReminder(params.value)
         if (generated == null) {
-            repository.deleteReminderWithNotification(reminderId)
+            repository.deleteReminderWithNotification(params.scope, reminderId)
             return null
         }
-        repository.saveReminderWithNotification(generated.reminder, generated.notificationPlan)
+        repository.saveReminderWithNotification(params.scope, generated.reminder, generated.notificationPlan)
         return generated
     }
 }

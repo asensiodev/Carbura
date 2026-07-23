@@ -8,10 +8,12 @@ import com.asensiodev.carbura.core.domain.reminder.usecase.CreateReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.DeleteReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.GetPendingRemindersUseCase
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.ReminderId
+import com.asensiodev.carbura.core.model.UserId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
@@ -155,7 +157,7 @@ class ReminderVehicleFilterViewModelTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val scheduler = FilterNotificationScheduler()
         return RemindersViewModel(
-            familyId = familyId,
+            scope = ActiveFamilyScope(UserId("user-filter"), familyId, 1),
             vehicleRepository = vehicleRepository,
             dispatchers = TestDispatcherProvider(dispatcher, dispatcher, dispatcher),
             createReminderUseCase = CreateReminderUseCase(reminderRepository, scheduler),
@@ -193,11 +195,17 @@ class ReminderVehicleFilterViewModelTest {
 private class FilterVehicleRepository(
     val vehicles: MutableList<Vehicle>,
 ) : VehicleRepository {
-    override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> = vehicles.filter { it.familyId == familyId }
+    override suspend fun observeVehicles(scope: ActiveFamilyScope): List<Vehicle> = vehicles.filter { it.familyId == scope.familyId }
 
-    override suspend fun saveVehicle(vehicle: Vehicle) = Unit
+    override suspend fun saveVehicle(
+        scope: ActiveFamilyScope,
+        vehicle: Vehicle,
+    ) = Unit
 
-    override suspend fun deleteVehicle(vehicleId: VehicleId) = Unit
+    override suspend fun deleteVehicle(
+        scope: ActiveFamilyScope,
+        vehicleId: VehicleId,
+    ) = Unit
 }
 
 private class FilterReminderRepository(
@@ -205,23 +213,46 @@ private class FilterReminderRepository(
 ) : ReminderRepository {
     private val reminders = reminders.toMutableList()
 
-    override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> =
-        reminders.filter { it.familyId == familyId && !it.isCompleted }
+    override suspend fun getPendingReminders(scope: ActiveFamilyScope): List<Reminder> =
+        reminders.filter { it.familyId == scope.familyId && !it.isCompleted }
 
-    override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> = reminders.filter { it.vehicleId == vehicleId }
+    override suspend fun getRemindersByVehicle(
+        scope: ActiveFamilyScope,
+        vehicleId: VehicleId,
+    ): List<Reminder> =
+        reminders.filter {
+            it.familyId ==
+                scope.familyId &&
+                it.vehicleId == vehicleId
+        }
 
-    override suspend fun saveReminder(reminder: Reminder) = Unit
+    override suspend fun saveReminder(
+        scope: ActiveFamilyScope,
+        reminder: Reminder,
+    ) = Unit
 
-    override suspend fun markReminderCompleted(reminderId: ReminderId) {
+    override suspend fun markReminderCompleted(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) {
         val index = reminders.indexOfFirst { it.id == reminderId }
         if (index >= 0) reminders[index] = reminders[index].copy(isCompleted = true)
     }
 
-    override suspend fun deleteReminder(reminderId: ReminderId) = Unit
+    override suspend fun deleteReminder(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) = Unit
 }
 
 private class FilterNotificationScheduler : ReminderNotificationScheduler {
-    override suspend fun schedule(plan: ReminderNotificationPlan) = Unit
+    override suspend fun schedule(
+        scope: ActiveFamilyScope,
+        plan: ReminderNotificationPlan,
+    ) = Unit
 
-    override suspend fun cancel(reminderId: ReminderId) = Unit
+    override suspend fun cancel(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) = Unit
 }

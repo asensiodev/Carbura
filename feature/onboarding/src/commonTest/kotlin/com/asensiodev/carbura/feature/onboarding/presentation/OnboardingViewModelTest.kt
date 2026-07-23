@@ -5,8 +5,10 @@ import com.asensiodev.carbura.core.domain.auth.AccountLocalDataCleaner
 import com.asensiodev.carbura.core.domain.auth.AuthGateway
 import com.asensiodev.carbura.core.domain.auth.AuthSession
 import com.asensiodev.carbura.core.domain.auth.AuthUser
+import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfile
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import com.asensiodev.carbura.core.testing.TestDispatcherProvider
@@ -450,7 +452,12 @@ class OnboardingViewModelTest {
     @Test
     fun signOutReturnsToLoginAndEmitsEffect() =
         runTest {
-            val viewModel = onboardingViewModel(authGateway = FakeAuthGateway(currentSession = authSession()))
+            val familyScope = FakeActiveFamilyScopeGateway()
+            val viewModel =
+                onboardingViewModel(
+                    authGateway = FakeAuthGateway(currentSession = authSession()),
+                    familyScope = familyScope,
+                )
 
             viewModel.onEvent(OnboardingEvent.Started)
             advanceUntilIdle()
@@ -471,6 +478,7 @@ class OnboardingViewModelTest {
             assertEquals(null, state.displayName)
             assertEquals(null, state.email)
             assertEquals(null, state.familyName)
+            assertEquals(FamilyId("local-family"), familyScope.current().familyId)
         }
 
     @Test
@@ -610,6 +618,7 @@ class OnboardingViewModelTest {
         authGateway: AuthGateway = FakeAuthGateway(),
         remoteUserProfileGateway: RemoteUserProfileGateway = FakeRemoteUserProfileGateway(remoteProfile()),
         accountLocalDataCleaner: AccountLocalDataCleaner = FakeAccountLocalDataCleaner(),
+        familyScope: ActiveFamilyScopeGateway = FakeActiveFamilyScopeGateway(),
         coroutineScope: CoroutineScope = this,
     ): OnboardingViewModel {
         val dispatcher = StandardTestDispatcher(testScheduler)
@@ -617,6 +626,7 @@ class OnboardingViewModelTest {
             authGateway = authGateway,
             remoteUserProfileGateway = remoteUserProfileGateway,
             accountLocalDataCleaner = accountLocalDataCleaner,
+            familyScope = familyScope,
             dispatchers =
                 TestDispatcherProvider(
                     io = dispatcher,
@@ -646,6 +656,29 @@ class OnboardingViewModelTest {
             displayName = "Angela Remote",
             email = "angela@example.com",
         )
+}
+
+private class FakeActiveFamilyScopeGateway : ActiveFamilyScopeGateway {
+    private var scope = ActiveFamilyScope(null, FamilyId("local-family"), 1)
+
+    override fun activateAuthenticated(
+        userId: UserId,
+        familyId: FamilyId,
+    ): ActiveFamilyScope = activate(userId, familyId)
+
+    override fun activateLocal(): ActiveFamilyScope = activate(null, FamilyId("local-family"))
+
+    override fun current(): ActiveFamilyScope = scope
+
+    override fun requireCurrent(expected: ActiveFamilyScope) = check(expected == scope)
+
+    private fun activate(
+        userId: UserId?,
+        familyId: FamilyId,
+    ): ActiveFamilyScope {
+        if (scope.userId == userId && scope.familyId == familyId) return scope
+        return ActiveFamilyScope(userId, familyId, scope.generation + 1).also { scope = it }
+    }
 }
 
 private class FakeAuthGateway(

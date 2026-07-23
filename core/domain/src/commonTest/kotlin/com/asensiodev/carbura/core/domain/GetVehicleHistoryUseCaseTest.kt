@@ -15,7 +15,7 @@ class GetVehicleHistoryUseCaseTest {
             repository.savedRecords += listOf(older, newer)
             val useCase = GetVehicleHistoryUseCase(repository)
 
-            val history = useCase(testVehicleId)
+            val history = useCase(testVehicleId.familyScoped())
 
             assertEquals(listOf(newer, older), history)
         }

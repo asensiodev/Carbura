@@ -15,6 +15,7 @@ import com.asensiodev.carbura.core.domain.reminder.usecase.CreateAutomaticRemind
 import com.asensiodev.carbura.core.domain.reminder.usecase.CreatePlannedMaintenanceReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.RemovePlannedMaintenanceReminderUseCase
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
@@ -22,6 +23,7 @@ import com.asensiodev.carbura.core.model.MaintenanceRecordId
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.ReminderId
+import com.asensiodev.carbura.core.model.UserId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
@@ -276,7 +278,7 @@ class FutureMaintenanceReminderViewModelTest {
         repository.reminderRepository = reminderRepository
         return MaintenanceHistoryViewModel(
             vehicleId = vehicle.id,
-            familyId = familyId,
+            scope = ActiveFamilyScope(UserId("user-test"), familyId, 1),
             dispatchers = TestDispatcherProvider(dispatcher, dispatcher, dispatcher),
             createMaintenanceWithReminderFromInputUseCase =
                 CreateMaintenanceWithReminderFromInputUseCase(
@@ -310,7 +312,10 @@ private class FutureMaintenanceRepository(
     var reminderRepository: ReminderRepository? = null
     var saveCalls = 0
 
-    override suspend fun saveMaintenanceRecord(record: MaintenanceRecord) {
+    override suspend fun saveMaintenanceRecord(
+        scope: ActiveFamilyScope,
+        record: MaintenanceRecord,
+    ) {
         saveCalls += 1
         saveGate?.await()
         savedRecords.removeAll { it.id == record.id }
@@ -318,24 +323,30 @@ private class FutureMaintenanceRepository(
     }
 
     override suspend fun saveMaintenanceRecordWithNotification(
+        scope: ActiveFamilyScope,
         record: MaintenanceRecord,
         mutation: ReminderNotificationMutation,
     ) {
-        saveMaintenanceRecord(record)
+        saveMaintenanceRecord(scope, record)
         val reminders = requireNotNull(reminderRepository)
         when (mutation) {
             is ReminderNotificationMutation.Upsert -> {
-                reminders.saveReminderWithNotification(mutation.reminder, mutation.notificationPlan)
+                reminders.saveReminderWithNotification(scope, mutation.reminder, mutation.notificationPlan)
                 mutation.notificationPlan?.let(notificationPlans::add)
             }
-            is ReminderNotificationMutation.Delete -> reminders.deleteReminderWithNotification(mutation.reminderId)
+            is ReminderNotificationMutation.Delete -> reminders.deleteReminderWithNotification(scope, mutation.reminderId)
         }
     }
 
-    override suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord> =
-        savedRecords.filter { it.vehicleId == vehicleId }
+    override suspend fun getVehicleHistory(
+        scope: ActiveFamilyScope,
+        vehicleId: VehicleId,
+    ): List<MaintenanceRecord> = savedRecords.filter { it.familyId == scope.familyId && it.vehicleId == vehicleId }
 
-    override suspend fun deleteMaintenanceRecord(recordId: MaintenanceRecordId) {
+    override suspend fun deleteMaintenanceRecord(
+        scope: ActiveFamilyScope,
+        recordId: MaintenanceRecordId,
+    ) {
         savedRecords.removeAll { it.id == recordId }
     }
 }
@@ -344,27 +355,45 @@ private class FutureReminderRepository : ReminderRepository {
     val savedReminders = mutableListOf<Reminder>()
     val notificationPlans = mutableListOf<ReminderNotificationPlan>()
 
-    override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> =
-        savedReminders.filter { it.familyId == familyId && !it.isCompleted }
+    override suspend fun getPendingReminders(scope: ActiveFamilyScope): List<Reminder> =
+        savedReminders.filter { it.familyId == scope.familyId && !it.isCompleted }
 
-    override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> = savedReminders.filter { it.vehicleId == vehicleId }
+    override suspend fun getRemindersByVehicle(
+        scope: ActiveFamilyScope,
+        vehicleId: VehicleId,
+    ): List<Reminder> =
+        savedReminders.filter {
+            it.familyId ==
+                scope.familyId &&
+                it.vehicleId == vehicleId
+        }
 
-    override suspend fun saveReminder(reminder: Reminder) {
+    override suspend fun saveReminder(
+        scope: ActiveFamilyScope,
+        reminder: Reminder,
+    ) {
         savedReminders.removeAll { it.id == reminder.id }
         savedReminders += reminder
     }
 
     override suspend fun saveReminderWithNotification(
+        scope: ActiveFamilyScope,
         reminder: Reminder,
         notificationPlan: ReminderNotificationPlan?,
     ) {
-        saveReminder(reminder)
+        saveReminder(scope, reminder)
         notificationPlan?.let(notificationPlans::add)
     }
 
-    override suspend fun markReminderCompleted(reminderId: ReminderId) = Unit
+    override suspend fun markReminderCompleted(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) = Unit
 
-    override suspend fun deleteReminder(reminderId: ReminderId) {
+    override suspend fun deleteReminder(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) {
         savedReminders.removeAll { it.id == reminderId }
     }
 }
@@ -374,20 +403,32 @@ private class FutureNotificationScheduler(
 ) : ReminderNotificationScheduler {
     val scheduledPlans = mutableListOf<ReminderNotificationPlan>()
 
-    override suspend fun schedule(plan: ReminderNotificationPlan) {
+    override suspend fun schedule(
+        scope: ActiveFamilyScope,
+        plan: ReminderNotificationPlan,
+    ) {
         scheduleError?.let { throw it }
         scheduledPlans += plan
     }
 
-    override suspend fun cancel(reminderId: ReminderId) = Unit
+    override suspend fun cancel(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) = Unit
 }
 
 private class FutureVehicleRepository(
     private val vehicle: Vehicle,
 ) : VehicleRepository {
-    override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> = listOf(vehicle)
+    override suspend fun observeVehicles(scope: ActiveFamilyScope): List<Vehicle> = listOf(vehicle).filter { it.familyId == scope.familyId }
 
-    override suspend fun saveVehicle(vehicle: Vehicle) = Unit
+    override suspend fun saveVehicle(
+        scope: ActiveFamilyScope,
+        vehicle: Vehicle,
+    ) = Unit
 
-    override suspend fun deleteVehicle(vehicleId: VehicleId) = Unit
+    override suspend fun deleteVehicle(
+        scope: ActiveFamilyScope,
+        vehicleId: VehicleId,
+    ) = Unit
 }

@@ -10,11 +10,13 @@ import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotifica
 import com.asensiodev.carbura.core.domain.reminder.notification.maintenanceReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.notification.manualReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.notification.reminderAlertIdentity
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.ReminderId
+import com.asensiodev.carbura.core.model.UserId
 import com.asensiodev.carbura.core.model.VehicleId
 import kotlinx.coroutines.runBlocking
 import org.junit.runner.RunWith
@@ -91,7 +93,7 @@ class AndroidReminderNotificationSchedulerTest {
             alarmManager.set(AlarmManager.RTC_WAKEUP, 123_456L, legacyPendingIntent)
             assertEquals(1, shadowOf(alarmManager).scheduledAlarms.size)
 
-            AndroidReminderNotificationScheduler(context).cancel(reminderId)
+            AndroidReminderNotificationScheduler(context).cancel(SCOPE, reminderId)
 
             assertTrue(shadowOf(alarmManager).scheduledAlarms.isEmpty())
             assertEquals(null, legacyIntent.data)
@@ -106,10 +108,10 @@ class AndroidReminderNotificationSchedulerTest {
             val reminder = reminder("maintenance-reminder:record-1", "2099-07-01")
             val plan = maintenanceReminderNotificationPlan(reminder, MaintenanceTypeCode.Itv)!!
             val scheduler = AndroidReminderNotificationScheduler(context)
-            scheduler.schedule(plan)
+            scheduler.schedule(SCOPE, plan)
             assertEquals(3, shadowOf(alarmManager).scheduledAlarms.size)
 
-            scheduler.cancel(reminder.id)
+            scheduler.cancel(SCOPE, reminder.id)
 
             assertTrue(shadowOf(alarmManager).scheduledAlarms.isEmpty())
         }
@@ -129,8 +131,8 @@ class AndroidReminderNotificationSchedulerTest {
             assertEquals(stableAlertIntIdentity(firstIdentity), stableAlertIntIdentity(firstIdentity))
             val scheduler = AndroidReminderNotificationScheduler(context)
 
-            scheduler.schedule(manualReminderNotificationPlan(first))
-            scheduler.schedule(manualReminderNotificationPlan(second))
+            scheduler.schedule(SCOPE, manualReminderNotificationPlan(first))
+            scheduler.schedule(SCOPE, manualReminderNotificationPlan(second))
 
             assertEquals(2, shadowOf(alarmManager).scheduledAlarms.size)
         }
@@ -147,4 +149,8 @@ class AndroidReminderNotificationSchedulerTest {
             title = "Reminder",
             dueDate = dueDate?.let(::CalendarDate),
         )
+
+    private companion object {
+        val SCOPE = ActiveFamilyScope(UserId("user-1"), FamilyId("family-1"), 1)
+    }
 }

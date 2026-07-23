@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,9 +31,13 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,25 +47,41 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.asensiodev.carbura.core.data.desktopDataDirectory
 import com.asensiodev.carbura.core.data.desktopDatabasePath
+import com.asensiodev.carbura.core.domain.sync.LocalDataCounts
+import com.asensiodev.carbura.core.domain.sync.SyncStatus
 import com.asensiodev.carbura.desktop.resources.Res
 import com.asensiodev.carbura.desktop.resources.account_action_failed
 import com.asensiodev.carbura.desktop.resources.account_action_unsupported
 import com.asensiodev.carbura.desktop.resources.account_application_data_label
+import com.asensiodev.carbura.desktop.resources.account_authenticated_title
+import com.asensiodev.carbura.desktop.resources.account_cancel
 import com.asensiodev.carbura.desktop.resources.account_data_folder_action
 import com.asensiodev.carbura.desktop.resources.account_data_folder_action_name
 import com.asensiodev.carbura.desktop.resources.account_database_label
+import com.asensiodev.carbura.desktop.resources.account_excluded_description
+import com.asensiodev.carbura.desktop.resources.account_excluded_title
+import com.asensiodev.carbura.desktop.resources.account_family_value
 import com.asensiodev.carbura.desktop.resources.account_header_description
 import com.asensiodev.carbura.desktop.resources.account_header_eyebrow
 import com.asensiodev.carbura.desktop.resources.account_header_title
+import com.asensiodev.carbura.desktop.resources.account_last_sync
 import com.asensiodev.carbura.desktop.resources.account_local_mode_available
 import com.asensiodev.carbura.desktop.resources.account_local_mode_description
 import com.asensiodev.carbura.desktop.resources.account_local_mode_title
+import com.asensiodev.carbura.desktop.resources.account_never_synced
 import com.asensiodev.carbura.desktop.resources.account_project_action
 import com.asensiodev.carbura.desktop.resources.account_project_action_name
 import com.asensiodev.carbura.desktop.resources.account_project_description
 import com.asensiodev.carbura.desktop.resources.account_project_title
+import com.asensiodev.carbura.desktop.resources.account_retry
+import com.asensiodev.carbura.desktop.resources.account_sign_in
+import com.asensiodev.carbura.desktop.resources.account_sign_out
+import com.asensiodev.carbura.desktop.resources.account_sign_out_description
+import com.asensiodev.carbura.desktop.resources.account_sign_out_title
 import com.asensiodev.carbura.desktop.resources.account_storage_description
 import com.asensiodev.carbura.desktop.resources.account_storage_title
+import com.asensiodev.carbura.desktop.resources.account_sync_now
+import com.asensiodev.carbura.desktop.resources.account_syncing
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import java.net.URI
@@ -71,6 +92,13 @@ internal val CARBURA_PROJECT_URI: URI = URI("https://github.com/asensiodev/Carbu
 @Composable
 internal fun AccountWorkspace(
     compact: Boolean,
+    startupState: DesktopStartupState,
+    syncStatus: SyncStatus,
+    excludedLocalData: LocalDataCounts?,
+    onSignIn: () -> Unit,
+    onSyncNow: () -> Unit,
+    onRetry: () -> Unit,
+    onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
     dataDirectory: Path = desktopDataDirectory(),
     databasePath: Path = desktopDatabasePath(dataDirectory),
@@ -78,6 +106,8 @@ internal fun AccountWorkspace(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    var confirmSignOut by remember { mutableStateOf(false) }
+    val account = startupState.accountForWorkspace()
     val unsupportedActionMessage = stringResource(Res.string.account_action_unsupported)
     val failedActionMessage = stringResource(Res.string.account_action_failed)
     val projectActionName = stringResource(Res.string.account_project_action_name)
@@ -122,13 +152,46 @@ internal fun AccountWorkspace(
 
             if (compact) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    LocalModeCard(Modifier.fillMaxWidth())
+                    if (account == null) {
+                        LocalModeCard(startupState, onSignIn, onRetry, Modifier.fillMaxWidth())
+                    } else {
+                        AuthenticatedAccountCard(
+                            account,
+                            syncStatus,
+                            startupState,
+                            onSyncNow,
+                            onRetry,
+                            { confirmSignOut = true },
+                            Modifier.fillMaxWidth(),
+                        )
+                    }
                     StorageCard(dataDirectory, databasePath, platformActions, reportFailure, Modifier.fillMaxWidth())
                 }
             } else {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                    LocalModeCard(Modifier.weight(0.85f))
+                    if (account == null) {
+                        LocalModeCard(startupState, onSignIn, onRetry, Modifier.weight(0.85f))
+                    } else {
+                        AuthenticatedAccountCard(
+                            account,
+                            syncStatus,
+                            startupState,
+                            onSyncNow,
+                            onRetry,
+                            { confirmSignOut = true },
+                            Modifier.weight(0.85f),
+                        )
+                    }
                     StorageCard(dataDirectory, databasePath, platformActions, reportFailure, Modifier.weight(1.15f))
+                }
+            }
+
+            excludedLocalData?.let { counts ->
+                Surface(color = Color(0xFFFFF3D8), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(stringResource(Res.string.account_excluded_title), color = Ink, fontWeight = FontWeight.Bold)
+                        Text(stringResource(Res.string.account_excluded_description, counts.total), color = Muted)
+                    }
                 }
             }
 
@@ -160,10 +223,33 @@ internal fun AccountWorkspace(
             }
         }
     }
+    if (confirmSignOut) {
+        AlertDialog(
+            onDismissRequest = { confirmSignOut = false },
+            title = { Text(stringResource(Res.string.account_sign_out_title)) },
+            text = { Text(stringResource(Res.string.account_sign_out_description)) },
+            confirmButton = {
+                Button(onClick = {
+                    confirmSignOut = false
+                    onSignOut()
+                }) {
+                    Text(stringResource(Res.string.account_sign_out))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmSignOut = false }) { Text(stringResource(Res.string.account_cancel)) }
+            },
+        )
+    }
 }
 
 @Composable
-private fun LocalModeCard(modifier: Modifier) {
+private fun LocalModeCard(
+    startupState: DesktopStartupState,
+    onSignIn: () -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier,
+) {
     AccountCard(modifier) {
         WorkspaceIcon(Icons.Default.CloudOff)
         Text(stringResource(Res.string.account_local_mode_title), color = Ink, fontWeight = FontWeight.Bold, fontSize = 19.sp)
@@ -176,8 +262,59 @@ private fun LocalModeCard(modifier: Modifier) {
                 fontWeight = FontWeight.SemiBold,
             )
         }
+        (startupState as? DesktopStartupState.LocalMode)?.authError?.let {
+            Text(it, color = MaterialTheme.colorScheme.error)
+        }
+        if (startupState is DesktopStartupState.RecoverableFailure) {
+            Text(startupState.message, color = MaterialTheme.colorScheme.error)
+            OutlinedButton(onClick = onRetry) { Text(stringResource(Res.string.account_retry)) }
+        }
+        Button(onClick = onSignIn) { Text(stringResource(Res.string.account_sign_in)) }
     }
 }
+
+@Composable
+private fun AuthenticatedAccountCard(
+    account: DesktopAccount,
+    syncStatus: SyncStatus,
+    startupState: DesktopStartupState,
+    onSyncNow: () -> Unit,
+    onRetry: () -> Unit,
+    onSignOut: () -> Unit,
+    modifier: Modifier,
+) {
+    AccountCard(modifier) {
+        Text(stringResource(Res.string.account_authenticated_title), color = Ink, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+        Text(account.displayName, color = Ink)
+        account.email?.let { Text(it, color = Muted) }
+        Text(stringResource(Res.string.account_family_value, account.familyName ?: account.familyId.value), color = Muted)
+        Text(
+            if (syncStatus.isSyncing) {
+                stringResource(Res.string.account_syncing)
+            } else {
+                syncStatus.lastSyncedAtMillis?.let { stringResource(Res.string.account_last_sync, it.toString()) }
+                    ?: stringResource(Res.string.account_never_synced)
+            },
+            color = if (syncStatus.isSyncing) Blue else Muted,
+        )
+        (startupState as? DesktopStartupState.RecoverableFailure)?.let {
+            Text(it.message, color = MaterialTheme.colorScheme.error)
+            OutlinedButton(onClick = onRetry) { Text(stringResource(Res.string.account_retry)) }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(onClick = onSyncNow, enabled = !syncStatus.isSyncing) { Text(stringResource(Res.string.account_sync_now)) }
+            OutlinedButton(onClick = onSignOut) { Text(stringResource(Res.string.account_sign_out)) }
+        }
+    }
+}
+
+private fun DesktopStartupState.accountForWorkspace(): DesktopAccount? =
+    when (this) {
+        is DesktopStartupState.Authenticated -> account
+        is DesktopStartupState.InitialSync -> account
+        is DesktopStartupState.RecoverableFailure -> account
+        else -> null
+    }
 
 @Composable
 private fun StorageCard(

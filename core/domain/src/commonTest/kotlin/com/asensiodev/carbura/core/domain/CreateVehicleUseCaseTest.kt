@@ -14,7 +14,7 @@ class CreateVehicleUseCaseTest {
             val useCase = CreateVehicleUseCase(repository)
             val vehicle = testVehicle()
 
-            val result = useCase(vehicle)
+            val result = useCase(vehicle.familyScoped())
 
             assertEquals(DomainResult.Success(vehicle), result)
             assertEquals(listOf(vehicle), repository.savedVehicles)
@@ -26,7 +26,7 @@ class CreateVehicleUseCaseTest {
             val repository = FakeVehicleRepository()
             val useCase = CreateVehicleUseCase(repository)
 
-            val result = useCase(testVehicle(name = "  "))
+            val result = useCase(testVehicle(name = "  ").familyScoped())
 
             assertEquals(
                 DomainResult.ValidationError(ValidationFailure.BlankVehicleName),
@@ -41,7 +41,7 @@ class CreateVehicleUseCaseTest {
             val repository = FakeVehicleRepository()
             val useCase = CreateVehicleUseCase(repository)
 
-            val result = useCase(testVehicle(odometerKm = -1))
+            val result = useCase(testVehicle(odometerKm = -1).familyScoped())
 
             assertEquals(
                 DomainResult.ValidationError(ValidationFailure.NegativeVehicleOdometer),

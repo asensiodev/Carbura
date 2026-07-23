@@ -15,7 +15,7 @@ class CreateMaintenanceRecordUseCaseTest {
             val useCase = CreateMaintenanceRecordUseCase(repository)
             val record = testMaintenanceRecord()
 
-            val result = useCase(record)
+            val result = useCase(record.familyScoped())
 
             assertEquals(DomainResult.Success(record), result)
             assertEquals(listOf(record), repository.savedRecords)
@@ -27,7 +27,7 @@ class CreateMaintenanceRecordUseCaseTest {
             val repository = FakeMaintenanceRecordRepository()
             val useCase = CreateMaintenanceRecordUseCase(repository)
 
-            val result = useCase(testMaintenanceRecord(odometerKm = -1))
+            val result = useCase(testMaintenanceRecord(odometerKm = -1).familyScoped())
 
             assertEquals(
                 DomainResult.ValidationError(ValidationFailure.NegativeMaintenanceOdometer),
@@ -42,7 +42,7 @@ class CreateMaintenanceRecordUseCaseTest {
             val repository = FakeMaintenanceRecordRepository()
             val useCase = CreateMaintenanceRecordUseCase(repository)
 
-            val result = useCase(testMaintenanceRecord(costCents = -1))
+            val result = useCase(testMaintenanceRecord(costCents = -1).familyScoped())
 
             assertEquals(
                 DomainResult.ValidationError(ValidationFailure.NegativeMaintenanceCost),
@@ -58,7 +58,7 @@ class CreateMaintenanceRecordUseCaseTest {
             val useCase = CreateMaintenanceRecordUseCase(repository)
             val input = testMaintenanceRecord(code = MaintenanceTypeCode.Repair, nextDueDate = "2027-07-01")
 
-            val result = useCase(input)
+            val result = useCase(input.familyScoped())
 
             val expected = input.copy(nextDueDate = null)
             assertEquals(DomainResult.Success(expected), result)

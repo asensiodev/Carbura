@@ -2,8 +2,6 @@
 <resources>
     <string name="shell_app_name">Carbura</string>
     <string name="shell_brand">CARBURA</string>
-    <string name="shell_desktop_preview">VISTA PREVIA DE ESCRITORIO</string>
-    <string name="shell_supported_systems">macOS + Windows</string>
     <string name="shell_destination_garage">Garaje</string>
     <string name="shell_destination_reminders">Recordatorios</string>
     <string name="shell_destination_maintenance">Mantenimiento</string>
@@ -20,4 +18,17 @@
     <string name="shell_account_eyebrow">CUENTA LOCAL</string>
     <string name="shell_account_headline">Tus datos, en este dispositivo.</string>
     <string name="shell_account_description">Consulta el modo local y el almacenamiento que usa Carbura Desktop.</string>
+    <string name="startup_restoring">Comprobando la sesión segura…</string>
+    <string name="startup_authenticating">Esperando la autenticación de Google…</string>
+    <string name="startup_profile">Resolviendo tu cuenta y familia…</string>
+    <string name="startup_initial_sync">Sincronizando los datos de tu cuenta…</string>
+    <string name="startup_import_title">Datos locales encontrados</string>
+    <string name="startup_import_description">Elige qué hacer antes de sincronizar. Carbura no subirá ni eliminará estos datos sin tu confirmación.</string>
+    <string name="startup_import_summary">%1$d vehículos, %2$d mantenimientos y %3$d recordatorios locales</string>
+    <string name="startup_import_action">Importar y combinar</string>
+    <string name="startup_use_account_action">Usar datos de la cuenta</string>
+    <string name="startup_cancel">Cancelar</string>
+    <string name="startup_retry">Reintentar</string>
+    <string name="startup_sign_in">Continuar con Google</string>
+    <string name="startup_local_action">Usar modo local</string>
 </resources>

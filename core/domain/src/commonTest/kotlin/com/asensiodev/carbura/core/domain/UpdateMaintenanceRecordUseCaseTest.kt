@@ -69,6 +69,7 @@ class UpdateMaintenanceRecordUseCaseTest {
 
     private fun validInput() =
         UpdateMaintenanceRecordInput(
+            scope = testFamilyScope,
             recordId = recordId,
             expectedFamilyId = familyId,
             expectedVehicleId = vehicleId,

@@ -4,6 +4,7 @@ import app.cash.sqldelight.db.SqlDriver
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.auth.AccountLocalDataCleaner
+import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
 import com.asensiodev.carbura.core.domain.maintenance.repository.MaintenanceRecordRepository
 import com.asensiodev.carbura.core.domain.reminder.notification.NoOpNotificationOutboxRecovery
 import com.asensiodev.carbura.core.domain.reminder.notification.NoOpReminderNotificationScheduler
@@ -12,6 +13,7 @@ import com.asensiodev.carbura.core.domain.reminder.notification.NotificationOutb
 import com.asensiodev.carbura.core.domain.reminder.notification.NotificationOutboxRecovery
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
+import com.asensiodev.carbura.core.domain.sync.LocalDataAdoptionGateway
 import com.asensiodev.carbura.core.domain.sync.SyncManager
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
@@ -24,6 +26,8 @@ actual val dataModule: Module =
         single<SqlDriver> { createDesktopSqlDriver() }
         single { CarburaDatabase(get()) }
         single { SyncOperationLock() }
+        single<ActiveFamilyScopeGateway> { SqlDelightActiveFamilyScopeGateway(get()) }
+        single<LocalDataAdoptionGateway> { SqlDelightLocalDataAdoptionGateway(get(), get()) }
         single<ReminderNotificationScheduler> { NoOpReminderNotificationScheduler }
         single<NotificationOutbox> { SqlDelightNotificationOutbox(get()) }
         single { NotificationOutboxProcessor(get(), get()) }
@@ -35,5 +39,5 @@ actual val dataModule: Module =
         single<RemoteUserProfileGateway> { SupabaseUserProfileGateway(get()) }
         single<LocalSyncDataSource> { SqlDelightLocalSyncDataSource(get(), get()) }
         single<RemoteSyncDataSource> { SupabaseSyncDataSource(get()) }
-        single<SyncManager> { LocalFirstSyncManager(get(), get(), get(), get(), get()) }
+        single<SyncManager> { LocalFirstSyncManager(get(), get(), get(), get(), get(), get()) }
     }

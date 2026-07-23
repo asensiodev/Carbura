@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
+import com.asensiodev.carbura.core.domain.family.FamilyScoped
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceRecordInput
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderFromInputUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.DeleteMaintenanceRecordUseCase
@@ -15,8 +16,8 @@ import com.asensiodev.carbura.core.domain.reminder.usecase.CreatePlannedMaintena
 import com.asensiodev.carbura.core.domain.reminder.usecase.RemovePlannedMaintenanceReminderUseCase
 import com.asensiodev.carbura.core.domain.sync.SyncManager
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.CalendarDate
-import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
@@ -38,7 +39,7 @@ import kotlin.random.Random
 
 class MaintenanceHistoryViewModel(
     private val vehicleId: VehicleId,
-    private val familyId: FamilyId,
+    scope: ActiveFamilyScope,
     private val dispatchers: DispatcherProvider,
     private val createMaintenanceWithReminderFromInputUseCase: CreateMaintenanceWithReminderFromInputUseCase,
     private val createPlannedMaintenanceReminderUseCase: CreatePlannedMaintenanceReminderUseCase,
@@ -52,6 +53,7 @@ class MaintenanceHistoryViewModel(
     private val localDateProvider: LocalDateProvider = LocalDateProvider(::deviceLocalDate),
     private val coroutineScope: CoroutineScope? = null,
 ) : ViewModel() {
+    private val activeScope = scope
     private var pendingRecordId: MaintenanceRecordId? = null
     private val _uiState = MutableStateFlow(MaintenanceHistoryUiState(performedOn = localDateProvider.currentDate().iso8601))
     val uiState: StateFlow<MaintenanceHistoryUiState> = _uiState.asStateFlow()
@@ -164,11 +166,11 @@ class MaintenanceHistoryViewModel(
         try {
             val vehicle =
                 withContext(dispatchers.io) {
-                    vehicleRepository.observeVehicles(familyId).firstOrNull { it.id == vehicleId }
+                    vehicleRepository.observeVehicles(activeScope).firstOrNull { it.id == vehicleId }
                 } ?: error("Selected vehicle is unavailable")
             if (revision != loadRevision) return
             _uiState.update { it.copy(vehicle = vehicle) }
-            val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
+            val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(FamilyScoped(activeScope, vehicleId)) }
             if (revision != loadRevision) return
             _uiState.update {
                 it.copy(
@@ -208,17 +210,12 @@ class MaintenanceHistoryViewModel(
 
     private suspend fun createMaintenance(plannedReminderChoice: Boolean?) {
         if (_uiState.value.activeMutation != null) return
-        _uiState.update {
-            it.copy(
-                activeMutation = MaintenanceMutation.Saving,
-                persistenceError = false,
-            )
-        }
+        _uiState.update { it.copy(activeMutation = MaintenanceMutation.Saving, persistenceError = false) }
         val state = _uiState.value
         val input =
             CreateMaintenanceRecordInput(
                 id = pendingRecordId ?: nextRecordId().also { pendingRecordId = it },
-                familyId = familyId,
+                familyId = activeScope.familyId,
                 vehicleId = vehicleId,
                 performedOn = state.performedOn,
                 odometerKm = state.odometerKm,
@@ -231,19 +228,29 @@ class MaintenanceHistoryViewModel(
             )
 
         try {
-            when (val result = withContext(dispatchers.io) { createMaintenanceWithReminderFromInputUseCase(input) }) {
+            when (
+                val result =
+                    withContext(
+                        dispatchers.io,
+                    ) { createMaintenanceWithReminderFromInputUseCase(FamilyScoped(activeScope, input)) }
+            ) {
                 is DomainResult.Success -> {
                     val plannedReminder =
                         when (plannedReminderChoice) {
-                            true -> withContext(dispatchers.io) { createPlannedMaintenanceReminderUseCase(result.value.record) }
+                            true ->
+                                withContext(
+                                    dispatchers.io,
+                                ) { createPlannedMaintenanceReminderUseCase(FamilyScoped(activeScope, result.value.record)) }
                             false,
                             null,
                             -> {
-                                withContext(dispatchers.io) { removePlannedMaintenanceReminderUseCase(result.value.record) }
+                                withContext(
+                                    dispatchers.io,
+                                ) { removePlannedMaintenanceReminderUseCase(FamilyScoped(activeScope, result.value.record)) }
                                 null
                             }
                         }
-                    val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
+                    val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(FamilyScoped(activeScope, vehicleId)) }
                     _uiState.update {
                         it.copy(
                             records = records,
@@ -291,8 +298,9 @@ class MaintenanceHistoryViewModel(
         try {
             val input =
                 UpdateMaintenanceRecordInput(
+                    scope = activeScope,
                     recordId = recordId,
-                    expectedFamilyId = familyId,
+                    expectedFamilyId = activeScope.familyId,
                     expectedVehicleId = vehicleId,
                     maintenanceTypeCode = state.maintenanceTypeCode,
                     customTypeLabel = state.customTypeLabel,
@@ -306,7 +314,7 @@ class MaintenanceHistoryViewModel(
                 )
             when (val result = withContext(dispatchers.io) { requireNotNull(updateMaintenanceRecordUseCase)(input) }) {
                 is UpdateMaintenanceRecordResult.Success -> {
-                    val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
+                    val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(FamilyScoped(activeScope, vehicleId)) }
                     _uiState.update { it.resetForm(localDateProvider.currentDate()).copy(records = records) }
                     _effects.send(
                         MaintenanceHistoryEffect.MaintenanceUpdated(
@@ -319,7 +327,7 @@ class MaintenanceHistoryViewModel(
                 }
                 is UpdateMaintenanceRecordResult.ValidationError -> emitValidation(result.reason.toMaintenanceMessage())
                 UpdateMaintenanceRecordResult.NotFound -> {
-                    val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
+                    val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(FamilyScoped(activeScope, vehicleId)) }
                     _uiState.update {
                         it.resetForm(localDateProvider.currentDate()).copy(records = records, persistenceError = true)
                     }
@@ -351,8 +359,8 @@ class MaintenanceHistoryViewModel(
             _uiState.value.records
                 .firstOrNull { it.id == recordId }
         try {
-            withContext(dispatchers.io) { deleteMaintenanceRecordUseCase(recordId) }
-            val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(vehicleId) }
+            withContext(dispatchers.io) { deleteMaintenanceRecordUseCase(FamilyScoped(activeScope, recordId)) }
+            val records = withContext(dispatchers.io) { getVehicleHistoryUseCase(FamilyScoped(activeScope, vehicleId)) }
             _uiState.update { it.copy(records = records, validationError = null) }
             record?.let {
                 _effects.send(

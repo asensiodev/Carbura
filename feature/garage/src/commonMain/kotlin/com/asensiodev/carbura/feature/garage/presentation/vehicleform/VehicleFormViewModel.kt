@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.asensiodev.carbura.core.domain.DispatcherProvider
 import com.asensiodev.carbura.core.domain.DomainResult
 import com.asensiodev.carbura.core.domain.ValidationFailure
+import com.asensiodev.carbura.core.domain.family.FamilyScoped
 import com.asensiodev.carbura.core.domain.reminder.usecase.DeriveVehicleReminderSuggestionsUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.SaveVehicleWithRemindersParams
 import com.asensiodev.carbura.core.domain.reminder.usecase.SaveVehicleWithRemindersUseCase
@@ -14,8 +15,8 @@ import com.asensiodev.carbura.core.domain.vehicle.usecase.CreateVehicleUseCase
 import com.asensiodev.carbura.core.domain.vehicle.usecase.UpdateVehicleParams
 import com.asensiodev.carbura.core.domain.vehicle.usecase.UpdateVehicleResult
 import com.asensiodev.carbura.core.domain.vehicle.usecase.UpdateVehicleUseCase
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.CalendarDate
-import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
@@ -34,7 +35,7 @@ import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
 class VehicleFormViewModel(
-    private val familyId: FamilyId,
+    scope: ActiveFamilyScope,
     private val dispatchers: DispatcherProvider,
     vehicleRepository: VehicleRepository,
     private val createVehicleUseCase: CreateVehicleUseCase = CreateVehicleUseCase(vehicleRepository),
@@ -46,6 +47,7 @@ class VehicleFormViewModel(
     private val nextVehicleId: () -> VehicleId = ::randomVehicleId,
     private val coroutineScope: CoroutineScope? = null,
 ) : ViewModel() {
+    private val activeScope = scope
     private val _uiState = MutableStateFlow(VehicleFormUiState())
     val uiState: StateFlow<VehicleFormUiState> = _uiState.asStateFlow()
 
@@ -208,7 +210,7 @@ class VehicleFormViewModel(
         val vehicle =
             Vehicle(
                 id = nextVehicleId(),
-                familyId = familyId,
+                familyId = activeScope.familyId,
                 name = state.name.trim(),
                 type = state.selectedType,
                 currentOdometerKm = state.odometerKm.toIntOrNull() ?: -1,
@@ -224,7 +226,7 @@ class VehicleFormViewModel(
         vehicle: Vehicle,
         reconcileReminders: Boolean,
     ) {
-        val result = withContext(dispatchers.io) { createVehicleUseCase(vehicle) }
+        val result = withContext(dispatchers.io) { createVehicleUseCase(FamilyScoped(activeScope, vehicle)) }
         when (result) {
             is DomainResult.Success -> {
                 if (reconcileReminders) reconcileReminders(result.value)
@@ -260,6 +262,7 @@ class VehicleFormViewModel(
         val vehicle = editingVehicle ?: return
         val params =
             UpdateVehicleParams(
+                scope = activeScope,
                 currentVehicle = vehicle,
                 name = state.editName,
                 type = state.editType,
@@ -351,7 +354,7 @@ class VehicleFormViewModel(
 
     private suspend fun reconcileReminders(vehicle: Vehicle) {
         withContext(dispatchers.io) {
-            saveVehicleWithRemindersUseCase?.invoke(SaveVehicleWithRemindersParams(vehicle, true))
+            saveVehicleWithRemindersUseCase?.invoke(SaveVehicleWithRemindersParams(activeScope, vehicle, true))
         }
     }
 

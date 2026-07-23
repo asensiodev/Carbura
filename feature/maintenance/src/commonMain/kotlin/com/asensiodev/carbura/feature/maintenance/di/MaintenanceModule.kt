@@ -1,5 +1,6 @@
 package com.asensiodev.carbura.feature.maintenance.di
 
+import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceRecordUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderFromInputUseCase
 import com.asensiodev.carbura.core.domain.maintenance.usecase.CreateMaintenanceWithReminderUseCase
@@ -28,7 +29,7 @@ val maintenanceModule =
         factory { parameters ->
             MaintenanceHistoryViewModel(
                 vehicleId = parameters.get<VehicleId>(),
-                familyId = parameters.get<FamilyId>(),
+                scope = get<ActiveFamilyScopeGateway>().capture(parameters.get<FamilyId>()),
                 dispatchers = get(),
                 createMaintenanceWithReminderFromInputUseCase = get(),
                 createPlannedMaintenanceReminderUseCase = get(),

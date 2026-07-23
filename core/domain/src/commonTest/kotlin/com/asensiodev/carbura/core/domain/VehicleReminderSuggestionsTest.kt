@@ -54,12 +54,13 @@ class VehicleReminderSuggestionsTest {
                     title = "Manual",
                     dueOdometerKm = 20000,
                 )
-            reminderRepository.saveReminder(manual)
+            reminderRepository.saveReminder(testFamilyScope, manual)
             val useCase = SaveVehicleWithRemindersUseCase(vehicleRepository, reminderRepository, scheduler)
 
-            useCase(SaveVehicleWithRemindersParams(vehicle, reconcileGeneratedReminders = true))
+            useCase(SaveVehicleWithRemindersParams(testFamilyScope, vehicle, reconcileGeneratedReminders = true))
             useCase(
                 SaveVehicleWithRemindersParams(
+                    testFamilyScope,
                     vehicle.copy(nextItvDate = CalendarDate("2027-06-10")),
                     reconcileGeneratedReminders = true,
                 ),
@@ -88,9 +89,9 @@ class VehicleReminderSuggestionsTest {
             val scheduler = FakeReminderNotificationScheduler()
             val vehicle = testVehicle().copy(nextItvDate = CalendarDate("2027-05-10"))
             val useCase = SaveVehicleWithRemindersUseCase(vehicleRepository, reminderRepository, scheduler)
-            useCase(SaveVehicleWithRemindersParams(vehicle, true))
+            useCase(SaveVehicleWithRemindersParams(testFamilyScope, vehicle, true))
 
-            useCase(SaveVehicleWithRemindersParams(vehicle.copy(nextItvDate = null), true))
+            useCase(SaveVehicleWithRemindersParams(testFamilyScope, vehicle.copy(nextItvDate = null), true))
 
             val latestDeletes = vehicleRepository.notificationMutations.takeLast(VehicleReminderKind.entries.size)
             assertTrue(
@@ -111,7 +112,7 @@ class VehicleReminderSuggestionsTest {
             val vehicle = testVehicle().copy(nextItvDate = CalendarDate("2027-05-10"))
 
             SaveVehicleWithRemindersUseCase(vehicleRepository, reminderRepository, scheduler)(
-                SaveVehicleWithRemindersParams(vehicle, false),
+                SaveVehicleWithRemindersParams(testFamilyScope, vehicle, false),
             )
 
             assertEquals(listOf(vehicle), vehicleRepository.savedVehicles)

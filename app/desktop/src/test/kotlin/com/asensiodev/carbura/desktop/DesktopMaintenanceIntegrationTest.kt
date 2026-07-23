@@ -4,6 +4,7 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.asensiodev.carbura.core.data.dataModule
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
+import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
@@ -255,6 +256,7 @@ class DesktopMaintenanceIntegrationTest {
 
     private suspend fun TestScope.createJourney(): MaintenanceJourney {
         val familyId = koin.get<FamilyId>()
+        val activeScope = koin.get<ActiveFamilyScopeGateway>().capture(familyId)
         val vehicleForm = koin.get<VehicleFormViewModel> { parametersOf(familyId) }
         val vehicleCreated =
             async(start = CoroutineStart.UNDISPATCHED) {
@@ -267,7 +269,7 @@ class DesktopMaintenanceIntegrationTest {
         val vehicleId =
             koin
                 .get<VehicleRepository>()
-                .observeVehicles(familyId)
+                .observeVehicles(activeScope)
                 .single()
                 .id
         val maintenance = koin.get<MaintenanceHistoryViewModel> { parametersOf(vehicleId, familyId) }

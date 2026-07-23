@@ -3,6 +3,7 @@ package com.asensiodev.carbura.core.data
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.domain.reminder.notification.DesiredNotificationAction
+import com.asensiodev.carbura.core.model.FamilyId
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -16,6 +17,7 @@ class NotificationOutboxReconcilerTest {
             try {
                 CarburaDatabase.Schema.create(driver)
                 val database = CarburaDatabase(driver)
+                val scope = database.activateTestFamily(FamilyId("family"))
                 insertReminder(database, id = "active", isCompleted = 0, deletedAt = null, dueDate = "2027-07-01")
                 insertReminder(database, id = "completed", isCompleted = 1, deletedAt = null, dueDate = "2027-07-01")
                 insertReminder(database, id = "deleted", isCompleted = 0, deletedAt = 2, dueDate = "2027-07-01")
@@ -23,7 +25,7 @@ class NotificationOutboxReconcilerTest {
                 val reconciler = NotificationOutboxReconciler(database)
                 val outbox = SqlDelightNotificationOutbox(database)
 
-                reconciler.reconcileExistingReminders()
+                reconciler.reconcileExistingReminders(scope)
 
                 assertEquals(
                     listOf(
@@ -32,13 +34,13 @@ class NotificationOutboxReconcilerTest {
                         DesiredNotificationAction.Cancel,
                         DesiredNotificationAction.Cancel,
                     ),
-                    outbox.pending().map { it.action },
+                    outbox.pending(scope).map { it.action },
                 )
-                outbox.pending().forEach { outbox.acknowledge(it.reminderId, it.revision) }
+                outbox.pending(scope).forEach { outbox.acknowledge(scope, it.reminderId, it.revision) }
 
-                reconciler.reconcileExistingReminders()
+                reconciler.reconcileExistingReminders(scope)
 
-                assertTrue(outbox.pending().isEmpty())
+                assertTrue(outbox.pending(scope).isEmpty())
             } finally {
                 driver.close()
             }

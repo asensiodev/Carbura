@@ -2,7 +2,7 @@ package com.asensiodev.carbura.core.domain
 
 import com.asensiodev.carbura.core.domain.maintenance.repository.MaintenanceRecordRepository
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
-import com.asensiodev.carbura.core.model.FamilyId
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.MaintenanceRecord
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
 import com.asensiodev.carbura.core.model.ReminderId
@@ -14,23 +14,28 @@ internal class FakeMaintenanceRecordRepository : MaintenanceRecordRepository {
     val notificationCancellationIds = mutableListOf<ReminderId>()
     val notificationMutations = mutableListOf<ReminderNotificationMutation>()
 
-    override suspend fun saveMaintenanceRecord(record: MaintenanceRecord) {
+    override suspend fun saveMaintenanceRecord(
+        scope: ActiveFamilyScope,
+        record: MaintenanceRecord,
+    ) {
         savedRecords.removeAll { it.id == record.id }
         savedRecords += record
     }
 
-    override suspend fun getVehicleHistory(vehicleId: VehicleId): List<MaintenanceRecord> =
-        savedRecords.filter { it.vehicleId == vehicleId }
+    override suspend fun getVehicleHistory(
+        scope: ActiveFamilyScope,
+        vehicleId: VehicleId,
+    ): List<MaintenanceRecord> = savedRecords.filter { it.familyId == scope.familyId && it.vehicleId == vehicleId }
 
     override suspend fun updateMaintenanceRecordWithNotifications(
         record: MaintenanceRecord,
-        expectedFamilyId: FamilyId,
+        scope: ActiveFamilyScope,
         expectedVehicleId: VehicleId,
         mutations: List<ReminderNotificationMutation>,
     ): Boolean {
         val index =
             savedRecords.indexOfFirst {
-                it.id == record.id && it.familyId == expectedFamilyId && it.vehicleId == expectedVehicleId
+                it.id == record.id && it.familyId == scope.familyId && it.vehicleId == expectedVehicleId
             }
         if (index < 0) return false
         savedRecords[index] = record
@@ -38,24 +43,29 @@ internal class FakeMaintenanceRecordRepository : MaintenanceRecordRepository {
         return true
     }
 
-    override suspend fun deleteMaintenanceRecord(recordId: MaintenanceRecordId) {
+    override suspend fun deleteMaintenanceRecord(
+        scope: ActiveFamilyScope,
+        recordId: MaintenanceRecordId,
+    ) {
         if (failDeletes) error("maintenance delete failed")
         savedRecords.removeAll { it.id == recordId }
     }
 
     override suspend fun saveMaintenanceRecordWithNotification(
+        scope: ActiveFamilyScope,
         record: MaintenanceRecord,
         mutation: ReminderNotificationMutation,
     ) {
-        saveMaintenanceRecord(record)
+        saveMaintenanceRecord(scope, record)
         notificationMutations += mutation
     }
 
     override suspend fun deleteMaintenanceRecordWithNotifications(
+        scope: ActiveFamilyScope,
         recordId: MaintenanceRecordId,
         reminderIds: List<ReminderId>,
     ) {
-        deleteMaintenanceRecord(recordId)
+        deleteMaintenanceRecord(scope, recordId)
         notificationCancellationIds += reminderIds
     }
 }

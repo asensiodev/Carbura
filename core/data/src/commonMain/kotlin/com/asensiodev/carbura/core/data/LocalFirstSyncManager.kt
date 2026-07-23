@@ -7,6 +7,8 @@ import com.asensiodev.carbura.core.domain.sync.SyncStatus
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
+import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +21,7 @@ internal class LocalFirstSyncManager(
     private val local: LocalSyncDataSource,
     private val remote: RemoteSyncDataSource,
     private val operationLock: SyncOperationLock = SyncOperationLock(),
+    private val familyScope: ActiveFamilyScopeGateway,
 ) : SyncManager {
     private val _status = MutableStateFlow(SyncStatus())
     private var nextFailureId = 0L
@@ -48,7 +51,7 @@ internal class LocalFirstSyncManager(
                 _status.update { it.copy(isSyncing = false) }
                 throw error
             } catch (error: Throwable) {
-                val message = error.message ?: error::class.simpleName ?: "Sync failed"
+                val message = "Sync failed"
                 if (reportFailure) nextFailureId += 1L
                 _status.update {
                     it.copy(
@@ -73,92 +76,93 @@ internal class LocalFirstSyncManager(
     }
 
     private suspend fun syncActiveFamily(): Long {
-        val familyId = resolveFamilyId()
-        local.adoptLegacyLocalFamily(familyId)
-        pushPendingChanges(familyId)
-        pullAndMerge(familyId)
+        val scope = resolveFamilyScope()
+        pushPendingChanges(scope)
+        pullAndMerge(scope)
         return currentTimeMillis()
     }
 
-    private suspend fun resolveFamilyId(): FamilyId {
+    private suspend fun resolveFamilyScope(): ActiveFamilyScope {
         val session = authGateway.currentSession() ?: error("No active session")
-        return profileGateway.getProfileForUser(UserId(session.user.id))?.familyId
-            ?: error("No active family")
+        val userId = UserId(session.user.id)
+        val familyId = profileGateway.getProfileForUser(userId)?.familyId ?: error("No active family")
+        return familyScope.activateAuthenticated(userId, familyId)
     }
 
-    private suspend fun pushPendingChanges(familyId: FamilyId) {
+    private suspend fun pushPendingChanges(scope: ActiveFamilyScope) {
+        val familyId = scope.familyId
         val remoteVehicles = remote.getVehicles(familyId).associateBy { it.id }
-        val pendingVehicles = local.getPendingVehicles().filter { it.familyId == familyId.value }
+        val pendingVehicles = local.getPendingVehicles(scope)
         val vehiclesToPush =
             pendingVehicles.filter { localVehicle ->
                 val remoteVehicle = remoteVehicles[localVehicle.id]
                 remoteVehicle == null || localVehicle.updatedAt >= remoteVehicle.updatedAt
             }
         remote.upsertVehicles(vehiclesToPush)
-        vehiclesToPush.forEach { local.markVehicleSynced(it.id) }
+        vehiclesToPush.forEach { local.markVehicleSynced(scope, it.id, it.updatedAt) }
 
         val remoteMaintenance = remote.getMaintenanceRecords(familyId).associateBy { it.id }
-        val pendingMaintenance = local.getPendingMaintenanceRecords().filter { it.familyId == familyId.value }
+        val pendingMaintenance = local.getPendingMaintenanceRecords(scope)
         val maintenanceToPush =
             pendingMaintenance.filter { localRecord ->
                 val remoteRecord = remoteMaintenance[localRecord.id]
                 remoteRecord == null || localRecord.updatedAt >= remoteRecord.updatedAt
             }
         remote.upsertMaintenanceRecords(maintenanceToPush)
-        maintenanceToPush.forEach { local.markMaintenanceRecordSynced(it.id) }
+        maintenanceToPush.forEach { local.markMaintenanceRecordSynced(scope, it.id, it.updatedAt) }
 
         val remoteReminders = remote.getReminders(familyId).associateBy { it.id }
-        val pendingReminders = local.getPendingReminders().filter { it.familyId == familyId.value }
+        val pendingReminders = local.getPendingReminders(scope)
         val remindersToPush =
             pendingReminders.filter { localReminder ->
                 val remoteReminder = remoteReminders[localReminder.id]
                 remoteReminder == null || localReminder.updatedAt >= remoteReminder.updatedAt
             }
         remote.upsertReminders(remindersToPush)
-        remindersToPush.forEach { local.markReminderSynced(it.id) }
+        remindersToPush.forEach { local.markReminderSynced(scope, it.id, it.updatedAt) }
     }
 
-    private suspend fun pullAndMerge(familyId: FamilyId) {
-        mergeVehicles(familyId, remote.getVehicles(familyId))
-        mergeMaintenanceRecords(familyId, remote.getMaintenanceRecords(familyId))
-        mergeReminders(familyId, remote.getReminders(familyId))
+    private suspend fun pullAndMerge(scope: ActiveFamilyScope) {
+        mergeVehicles(scope, remote.getVehicles(scope.familyId))
+        mergeMaintenanceRecords(scope, remote.getMaintenanceRecords(scope.familyId))
+        mergeReminders(scope, remote.getReminders(scope.familyId))
     }
 
     private suspend fun mergeVehicles(
-        familyId: FamilyId,
+        scope: ActiveFamilyScope,
         remoteVehicles: List<SyncVehicle>,
     ) {
-        val localVehicles = local.getVehicles(familyId).associateBy { it.id }
+        val localVehicles = local.getVehicles(scope).associateBy { it.id }
         remoteVehicles.forEach { remoteVehicle ->
             val localVehicle = localVehicles[remoteVehicle.id]
             if (localVehicle == null || !localVehicle.pendingSync || remoteVehicle.updatedAt >= localVehicle.updatedAt) {
-                local.upsertSyncedVehicle(remoteVehicle)
+                local.upsertSyncedVehicle(scope, remoteVehicle)
             }
         }
     }
 
     private suspend fun mergeMaintenanceRecords(
-        familyId: FamilyId,
+        scope: ActiveFamilyScope,
         remoteRecords: List<SyncMaintenanceRecord>,
     ) {
-        val localRecords = local.getMaintenanceRecords(familyId).associateBy { it.id }
+        val localRecords = local.getMaintenanceRecords(scope).associateBy { it.id }
         remoteRecords.forEach { remoteRecord ->
             val localRecord = localRecords[remoteRecord.id]
             if (localRecord == null || !localRecord.pendingSync || remoteRecord.updatedAt >= localRecord.updatedAt) {
-                local.upsertSyncedMaintenanceRecord(remoteRecord)
+                local.upsertSyncedMaintenanceRecord(scope, remoteRecord)
             }
         }
     }
 
     private suspend fun mergeReminders(
-        familyId: FamilyId,
+        scope: ActiveFamilyScope,
         remoteReminders: List<SyncReminder>,
     ) {
-        val localReminders = local.getReminders(familyId).associateBy { it.id }
+        val localReminders = local.getReminders(scope).associateBy { it.id }
         remoteReminders.forEach { remoteReminder ->
             val localReminder = localReminders[remoteReminder.id]
             if (localReminder == null || !localReminder.pendingSync || remoteReminder.updatedAt >= localReminder.updatedAt) {
-                local.upsertSyncedReminder(remoteReminder)
+                local.upsertSyncedReminder(scope, remoteReminder)
             }
         }
     }

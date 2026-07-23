@@ -1,5 +1,6 @@
 package com.asensiodev.carbura.core.domain.reminder.notification
 
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -18,19 +19,23 @@ class NotificationOutboxProcessor(
 ) {
     private val mutex = Mutex()
 
-    suspend fun drain(): NotificationOutboxDrainResult =
+    suspend fun drain(scope: ActiveFamilyScope): NotificationOutboxDrainResult =
         mutex.withLock {
             var hasRetryableFailure = false
             var hasPermissionFailure = false
             var hasNonRetryableFailure = false
 
-            outbox.pending().forEach { desired ->
+            outbox.pending(scope).forEach { desired ->
                 try {
                     when (desired.action) {
-                        DesiredNotificationAction.Schedule -> scheduler.schedule(requireNotNull(desired.payload).toPlan(desired.revision))
-                        DesiredNotificationAction.Cancel -> scheduler.cancel(desired.reminderId)
+                        DesiredNotificationAction.Schedule ->
+                            scheduler.schedule(
+                                scope,
+                                requireNotNull(desired.payload).toPlan(desired.revision),
+                            )
+                        DesiredNotificationAction.Cancel -> scheduler.cancel(scope, desired.reminderId)
                     }
-                    outbox.acknowledge(desired.reminderId, desired.revision)
+                    outbox.acknowledge(scope, desired.reminderId, desired.revision)
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: NotificationPermissionDeniedException) {

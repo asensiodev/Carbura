@@ -1,0 +1,82 @@
+ALTER TABLE vehicles RENAME TO vehicles_old;
+CREATE TABLE vehicles (
+    id TEXT NOT NULL, familyId TEXT NOT NULL, name TEXT NOT NULL, type TEXT NOT NULL, brand TEXT,
+    model TEXT, licensePlate TEXT, currentOdometerKm INTEGER NOT NULL, nextItvDate TEXT,
+    insuranceRenewalDate TEXT, nextServiceOdometerKm INTEGER, updatedAt INTEGER NOT NULL DEFAULT 0,
+    pendingSync INTEGER NOT NULL DEFAULT 0, deletedAt INTEGER, PRIMARY KEY (familyId, id)
+);
+INSERT INTO vehicles(
+    id, familyId, name, type, brand, model, licensePlate, currentOdometerKm, nextItvDate,
+    insuranceRenewalDate, nextServiceOdometerKm, updatedAt, pendingSync, deletedAt
+)
+SELECT
+    id, familyId, name, type, brand, model, licensePlate, currentOdometerKm, nextItvDate,
+    insuranceRenewalDate, nextServiceOdometerKm, updatedAt, pendingSync, deletedAt
+FROM vehicles_old;
+DROP TABLE vehicles_old;
+
+ALTER TABLE maintenanceRecords RENAME TO maintenanceRecords_old;
+CREATE TABLE maintenanceRecords (
+    id TEXT NOT NULL, familyId TEXT NOT NULL, vehicleId TEXT NOT NULL, maintenanceTypeId TEXT NOT NULL,
+    maintenanceTypeCode TEXT, maintenanceTypeLabel TEXT, performedOn TEXT NOT NULL, odometerKm INTEGER,
+    costCents INTEGER, currency TEXT NOT NULL, workshop TEXT, notes TEXT, nextDueDate TEXT,
+    updatedAt INTEGER NOT NULL DEFAULT 0, pendingSync INTEGER NOT NULL DEFAULT 0, deletedAt INTEGER,
+    PRIMARY KEY (familyId, id)
+);
+INSERT INTO maintenanceRecords(
+    id, familyId, vehicleId, maintenanceTypeId, maintenanceTypeCode, maintenanceTypeLabel,
+    performedOn, odometerKm, costCents, currency, workshop, notes, nextDueDate, updatedAt,
+    pendingSync, deletedAt
+)
+SELECT
+    id, familyId, vehicleId, maintenanceTypeId, maintenanceTypeCode, maintenanceTypeLabel,
+    performedOn, odometerKm, costCents, currency, workshop, notes, nextDueDate, updatedAt,
+    pendingSync, deletedAt
+FROM maintenanceRecords_old;
+DROP TABLE maintenanceRecords_old;
+
+ALTER TABLE reminders RENAME TO reminders_old;
+CREATE TABLE reminders (
+    id TEXT NOT NULL, familyId TEXT NOT NULL, vehicleId TEXT NOT NULL, maintenanceTypeId TEXT, title TEXT NOT NULL,
+    dueDate TEXT, dueOdometerKm INTEGER, notifyDaysBefore INTEGER NOT NULL, isCompleted INTEGER NOT NULL DEFAULT 0,
+    updatedAt INTEGER NOT NULL DEFAULT 0, pendingSync INTEGER NOT NULL DEFAULT 0, deletedAt INTEGER,
+    PRIMARY KEY (familyId, id)
+);
+INSERT INTO reminders(
+    id, familyId, vehicleId, maintenanceTypeId, title, dueDate, dueOdometerKm, notifyDaysBefore,
+    isCompleted, updatedAt, pendingSync, deletedAt
+)
+SELECT
+    id, familyId, vehicleId, maintenanceTypeId, title, dueDate, dueOdometerKm, notifyDaysBefore,
+    isCompleted, updatedAt, pendingSync, deletedAt
+FROM reminders_old;
+DROP TABLE reminders_old;
+
+ALTER TABLE desiredNotificationOutbox RENAME TO desiredNotificationOutbox_old;
+CREATE TABLE desiredNotificationOutbox (
+    familyId TEXT NOT NULL, reminderId TEXT NOT NULL, action TEXT NOT NULL, payload TEXT, revision INTEGER NOT NULL,
+    PRIMARY KEY (familyId, reminderId)
+);
+INSERT INTO desiredNotificationOutbox
+SELECT COALESCE((SELECT familyId FROM reminders WHERE id = old.reminderId LIMIT 1), 'local-family'), reminderId, action, payload, revision
+FROM desiredNotificationOutbox_old AS old;
+DROP TABLE desiredNotificationOutbox_old;
+
+ALTER TABLE notificationRevisions RENAME TO notificationRevisions_old;
+CREATE TABLE notificationRevisions (
+    familyId TEXT NOT NULL, reminderId TEXT NOT NULL, revision INTEGER NOT NULL, PRIMARY KEY (familyId, reminderId)
+);
+INSERT INTO notificationRevisions
+SELECT COALESCE((SELECT familyId FROM reminders WHERE id = old.reminderId LIMIT 1), 'local-family'), reminderId, revision
+FROM notificationRevisions_old AS old;
+DROP TABLE notificationRevisions_old;
+
+CREATE TABLE activeFamilyScope (
+    singleton INTEGER NOT NULL PRIMARY KEY CHECK (singleton = 1), userId TEXT, familyId TEXT NOT NULL, generation INTEGER NOT NULL
+);
+INSERT INTO activeFamilyScope VALUES (1, NULL, 'local-family', 1);
+
+CREATE TABLE localDataDecisions (
+    userId TEXT NOT NULL, familyId TEXT NOT NULL, snapshotDigest TEXT NOT NULL, decision TEXT NOT NULL,
+    PRIMARY KEY (userId, familyId, snapshotDigest)
+);

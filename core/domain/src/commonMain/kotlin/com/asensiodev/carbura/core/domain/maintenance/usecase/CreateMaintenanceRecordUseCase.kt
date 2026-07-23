@@ -3,6 +3,7 @@ package com.asensiodev.carbura.core.domain.maintenance.usecase
 import com.asensiodev.carbura.core.domain.DomainResult
 import com.asensiodev.carbura.core.domain.SuspendUseCase
 import com.asensiodev.carbura.core.domain.ValidationFailure
+import com.asensiodev.carbura.core.domain.family.FamilyScoped
 import com.asensiodev.carbura.core.domain.maintenance.repository.MaintenanceRecordRepository
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationMutation
 import com.asensiodev.carbura.core.model.MaintenanceRecord
@@ -10,16 +11,16 @@ import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 
 class CreateMaintenanceRecordUseCase(
     private val repository: MaintenanceRecordRepository,
-) : SuspendUseCase<MaintenanceRecord, DomainResult<MaintenanceRecord>> {
-    override suspend fun invoke(params: MaintenanceRecord): DomainResult<MaintenanceRecord> =
-        persist(params) { repository.saveMaintenanceRecord(it) }
+) : SuspendUseCase<FamilyScoped<MaintenanceRecord>, DomainResult<MaintenanceRecord>> {
+    override suspend fun invoke(params: FamilyScoped<MaintenanceRecord>): DomainResult<MaintenanceRecord> =
+        persist(params.value) { repository.saveMaintenanceRecord(params.scope, it) }
 
     suspend fun withNotification(
-        params: MaintenanceRecord,
+        params: FamilyScoped<MaintenanceRecord>,
         mutation: (MaintenanceRecord) -> ReminderNotificationMutation,
     ): DomainResult<MaintenanceRecord> =
-        persist(params) { normalized ->
-            repository.saveMaintenanceRecordWithNotification(normalized, mutation(normalized))
+        persist(params.value) { normalized ->
+            repository.saveMaintenanceRecordWithNotification(params.scope, normalized, mutation(normalized))
         }
 
     private suspend fun persist(

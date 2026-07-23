@@ -145,17 +145,17 @@ import org.koin.core.parameter.parametersOf
 @Composable
 internal fun GarageWorkspace(
     compact: Boolean,
+    familyId: FamilyId,
+    refreshGeneration: Long,
     onOpenMaintenance: (VehicleId) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val overviewViewModel =
-        remember {
-            val familyId = GlobalContext.get().get<FamilyId>()
+        remember(familyId) {
             GlobalContext.get().get<GarageOverviewViewModel> { parametersOf(familyId) }
         }
     val formViewModel =
-        remember {
-            val familyId = GlobalContext.get().get<FamilyId>()
+        remember(familyId) {
             GlobalContext.get().get<VehicleFormViewModel> { parametersOf(familyId) }
         }
     val overviewState by overviewViewModel.uiState.collectAsState()
@@ -180,6 +180,9 @@ internal fun GarageWorkspace(
                 is GarageOverviewEffect.NavigateToVehicleHistory -> onOpenMaintenance(effect.vehicleId)
             }
         }
+    }
+    LaunchedEffect(refreshGeneration) {
+        if (refreshGeneration > 0L) overviewViewModel.onEvent(GarageOverviewEvent.Refresh)
     }
     LaunchedEffect(formViewModel) {
         formViewModel.effects.collect { effect ->

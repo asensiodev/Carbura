@@ -8,6 +8,7 @@ import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotifica
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
 import com.asensiodev.carbura.core.domain.reminder.notification.manualReminderNotificationPlan
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
@@ -31,70 +32,75 @@ class CancellationConvergenceTest {
     @Test
     fun manualReminderCommitSurvivesCancellationAndReplaysSameIdentity() =
         withDatabase { database ->
+            val scope = database.activateTestFamily(FAMILY_ID)
             val reminder = reminder("manual")
             val repository = LocalReminderRepository(database, CancellingRecovery)
 
             assertFailsWith<CancellationException> {
-                repository.saveReminderWithNotification(reminder, manualReminderNotificationPlan(reminder))
+                repository.saveReminderWithNotification(scope, reminder, manualReminderNotificationPlan(reminder))
             }
 
-            assertEquals(listOf(reminder), LocalReminderRepository(database).getPendingReminders(FAMILY_ID))
+            assertEquals(listOf(reminder), LocalReminderRepository(database).getPendingReminders(scope))
             val scheduler = RecordingScheduler()
-            NotificationOutboxProcessor(SqlDelightNotificationOutbox(database), scheduler).drain()
+            NotificationOutboxProcessor(SqlDelightNotificationOutbox(database), scheduler).drain(scope)
             assertEquals(listOf(reminder.id), scheduler.scheduled.map { it.reminder.id })
-            assertTrue(SqlDelightNotificationOutbox(database).pending().isEmpty())
+            assertTrue(SqlDelightNotificationOutbox(database).pending(scope).isEmpty())
         }
 
     @Test
     fun completionAndDeletionCommitsSurviveCancellationAndReplayCancel() =
         withDatabase { database ->
+            val scope = database.activateTestFamily(FAMILY_ID)
             val first = reminder("complete")
             val second = reminder("delete")
             val setup = LocalReminderRepository(database)
-            setup.saveReminder(first)
-            setup.saveReminder(second)
+            setup.saveReminder(scope, first)
+            setup.saveReminder(scope, second)
             val repository = LocalReminderRepository(database, CancellingRecovery)
 
-            assertFailsWith<CancellationException> { repository.markReminderCompletedWithNotification(first.id) }
-            assertFailsWith<CancellationException> { repository.deleteReminderWithNotification(second.id) }
+            assertFailsWith<CancellationException> { repository.markReminderCompletedWithNotification(scope, first.id) }
+            assertFailsWith<CancellationException> { repository.deleteReminderWithNotification(scope, second.id) }
 
             val rows = database.carburaDatabaseQueries.selectSyncRemindersByFamily(FAMILY_ID.value).executeAsList()
             assertEquals(1L, rows.single { it.id == first.id.value }.isCompleted)
             assertNotNull(rows.single { it.id == second.id.value }.deletedAt)
             val scheduler = RecordingScheduler()
-            NotificationOutboxProcessor(SqlDelightNotificationOutbox(database), scheduler).drain()
+            NotificationOutboxProcessor(SqlDelightNotificationOutbox(database), scheduler).drain(scope)
             assertEquals(setOf(first.id, second.id), scheduler.cancelled.toSet())
         }
 
     @Test
     fun maintenanceCreationAndDeletionCommitsSurviveCancellation() =
         withDatabase { database ->
+            val scope = database.activateTestFamily(FAMILY_ID)
             val record = maintenanceRecord()
             val generated = reminder("maintenance-reminder")
             val repository = LocalMaintenanceRecordRepository(database, CancellingRecovery)
 
             assertFailsWith<CancellationException> {
                 repository.saveMaintenanceRecordWithNotification(
+                    scope,
                     record,
                     ReminderNotificationMutation.Upsert(generated, manualReminderNotificationPlan(generated)),
                 )
             }
             val scheduleScheduler = RecordingScheduler()
-            NotificationOutboxProcessor(SqlDelightNotificationOutbox(database), scheduleScheduler).drain()
+            NotificationOutboxProcessor(SqlDelightNotificationOutbox(database), scheduleScheduler).drain(scope)
             assertEquals(listOf(generated.id), scheduleScheduler.scheduled.map { it.reminder.id })
 
             assertFailsWith<CancellationException> {
-                repository.deleteMaintenanceRecordWithNotifications(record.id, listOf(generated.id))
+                repository.deleteMaintenanceRecordWithNotifications(scope, record.id, listOf(generated.id))
             }
             val cancelScheduler = RecordingScheduler()
-            NotificationOutboxProcessor(SqlDelightNotificationOutbox(database), cancelScheduler).drain()
+            NotificationOutboxProcessor(SqlDelightNotificationOutbox(database), cancelScheduler).drain(scope)
             assertEquals(listOf(generated.id), cancelScheduler.cancelled)
-            assertTrue(LocalMaintenanceRecordRepository(database).getVehicleHistory(VEHICLE_ID).isEmpty())
+            assertTrue(LocalMaintenanceRecordRepository(database).getVehicleHistory(scope, VEHICLE_ID).isEmpty())
         }
 
     @Test
     fun proactiveVehicleReconciliationAndDeletionSurviveCancellation() =
         withDatabase { database ->
+            val scope = database.activateTestFamily(FAMILY_ID)
             val vehicle = vehicle()
             val itv = reminder("vehicle-reminder:vehicle:itv")
             val service = reminder("vehicle-reminder:vehicle:service", dueDate = null)
@@ -102,6 +108,7 @@ class CancellationConvergenceTest {
 
             assertFailsWith<CancellationException> {
                 repository.saveVehicleWithNotifications(
+                    scope,
                     vehicle,
                     listOf(
                         ReminderNotificationMutation.Upsert(itv, manualReminderNotificationPlan(itv)),
@@ -111,15 +118,15 @@ class CancellationConvergenceTest {
                 )
             }
             val reconciliationScheduler = RecordingScheduler()
-            NotificationOutboxProcessor(SqlDelightNotificationOutbox(database), reconciliationScheduler).drain()
+            NotificationOutboxProcessor(SqlDelightNotificationOutbox(database), reconciliationScheduler).drain(scope)
             assertEquals(listOf(itv.id), reconciliationScheduler.scheduled.map { it.reminder.id })
             assertEquals(2, reconciliationScheduler.cancelled.size)
 
-            assertFailsWith<CancellationException> { repository.deleteVehicleWithNotifications(vehicle.id) }
+            assertFailsWith<CancellationException> { repository.deleteVehicleWithNotifications(scope, vehicle.id) }
             val deletionScheduler = RecordingScheduler()
-            NotificationOutboxProcessor(SqlDelightNotificationOutbox(database), deletionScheduler).drain()
+            NotificationOutboxProcessor(SqlDelightNotificationOutbox(database), deletionScheduler).drain(scope)
             assertEquals(setOf(itv.id, service.id), deletionScheduler.cancelled.toSet())
-            assertTrue(LocalVehicleRepository(database).observeVehicles(FAMILY_ID).isEmpty())
+            assertTrue(LocalVehicleRepository(database).observeVehicles(scope).isEmpty())
         }
 
     private fun withDatabase(block: suspend (CarburaDatabase) -> Unit) =
@@ -173,11 +180,17 @@ class CancellationConvergenceTest {
         val scheduled = mutableListOf<ReminderNotificationPlan>()
         val cancelled = mutableListOf<ReminderId>()
 
-        override suspend fun schedule(plan: ReminderNotificationPlan) {
+        override suspend fun schedule(
+            scope: ActiveFamilyScope,
+            plan: ReminderNotificationPlan,
+        ) {
             scheduled += plan
         }
 
-        override suspend fun cancel(reminderId: ReminderId) {
+        override suspend fun cancel(
+            scope: ActiveFamilyScope,
+            reminderId: ReminderId,
+        ) {
             cancelled += reminderId
         }
     }

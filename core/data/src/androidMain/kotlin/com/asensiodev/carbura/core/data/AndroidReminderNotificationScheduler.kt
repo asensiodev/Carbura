@@ -12,6 +12,7 @@ import com.asensiodev.carbura.core.domain.reminder.notification.ReminderAlertKin
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
 import com.asensiodev.carbura.core.domain.reminder.notification.reminderAlertIdentity
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.ReminderId
 import com.asensiodev.carbura.coredata.R
 import java.security.MessageDigest
@@ -24,8 +25,11 @@ internal class AndroidReminderNotificationScheduler(
 ) : ReminderNotificationScheduler {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
 
-    override suspend fun schedule(plan: ReminderNotificationPlan) {
-        cancel(plan.reminder.id)
+    override suspend fun schedule(
+        scope: ActiveFamilyScope,
+        plan: ReminderNotificationPlan,
+    ) {
+        cancel(scope, plan.reminder.id)
         val futureAlerts = futureAlertInstances(plan, currentTimeMillis())
         if (futureAlerts.isEmpty()) return
 
@@ -36,6 +40,7 @@ internal class AndroidReminderNotificationScheduler(
                 instance.triggerAtMillis,
                 reminderPendingIntent(
                     reminderId = plan.reminder.id,
+                    scope = scope,
                     title = plan.reminder.title,
                     dueDate = plan.reminder.dueDate?.iso8601,
                     alertKind = instance.alert.kind,
@@ -45,12 +50,16 @@ internal class AndroidReminderNotificationScheduler(
         }
     }
 
-    override suspend fun cancel(reminderId: ReminderId) {
+    override suspend fun cancel(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) {
         alarmManager.cancel(legacyReminderPendingIntent(reminderId))
         ReminderAlertKind.entries.forEach { alertKind ->
             alarmManager.cancel(
                 reminderPendingIntent(
                     reminderId = reminderId,
+                    scope = scope,
                     title = null,
                     dueDate = null,
                     alertKind = alertKind,
@@ -70,16 +79,20 @@ internal class AndroidReminderNotificationScheduler(
 
     private fun reminderPendingIntent(
         reminderId: ReminderId,
+        scope: ActiveFamilyScope,
         title: String?,
         dueDate: String?,
         alertKind: ReminderAlertKind,
         revision: Long?,
     ): PendingIntent {
-        val identity = reminderAlertIdentity(reminderId, alertKind)
+        val identity = "${scope.familyId.value}:${scope.generation}:${reminderAlertIdentity(reminderId, alertKind)}"
         val intent =
             Intent(context, AndroidReminderNotificationReceiver::class.java).apply {
                 data = Uri.parse("carbura://reminder-alert/${Uri.encode(identity)}")
                 putExtra(AndroidReminderNotificationReceiver.EXTRA_REMINDER_ID, reminderId.value)
+                putExtra(AndroidReminderNotificationReceiver.EXTRA_FAMILY_ID, scope.familyId.value)
+                scope.userId?.value?.let { putExtra(AndroidReminderNotificationReceiver.EXTRA_USER_ID, it) }
+                putExtra(AndroidReminderNotificationReceiver.EXTRA_SCOPE_GENERATION, scope.generation)
                 putExtra(AndroidReminderNotificationReceiver.EXTRA_ALERT_KIND, alertKind.name)
                 if (revision != null) putExtra(AndroidReminderNotificationReceiver.EXTRA_REVISION, revision)
                 if (title != null) putExtra(AndroidReminderNotificationReceiver.EXTRA_REMINDER_TITLE, title)

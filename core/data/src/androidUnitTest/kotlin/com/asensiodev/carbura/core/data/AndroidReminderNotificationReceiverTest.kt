@@ -4,6 +4,9 @@ import android.content.Context
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderAlertKind
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
+import com.asensiodev.carbura.core.model.FamilyId
+import com.asensiodev.carbura.core.model.UserId
 import com.asensiodev.carbura.coredata.R
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -24,6 +27,7 @@ class AndroidReminderNotificationReceiverTest {
         val context: Context = RuntimeEnvironment.getApplication()
         val driver = AndroidSqliteDriver(CarburaDatabase.Schema, context, "receiver-validation.db")
         val database = CarburaDatabase(driver)
+        val scope = ActiveFamilyScope(UserId("user"), FamilyId("family"), 2)
         val queries = database.carburaDatabaseQueries
         queries.upsertReminder(
             id = "active",
@@ -39,14 +43,15 @@ class AndroidReminderNotificationReceiverTest {
             pendingSync = 0,
             deletedAt = null,
         )
-        queries.replaceNotificationRevision("active", 2)
+        queries.replaceNotificationRevision("family", "active", 2)
 
-        assertTrue(isCurrentReminderAlarm(database, "active", 2))
-        assertFalse(isCurrentReminderAlarm(database, "active", 1))
-        assertFalse(isCurrentReminderAlarm(database, "missing", 2))
+        assertTrue(isCurrentReminderAlarm(database, scope, scope, "active", 2))
+        assertFalse(isCurrentReminderAlarm(database, scope, scope, "active", 1))
+        assertFalse(isCurrentReminderAlarm(database, scope, scope, "missing", 2))
+        assertFalse(isCurrentReminderAlarm(database, scope.copy(generation = 3), scope, "active", 2))
 
-        queries.markReminderCompleted(updatedAt = 2, id = "active")
-        assertFalse(isCurrentReminderAlarm(database, "active", 2))
+        queries.markReminderCompleted(updatedAt = 2, familyId = "family", id = "active")
+        assertFalse(isCurrentReminderAlarm(database, scope, scope, "active", 2))
 
         queries.upsertReminder(
             id = "deleted",
@@ -62,8 +67,8 @@ class AndroidReminderNotificationReceiverTest {
             pendingSync = 0,
             deletedAt = 2,
         )
-        queries.replaceNotificationRevision("deleted", 1)
-        assertFalse(isCurrentReminderAlarm(database, "deleted", 1))
+        queries.replaceNotificationRevision("family", "deleted", 1)
+        assertFalse(isCurrentReminderAlarm(database, scope, scope, "deleted", 1))
         driver.close()
         context.deleteDatabase("receiver-validation.db")
     }

@@ -127,12 +127,13 @@ import java.text.NumberFormat
 @Composable
 internal fun RemindersWorkspace(
     compact: Boolean,
+    familyId: FamilyId,
+    refreshGeneration: Long,
     onNavigateToGarage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel =
-        remember {
-            val familyId = GlobalContext.get().get<FamilyId>()
+        remember(familyId) {
             GlobalContext.get().get<RemindersViewModel> { parametersOf(familyId) }
         }
     val state by viewModel.uiState.collectAsState()
@@ -179,6 +180,9 @@ internal fun RemindersWorkspace(
                 feedbackQueue = feedbackQueue + Triple(feedbackSequence, message, title)
             }
         }
+    }
+    LaunchedEffect(refreshGeneration) {
+        if (refreshGeneration > 0L) viewModel.onEvent(RemindersEvent.Started)
     }
 
     Scaffold(

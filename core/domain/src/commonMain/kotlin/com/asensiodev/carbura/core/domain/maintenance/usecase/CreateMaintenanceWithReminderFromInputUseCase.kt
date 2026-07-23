@@ -2,13 +2,14 @@ package com.asensiodev.carbura.core.domain.maintenance.usecase
 
 import com.asensiodev.carbura.core.domain.DomainResult
 import com.asensiodev.carbura.core.domain.SuspendUseCase
+import com.asensiodev.carbura.core.domain.family.FamilyScoped
 
 class CreateMaintenanceWithReminderFromInputUseCase(
     private val createMaintenance: CreateMaintenanceWithReminderUseCase,
-) : SuspendUseCase<CreateMaintenanceRecordInput, DomainResult<MaintenanceCreationResult>> {
-    override suspend fun invoke(params: CreateMaintenanceRecordInput): DomainResult<MaintenanceCreationResult> =
-        when (val result = params.toMaintenanceRecord()) {
-            is DomainResult.Success -> createMaintenance(result.value)
+) : SuspendUseCase<FamilyScoped<CreateMaintenanceRecordInput>, DomainResult<MaintenanceCreationResult>> {
+    override suspend fun invoke(params: FamilyScoped<CreateMaintenanceRecordInput>): DomainResult<MaintenanceCreationResult> =
+        when (val result = params.value.toMaintenanceRecord()) {
+            is DomainResult.Success -> createMaintenance(FamilyScoped(params.scope, result.value))
             is DomainResult.ValidationError -> result
         }
 }

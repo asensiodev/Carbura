@@ -10,6 +10,7 @@ import com.asensiodev.carbura.core.domain.reminder.notification.plannedMaintenan
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
 import com.asensiodev.carbura.core.domain.reminder.usecase.deriveGeneratedMaintenanceReminder
 import com.asensiodev.carbura.core.domain.reminder.usecase.derivePlannedMaintenanceReminder
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecord
@@ -18,6 +19,7 @@ import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.VehicleId
 
 data class UpdateMaintenanceRecordInput(
+    val scope: ActiveFamilyScope,
     val recordId: MaintenanceRecordId,
     val expectedFamilyId: FamilyId,
     val expectedVehicleId: VehicleId,
@@ -50,10 +52,11 @@ class UpdateMaintenanceRecordUseCase(
     private val reminderRepository: ReminderRepository,
 ) {
     suspend operator fun invoke(input: UpdateMaintenanceRecordInput): UpdateMaintenanceRecordResult {
+        if (input.expectedFamilyId != input.scope.familyId) return UpdateMaintenanceRecordResult.NotFound
         val existing =
             maintenanceRepository.getActiveMaintenanceRecord(
                 input.recordId,
-                input.expectedFamilyId,
+                input.scope,
                 input.expectedVehicleId,
             ) ?: return UpdateMaintenanceRecordResult.NotFound
         val parsed =
@@ -83,7 +86,7 @@ class UpdateMaintenanceRecordUseCase(
                     ?: ReminderNotificationMutation.Delete(maintenanceReminderId(candidate.id)),
             )
         val plannedId = plannedMaintenanceReminderId(candidate.id)
-        val existingPlanned = reminderRepository.getActiveReminder(plannedId)
+        val existingPlanned = reminderRepository.getActiveReminder(input.scope, plannedId)
         var plannedRetained = false
         if (existingPlanned != null) {
             if (candidate.performedOn > input.currentDate) {
@@ -98,7 +101,7 @@ class UpdateMaintenanceRecordUseCase(
         val updated =
             maintenanceRepository.updateMaintenanceRecordWithNotifications(
                 record = candidate,
-                expectedFamilyId = input.expectedFamilyId,
+                scope = input.scope,
                 expectedVehicleId = input.expectedVehicleId,
                 mutations = mutations,
             )

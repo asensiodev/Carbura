@@ -6,9 +6,11 @@ import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotifica
 import com.asensiodev.carbura.core.domain.reminder.repository.ReminderRepository
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.domain.vehicle.usecase.DeleteVehicleUseCase
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.ReminderId
+import com.asensiodev.carbura.core.model.UserId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
@@ -202,7 +204,7 @@ class GarageOverviewViewModelTest {
     ): GarageOverviewViewModel {
         val dispatcher = UnconfinedTestDispatcher(testScheduler)
         return GarageOverviewViewModel(
-            familyId = familyId,
+            scope = ActiveFamilyScope(UserId("user-test"), familyId, 1),
             vehicleRepository = repository,
             dispatchers = TestDispatcherProvider(dispatcher, dispatcher, dispatcher),
             deleteVehicleUseCase = DeleteVehicleUseCase(repository, EmptyReminderRepository(), EmptyScheduler()),
@@ -226,15 +228,21 @@ private class FakeOverviewVehicleRepository(
     var deleteCalls = 0
     var deleteGate: CompletableDeferred<Unit>? = null
 
-    override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> {
+    override suspend fun observeVehicles(scope: ActiveFamilyScope): List<Vehicle> {
         if (cancelLoads) throw CancellationException("Load cancelled")
         if (failLoads) error("Load failed")
-        return vehicles.filter { it.familyId == familyId }
+        return vehicles.filter { it.familyId == scope.familyId }
     }
 
-    override suspend fun saveVehicle(vehicle: Vehicle) = Unit
+    override suspend fun saveVehicle(
+        scope: ActiveFamilyScope,
+        vehicle: Vehicle,
+    ) = Unit
 
-    override suspend fun deleteVehicle(vehicleId: VehicleId) {
+    override suspend fun deleteVehicle(
+        scope: ActiveFamilyScope,
+        vehicleId: VehicleId,
+    ) {
         deleteCalls += 1
         deleteGate?.await()
         if (cancelDeletes) throw CancellationException("Delete cancelled")
@@ -244,19 +252,37 @@ private class FakeOverviewVehicleRepository(
 }
 
 private class EmptyReminderRepository : ReminderRepository {
-    override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> = emptyList()
+    override suspend fun getPendingReminders(scope: ActiveFamilyScope): List<Reminder> = emptyList()
 
-    override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> = emptyList()
+    override suspend fun getRemindersByVehicle(
+        scope: ActiveFamilyScope,
+        vehicleId: VehicleId,
+    ): List<Reminder> = emptyList()
 
-    override suspend fun saveReminder(reminder: Reminder) = Unit
+    override suspend fun saveReminder(
+        scope: ActiveFamilyScope,
+        reminder: Reminder,
+    ) = Unit
 
-    override suspend fun markReminderCompleted(reminderId: ReminderId) = Unit
+    override suspend fun markReminderCompleted(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) = Unit
 
-    override suspend fun deleteReminder(reminderId: ReminderId) = Unit
+    override suspend fun deleteReminder(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) = Unit
 }
 
 private class EmptyScheduler : ReminderNotificationScheduler {
-    override suspend fun schedule(plan: ReminderNotificationPlan) = Unit
+    override suspend fun schedule(
+        scope: ActiveFamilyScope,
+        plan: ReminderNotificationPlan,
+    ) = Unit
 
-    override suspend fun cancel(reminderId: ReminderId) = Unit
+    override suspend fun cancel(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) = Unit
 }

@@ -5,6 +5,12 @@ value class FamilyId(
     val value: String,
 )
 
+data class ActiveFamilyScope(
+    val userId: UserId?,
+    val familyId: FamilyId,
+    val generation: Long,
+)
+
 @JvmInline
 value class UserProfileId(
     val value: String,

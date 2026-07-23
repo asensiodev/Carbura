@@ -9,45 +9,51 @@ import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.ReminderId
 import com.asensiodev.carbura.core.model.VehicleId
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
+import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
 
 class LocalReminderRepository(
     private val database: CarburaDatabase,
     private val notificationRecovery: NotificationOutboxRecovery = NoOpNotificationOutboxRecovery,
+    private val familyScope: ActiveFamilyScopeGateway = SqlDelightActiveFamilyScopeGateway(database),
 ) : ReminderRepository {
     private val notificationOutbox = SqlDelightNotificationOutbox(database)
-    override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> =
-        database.carburaDatabaseQueries
-            .selectPendingRemindersByFamily(familyId.value)
+    override suspend fun getPendingReminders(scope: ActiveFamilyScope): List<Reminder> =
+        database.carburaDatabaseQueries.also { familyScope.requireCurrent(scope) }
+            .selectPendingRemindersByFamily(scope.familyId.value)
             .executeAsList()
             .map { it.toReminder() }
 
-    override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> =
-        database.carburaDatabaseQueries
-            .selectSyncRemindersByVehicle(vehicleId.value)
+    override suspend fun getRemindersByVehicle(scope: ActiveFamilyScope, vehicleId: VehicleId): List<Reminder> =
+        database.carburaDatabaseQueries.also { familyScope.requireCurrent(scope) }
+            .selectSyncRemindersByVehicle(scope.familyId.value, vehicleId.value)
             .executeAsList()
             .map { it.toReminder() }
 
-    override suspend fun getActiveReminder(reminderId: ReminderId): Reminder? =
-        database.carburaDatabaseQueries
-            .selectActiveReminderById(reminderId.value)
+    override suspend fun getActiveReminder(scope: ActiveFamilyScope, reminderId: ReminderId): Reminder? =
+        database.carburaDatabaseQueries.also { familyScope.requireCurrent(scope) }
+            .selectActiveReminderById(scope.familyId.value, reminderId.value)
             .executeAsOneOrNull()
             ?.toReminder()
 
-    override suspend fun saveReminder(reminder: Reminder) {
+    override suspend fun saveReminder(scope: ActiveFamilyScope, reminder: Reminder) {
+        requireScope(scope, reminder.familyId)
         val now = currentTimeMillis()
         saveReminder(reminder, now)
     }
 
     override suspend fun saveReminderWithNotification(
+        scope: ActiveFamilyScope,
         reminder: Reminder,
         notificationPlan: ReminderNotificationPlan?,
     ) {
+        requireScope(scope, reminder.familyId)
         database.carburaDatabaseQueries.transaction {
             saveReminder(reminder, currentTimeMillis())
             if (notificationPlan != null) {
-                notificationOutbox.recordSchedule(notificationPlan)
+                notificationOutbox.recordSchedule(scope, notificationPlan)
             } else {
-                notificationOutbox.recordCancel(reminder.id)
+                notificationOutbox.recordCancel(scope, reminder.id)
             }
         }
         notificationRecovery.request()
@@ -73,43 +79,56 @@ class LocalReminderRepository(
         )
     }
 
-    override suspend fun markReminderCompleted(reminderId: ReminderId) {
+    override suspend fun markReminderCompleted(scope: ActiveFamilyScope, reminderId: ReminderId) {
+        familyScope.requireCurrent(scope)
         database.carburaDatabaseQueries.markReminderCompleted(
             updatedAt = currentTimeMillis(),
             id = reminderId.value,
+            familyId = scope.familyId.value,
         )
     }
 
-    override suspend fun markReminderCompletedWithNotification(reminderId: ReminderId) {
+    override suspend fun markReminderCompletedWithNotification(scope: ActiveFamilyScope, reminderId: ReminderId) {
+        familyScope.requireCurrent(scope)
         database.carburaDatabaseQueries.transaction {
             database.carburaDatabaseQueries.markReminderCompleted(
                 updatedAt = currentTimeMillis(),
                 id = reminderId.value,
+                familyId = scope.familyId.value,
             )
-            notificationOutbox.recordCancel(reminderId)
+            notificationOutbox.recordCancel(scope, reminderId)
         }
         notificationRecovery.request()
     }
 
-    override suspend fun deleteReminder(reminderId: ReminderId) {
+    override suspend fun deleteReminder(scope: ActiveFamilyScope, reminderId: ReminderId) {
+        familyScope.requireCurrent(scope)
         val now = currentTimeMillis()
         database.carburaDatabaseQueries.deleteReminder(
             deletedAt = now,
             updatedAt = now,
             id = reminderId.value,
+            familyId = scope.familyId.value,
         )
     }
 
-    override suspend fun deleteReminderWithNotification(reminderId: ReminderId) {
+    override suspend fun deleteReminderWithNotification(scope: ActiveFamilyScope, reminderId: ReminderId) {
+        familyScope.requireCurrent(scope)
         val now = currentTimeMillis()
         database.carburaDatabaseQueries.transaction {
             database.carburaDatabaseQueries.deleteReminder(
                 deletedAt = now,
                 updatedAt = now,
                 id = reminderId.value,
+                familyId = scope.familyId.value,
             )
-            notificationOutbox.recordCancel(reminderId)
+            notificationOutbox.recordCancel(scope, reminderId)
         }
         notificationRecovery.request()
+    }
+
+    private fun requireScope(scope: ActiveFamilyScope, familyId: FamilyId) {
+        familyScope.requireCurrent(scope)
+        require(scope.familyId == familyId)
     }
 }

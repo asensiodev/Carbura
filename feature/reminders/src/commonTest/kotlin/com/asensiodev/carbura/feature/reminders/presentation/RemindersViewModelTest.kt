@@ -10,11 +10,13 @@ import com.asensiodev.carbura.core.domain.reminder.usecase.CreateReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.DeleteReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.GetPendingRemindersUseCase
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.CalendarDate
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.ReminderId
+import com.asensiodev.carbura.core.model.UserId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
@@ -40,6 +42,7 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class RemindersViewModelTest {
     private val familyId = FamilyId("family-test")
+    private val activeScope = ActiveFamilyScope(UserId("user-test"), familyId, 1)
     private val vehicle =
         Vehicle(
             id = VehicleId("vehicle-1"),
@@ -106,7 +109,7 @@ class RemindersViewModelTest {
                     reminderRepository = repository,
                 )
             viewModel.onEvent(RemindersEvent.TitleChanged("Borrador"))
-            repository.saveReminder(reminder("remote"))
+            repository.saveReminder(activeScope, reminder("remote"))
 
             viewModel.onEvent(RemindersEvent.Refresh)
             advanceUntilIdle()
@@ -465,7 +468,7 @@ class RemindersViewModelTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val notificationScheduler = FakeReminderNotificationScheduler()
         return RemindersViewModel(
-            familyId = familyId,
+            scope = activeScope,
             vehicleRepository = vehicleRepository,
             dispatchers =
                 TestDispatcherProvider(
@@ -498,15 +501,21 @@ private class FakeVehicleRepository(
     var failReads: Boolean = false,
     var readFailure: Throwable? = null,
 ) : VehicleRepository {
-    override suspend fun observeVehicles(familyId: FamilyId): List<Vehicle> {
+    override suspend fun observeVehicles(scope: ActiveFamilyScope): List<Vehicle> {
         readFailure?.let { throw it }
         if (failReads) error("vehicle read failed")
-        return vehicles.filter { it.familyId == familyId }
+        return vehicles.filter { it.familyId == scope.familyId }
     }
 
-    override suspend fun saveVehicle(vehicle: Vehicle) = Unit
+    override suspend fun saveVehicle(
+        scope: ActiveFamilyScope,
+        vehicle: Vehicle,
+    ) = Unit
 
-    override suspend fun deleteVehicle(vehicleId: VehicleId) = Unit
+    override suspend fun deleteVehicle(
+        scope: ActiveFamilyScope,
+        vehicleId: VehicleId,
+    ) = Unit
 }
 
 private class FakeReminderRepository(
@@ -520,12 +529,23 @@ private class FakeReminderRepository(
     var completeFailure: Throwable? = null
     var deleteFailure: Throwable? = null
 
-    override suspend fun getPendingReminders(familyId: FamilyId): List<Reminder> =
-        savedReminders.filter { it.familyId == familyId && !it.isCompleted }
+    override suspend fun getPendingReminders(scope: ActiveFamilyScope): List<Reminder> =
+        savedReminders.filter { it.familyId == scope.familyId && !it.isCompleted }
 
-    override suspend fun getRemindersByVehicle(vehicleId: VehicleId): List<Reminder> = savedReminders.filter { it.vehicleId == vehicleId }
+    override suspend fun getRemindersByVehicle(
+        scope: ActiveFamilyScope,
+        vehicleId: VehicleId,
+    ): List<Reminder> =
+        savedReminders.filter {
+            it.familyId ==
+                scope.familyId &&
+                it.vehicleId == vehicleId
+        }
 
-    override suspend fun saveReminder(reminder: Reminder) {
+    override suspend fun saveReminder(
+        scope: ActiveFamilyScope,
+        reminder: Reminder,
+    ) {
         saveCalls += 1
         saveGate?.await()
         saveFailure?.let { throw it }
@@ -534,7 +554,10 @@ private class FakeReminderRepository(
         savedReminders += reminder
     }
 
-    override suspend fun markReminderCompleted(reminderId: ReminderId) {
+    override suspend fun markReminderCompleted(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) {
         completeFailure?.let { throw it }
         val index = savedReminders.indexOfFirst { it.id == reminderId }
         if (index >= 0) {
@@ -542,14 +565,23 @@ private class FakeReminderRepository(
         }
     }
 
-    override suspend fun deleteReminder(reminderId: ReminderId) {
+    override suspend fun deleteReminder(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) {
         deleteFailure?.let { throw it }
         savedReminders.removeAll { it.id == reminderId }
     }
 }
 
 private class FakeReminderNotificationScheduler : ReminderNotificationScheduler {
-    override suspend fun schedule(plan: ReminderNotificationPlan) = Unit
+    override suspend fun schedule(
+        scope: ActiveFamilyScope,
+        plan: ReminderNotificationPlan,
+    ) = Unit
 
-    override suspend fun cancel(reminderId: ReminderId) = Unit
+    override suspend fun cancel(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) = Unit
 }

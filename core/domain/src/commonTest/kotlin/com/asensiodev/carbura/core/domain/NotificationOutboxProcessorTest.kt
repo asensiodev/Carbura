@@ -37,12 +37,12 @@ class NotificationOutboxProcessorTest {
             val outbox = FakeNotificationOutbox(scheduleDesired(), cancelDesired())
             val scheduler = RecordingOutboxScheduler()
 
-            val result = NotificationOutboxProcessor(outbox, scheduler).drain()
+            val result = NotificationOutboxProcessor(outbox, scheduler).drain(testFamilyScope)
 
             assertEquals(NotificationOutboxDrainResult.Drained, result)
             assertEquals(listOf(ReminderId("schedule-1")), scheduler.scheduled.map { it.reminder.id })
             assertEquals(listOf(ReminderId("cancel-1")), scheduler.cancelled)
-            assertTrue(outbox.pending().isEmpty())
+            assertTrue(outbox.pending(testFamilyScope).isEmpty())
         }
 
     @Test
@@ -52,10 +52,10 @@ class NotificationOutboxProcessorTest {
             val outbox = FakeNotificationOutbox(desired)
             val scheduler = RecordingOutboxScheduler(scheduleError = IllegalStateException("Temporary failure"))
 
-            val result = NotificationOutboxProcessor(outbox, scheduler).drain()
+            val result = NotificationOutboxProcessor(outbox, scheduler).drain(testFamilyScope)
 
             assertEquals(NotificationOutboxDrainResult.RetryableWorkRemaining, result)
-            assertEquals(listOf(desired), outbox.pending())
+            assertEquals(listOf(desired), outbox.pending(testFamilyScope))
         }
 
     @Test
@@ -67,9 +67,9 @@ class NotificationOutboxProcessorTest {
 
             assertEquals(
                 NotificationOutboxDrainResult.PermissionDenied,
-                NotificationOutboxProcessor(outbox, scheduler).drain(),
+                NotificationOutboxProcessor(outbox, scheduler).drain(testFamilyScope),
             )
-            assertEquals(listOf(desired), outbox.pending())
+            assertEquals(listOf(desired), outbox.pending(testFamilyScope))
         }
 
     @Test
@@ -79,9 +79,9 @@ class NotificationOutboxProcessorTest {
             val outbox = FakeNotificationOutbox(desired)
             val scheduler = RecordingOutboxScheduler(scheduleError = CancellationException("Cancelled"))
 
-            assertFailsWith<CancellationException> { NotificationOutboxProcessor(outbox, scheduler).drain() }
+            assertFailsWith<CancellationException> { NotificationOutboxProcessor(outbox, scheduler).drain(testFamilyScope) }
 
-            assertEquals(listOf(desired), outbox.pending())
+            assertEquals(listOf(desired), outbox.pending(testFamilyScope))
         }
 
     @Test
@@ -92,15 +92,15 @@ class NotificationOutboxProcessorTest {
             val scheduler = RecordingOutboxScheduler()
             val processor = NotificationOutboxProcessor(outbox, scheduler)
 
-            assertFailsWith<CancellationException> { processor.drain() }
-            assertEquals(listOf(desired), outbox.pending())
+            assertFailsWith<CancellationException> { processor.drain(testFamilyScope) }
+            assertEquals(listOf(desired), outbox.pending(testFamilyScope))
             outbox.acknowledgeError = null
 
             val recreatedProcessor = NotificationOutboxProcessor(outbox, scheduler)
-            assertEquals(NotificationOutboxDrainResult.Drained, recreatedProcessor.drain())
+            assertEquals(NotificationOutboxDrainResult.Drained, recreatedProcessor.drain(testFamilyScope))
             assertEquals(2, scheduler.scheduled.size)
             assertEquals(desired.revision, scheduler.scheduled.last().revision)
-            assertTrue(outbox.pending().isEmpty())
+            assertTrue(outbox.pending(testFamilyScope).isEmpty())
         }
 
     @Test
@@ -111,8 +111,8 @@ class NotificationOutboxProcessorTest {
             val scheduler = RecordingOutboxScheduler(scheduleGate = gate)
             val processor = NotificationOutboxProcessor(outbox, scheduler)
 
-            val first = async { processor.drain() }
-            val second = async { processor.drain() }
+            val first = async { processor.drain(testFamilyScope) }
+            val second = async { processor.drain(testFamilyScope) }
             runCurrent()
             assertEquals(1, scheduler.scheduleAttempts)
 
@@ -159,9 +159,11 @@ private class FakeNotificationOutbox(
 ) : NotificationOutbox {
     private val rows = desired.associateByTo(mutableMapOf(), DesiredNotification::reminderId)
 
-    override suspend fun pending(): List<DesiredNotification> = rows.values.toList()
+    override suspend fun pending(scope: com.asensiodev.carbura.core.model.ActiveFamilyScope): List<DesiredNotification> =
+        rows.values.toList()
 
     override suspend fun acknowledge(
+        scope: com.asensiodev.carbura.core.model.ActiveFamilyScope,
         reminderId: ReminderId,
         revision: NotificationRevision,
     ) {
@@ -178,14 +180,20 @@ private class RecordingOutboxScheduler(
     val cancelled = mutableListOf<ReminderId>()
     var scheduleAttempts = 0
 
-    override suspend fun schedule(plan: ReminderNotificationPlan) {
+    override suspend fun schedule(
+        scope: com.asensiodev.carbura.core.model.ActiveFamilyScope,
+        plan: ReminderNotificationPlan,
+    ) {
         scheduleAttempts += 1
         scheduleGate?.await()
         scheduleError?.let { throw it }
         scheduled += plan
     }
 
-    override suspend fun cancel(reminderId: ReminderId) {
+    override suspend fun cancel(
+        scope: com.asensiodev.carbura.core.model.ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) {
         cancelled += reminderId
     }
 }

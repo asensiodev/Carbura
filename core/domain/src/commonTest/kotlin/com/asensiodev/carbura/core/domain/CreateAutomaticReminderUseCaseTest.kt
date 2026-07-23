@@ -20,7 +20,7 @@ class CreateAutomaticReminderUseCaseTest {
             val useCase = CreateAutomaticReminderUseCase(repository, scheduler)
             val record = testMaintenanceRecord(code = MaintenanceTypeCode.Itv, nextDueDate = "2027-07-01")
 
-            val generated = useCase(record)
+            val generated = useCase(record.familyScoped())
 
             assertEquals(ReminderId("maintenance-reminder:record-1"), generated?.reminder?.id)
             assertEquals("Proxima ITV", generated?.reminder?.title)
@@ -44,7 +44,7 @@ class CreateAutomaticReminderUseCaseTest {
             val repository = FakeReminderRepository()
             val generated =
                 CreateAutomaticReminderUseCase(repository, FakeReminderNotificationScheduler())(
-                    testMaintenanceRecord(code = MaintenanceTypeCode.Insurance, nextDueDate = "2027-07-01"),
+                    testMaintenanceRecord(code = MaintenanceTypeCode.Insurance, nextDueDate = "2027-07-01").familyScoped(),
                 )
 
             assertEquals("Proximo seguro", generated?.reminder?.title)
@@ -60,8 +60,8 @@ class CreateAutomaticReminderUseCaseTest {
             val useCase = CreateAutomaticReminderUseCase(repository, scheduler)
             val record = testMaintenanceRecord(code = MaintenanceTypeCode.Itv, nextDueDate = "2027-07-01")
 
-            val first = useCase(record)
-            val retry = useCase(record)
+            val first = useCase(record.familyScoped())
+            val retry = useCase(record.familyScoped())
 
             assertEquals(first?.reminder?.id, retry?.reminder?.id)
             assertEquals(first?.notificationPlan, retry?.notificationPlan)
@@ -74,7 +74,7 @@ class CreateAutomaticReminderUseCaseTest {
             val repository = FakeReminderRepository()
             val scheduler = FakeReminderNotificationScheduler()
 
-            val generated = CreateAutomaticReminderUseCase(repository, scheduler)(testMaintenanceRecord())
+            val generated = CreateAutomaticReminderUseCase(repository, scheduler)(testMaintenanceRecord().familyScoped())
 
             assertNull(generated)
             assertEquals(emptyList(), repository.savedReminders)
@@ -93,7 +93,7 @@ class CreateAutomaticReminderUseCaseTest {
 
             val generated =
                 CreateAutomaticReminderUseCase(repository, FakeReminderNotificationScheduler())(
-                    testMaintenanceRecord(code = MaintenanceTypeCode.OilChange, nextDueDate = "2027-07-01"),
+                    testMaintenanceRecord(code = MaintenanceTypeCode.OilChange, nextDueDate = "2027-07-01").familyScoped(),
                 )
 
             assertNull(generated)
@@ -107,11 +107,11 @@ class CreateAutomaticReminderUseCaseTest {
             val scheduler = FakeReminderNotificationScheduler().apply { failSchedules = true }
             val useCase = CreateAutomaticReminderUseCase(repository, scheduler)
             val eligible = testMaintenanceRecord(code = MaintenanceTypeCode.Itv, nextDueDate = "2027-07-01")
-            useCase(eligible)
+            useCase(eligible.familyScoped())
             assertEquals(1, repository.savedReminders.size)
 
             scheduler.failSchedules = false
-            val retry = useCase(eligible.copy(nextDueDate = null))
+            val retry = useCase(eligible.copy(nextDueDate = null).familyScoped())
 
             assertNull(retry)
             assertEquals(emptyList(), repository.savedReminders)
@@ -126,9 +126,9 @@ class CreateAutomaticReminderUseCaseTest {
             val scheduler = FakeReminderNotificationScheduler()
             val useCase = CreateAutomaticReminderUseCase(repository, scheduler)
             val eligible = testMaintenanceRecord(code = MaintenanceTypeCode.Insurance, nextDueDate = "2027-07-01")
-            useCase(eligible)
+            useCase(eligible.familyScoped())
 
-            val retry = useCase(eligible.copy(maintenanceTypeCode = MaintenanceTypeCode.Repair))
+            val retry = useCase(eligible.copy(maintenanceTypeCode = MaintenanceTypeCode.Repair).familyScoped())
 
             assertNull(retry)
             assertEquals(emptyList(), repository.savedReminders)

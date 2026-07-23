@@ -1,6 +1,7 @@
 package com.asensiodev.carbura.core.data
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -11,7 +12,11 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
+import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderAlertKind
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
+import com.asensiodev.carbura.core.model.FamilyId
+import com.asensiodev.carbura.core.model.UserId
 import com.asensiodev.carbura.coredata.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -36,6 +41,13 @@ class AndroidReminderNotificationReceiver : BroadcastReceiver() {
                     withTimeoutOrNull(RECEIVER_VALIDATION_TIMEOUT_MILLIS) {
                         isCurrentReminderAlarm(
                             database = koin.get(),
+                            activeScope = koin.get<ActiveFamilyScopeGateway>().current(),
+                            expectedScope =
+                                ActiveFamilyScope(
+                                    userId = intent.getStringExtra(EXTRA_USER_ID)?.let(::UserId),
+                                    familyId = FamilyId(intent.getStringExtra(EXTRA_FAMILY_ID).orEmpty()),
+                                    generation = intent.getLongExtra(EXTRA_SCOPE_GENERATION, MISSING_GENERATION),
+                                ),
                             reminderId = intent.getStringExtra(EXTRA_REMINDER_ID),
                             revision = intent.getLongExtra(EXTRA_REVISION, MISSING_REVISION),
                         )
@@ -47,6 +59,7 @@ class AndroidReminderNotificationReceiver : BroadcastReceiver() {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun showNotification(
         context: Context,
         intent: Intent,
@@ -95,6 +108,9 @@ class AndroidReminderNotificationReceiver : BroadcastReceiver() {
 
     companion object {
         const val EXTRA_REMINDER_ID = "extra_reminder_id"
+        const val EXTRA_FAMILY_ID = "extra_family_id"
+        const val EXTRA_USER_ID = "extra_user_id"
+        const val EXTRA_SCOPE_GENERATION = "extra_scope_generation"
         const val EXTRA_REMINDER_TITLE = "extra_reminder_title"
         const val EXTRA_ALERT_KIND = "extra_alert_kind"
         const val EXTRA_DUE_DATE = "extra_due_date"
@@ -102,20 +118,25 @@ class AndroidReminderNotificationReceiver : BroadcastReceiver() {
         private const val EXTRA_START_ROUTE = "com.asensiodev.carbura.START_ROUTE"
         private const val START_ROUTE_REMINDERS = "reminders"
         private const val MISSING_REVISION = -1L
+        private const val MISSING_GENERATION = -1L
         private const val RECEIVER_VALIDATION_TIMEOUT_MILLIS = 5_000L
     }
 }
 
 internal fun isCurrentReminderAlarm(
     database: CarburaDatabase,
+    activeScope: ActiveFamilyScope,
+    expectedScope: ActiveFamilyScope,
     reminderId: String?,
     revision: Long,
 ): Boolean {
     if (reminderId.isNullOrBlank() || revision < 1L) return false
-    val reminder = database.carburaDatabaseQueries.selectReminderById(reminderId).executeAsOneOrNull() ?: return false
+    if (activeScope != expectedScope) return false
+    val reminder =
+        database.carburaDatabaseQueries.selectReminderById(expectedScope.familyId.value, reminderId).executeAsOneOrNull() ?: return false
     if (reminder.deletedAt != null || reminder.isCompleted != 0L) return false
     return database.carburaDatabaseQueries
-        .selectNotificationRevision(reminderId)
+        .selectNotificationRevision(expectedScope.familyId.value, reminderId)
         .executeAsOneOrNull() == revision
 }
 
