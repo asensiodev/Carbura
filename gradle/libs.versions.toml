@@ -12,6 +12,7 @@ credentials = "1.2.2"
 espresso = "3.7.0"
 googleid = "1.1.1"
 java = "17"
+jna = "5.17.0"
 koin = "4.1.1"
 kotlin = "2.1.0"
 kotlinxSerializationJson = "1.9.0"
@@ -50,6 +51,8 @@ androidx-credentials = { module = "androidx.credentials:credentials", version.re
 androidx-credentials-playauth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
 androidx-test-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidxViewModel" }

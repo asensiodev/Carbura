@@ -18,7 +18,7 @@ class SupabaseAuthGatewayTest {
                     install(Auth)
                 }
 
-            val gateway = SupabaseAuthGateway(client, googleClientId = "")
+            val gateway = SupabaseAuthGateway(client)
 
             assertNull(gateway.currentSession())
         }

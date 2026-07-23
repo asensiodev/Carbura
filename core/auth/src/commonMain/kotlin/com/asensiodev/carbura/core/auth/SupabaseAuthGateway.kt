@@ -15,7 +15,6 @@ import kotlinx.serialization.json.jsonPrimitive
 
 class SupabaseAuthGateway(
     private val client: SupabaseClient,
-    private val googleClientId: String,
 ) : AuthGateway {
     override suspend fun currentSession(): AuthSession? =
         client.auth.currentSessionOrNull()?.let { session ->
