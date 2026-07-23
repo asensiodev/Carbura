@@ -15,9 +15,9 @@
     <string name="shell_maintenance_eyebrow">HISTORIAL DE MANTENIMIENTO</string>
     <string name="shell_maintenance_headline">Un registro claro de cada kilómetro.</string>
     <string name="shell_maintenance_description">Consulta y registra el historial de mantenimiento de cada vehículo.</string>
-    <string name="shell_account_eyebrow">CUENTA LOCAL</string>
-    <string name="shell_account_headline">Tus datos, en este dispositivo.</string>
-    <string name="shell_account_description">Consulta el modo local y el almacenamiento que usa Carbura Desktop.</string>
+    <string name="shell_account_eyebrow">CUENTA Y DATOS</string>
+    <string name="shell_account_headline">Tu cuenta y tus datos, bajo control.</string>
+    <string name="shell_account_description">Gestiona el modo local, la sincronización y el almacenamiento de Carbura Desktop.</string>
     <string name="startup_restoring">Comprobando la sesión segura…</string>
     <string name="startup_authenticating">Esperando la autenticación de Google…</string>
     <string name="startup_profile">Resolviendo tu cuenta y familia…</string>

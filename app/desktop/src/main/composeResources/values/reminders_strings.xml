@@ -12,8 +12,8 @@
     <string name="reminders_pending_single">1 recordatorio pendiente</string>
     <string name="reminders_pending_multiple">%1$d recordatorios pendientes</string>
     <string name="reminders_add">Añadir recordatorio</string>
-    <string name="reminders_local_storage_title">Guardados localmente en Carbura</string>
-    <string name="reminders_desktop_notifications_unavailable">Los avisos nativos de macOS y Windows no están disponibles en esta versión.</string>
+    <string name="reminders_local_storage_title">Recordatorios guardados y sincronizados; avisos solo en la app móvil</string>
+    <string name="reminders_desktop_notifications_unavailable">Carbura Desktop no programa avisos nativos de macOS o Windows.</string>
     <string name="reminders_all_vehicles_filter">Todos</string>
     <string name="reminders_loading">Cargando recordatorios...</string>
     <string name="reminders_load_error_title">No se pudieron cargar los recordatorios</string>

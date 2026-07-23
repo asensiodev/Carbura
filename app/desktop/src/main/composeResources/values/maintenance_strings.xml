@@ -6,7 +6,7 @@
     <string name="maintenance_header_select_vehicle">Selecciona un vehículo</string>
     <string name="maintenance_select_vehicle_title">Selecciona un vehículo</string>
     <string name="maintenance_select_vehicle_description">Elige el vehículo cuyo historial de mantenimiento quieres consultar o actualizar.</string>
-    <string name="maintenance_reminders_unavailable">Recordatorios guardados localmente; avisos nativos no disponibles</string>
+    <string name="maintenance_reminders_unavailable">Recordatorios sincronizados; avisos nativos solo en Android</string>
     <string name="maintenance_loading_vehicles">Cargando vehículos...</string>
     <string name="maintenance_vehicles_load_error_title">No se pudieron cargar los vehículos</string>
     <string name="maintenance_vehicles_load_error_description">Tus datos locales no han cambiado. Intenta abrir Mantenimiento de nuevo.</string>
@@ -62,7 +62,7 @@
     <string name="maintenance_cost_value">%1$s %2$s</string>
     <string name="maintenance_next_due_value">Próxima fecha: %1$s</string>
     <string name="maintenance_future_reminder_title">¿Quieres crear un recordatorio?</string>
-    <string name="maintenance_future_reminder_description">¿Quieres que Carbura guarde un recordatorio para este mantenimiento futuro? Los avisos nativos de macOS y Windows no están habilitados en esta versión.</string>
+    <string name="maintenance_future_reminder_description">¿Quieres que Carbura guarde y sincronice un recordatorio para este mantenimiento futuro? Los avisos nativos se entregan únicamente desde Android.</string>
     <string name="maintenance_future_reminder_confirm">Guardar y crear recordatorio</string>
     <string name="maintenance_future_reminder_save_only">Guardar sin este recordatorio</string>
     <string name="maintenance_validation_blank_type">Introduce un nombre para el mantenimiento personalizado.</string>

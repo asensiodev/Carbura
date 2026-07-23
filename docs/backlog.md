@@ -4,27 +4,28 @@ Este documento detalla los tickets de trabajo derivados de las historias de usua
 
 Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada bloque de trabajo se creara un cambio en `openspec/changes/` con `proposal.md`, `tasks.md` y spec delta cuando aplique. La implementacion seguira TDD: Red -> Green -> Refactor.
 
-## Alcance de Entrega 2
+## Alcance actual de la entrega final
 
-- Incluido y validado en Android: login Google real, perfil/familia MVP, garaje persistente, historial de mantenimiento, recordatorios MVP, notificaciones locales, sync v0 con Supabase, UI Android edge-to-edge y smoke visual manual.
+- Incluido en Android y Desktop: autenticacion Google/Supabase, familia activa, garaje persistente, historial, recordatorios, eliminacion de cuenta y sync v0 bidireccional.
 - Recordatorios MVP: crear, listar pendientes, marcar completados y borrar por familia/vehiculo, con fecha mediante date picker y/o kilometraje objetivo.
 - Mantenimiento MVP: crear con date picker, listar historial persistente por vehiculo y borrar registros con confirmacion.
 - Garaje MVP: crear, editar, listar y borrar vehiculos, actualizar rapidamente el odometro y gestionar objetivos opcionales de ITV, seguro y revision por kilometraje.
 - Sync v0: subida/bajada de vehiculos, mantenimientos y recordatorios; tombstones; `pending_sync`; `last-write-wins`; sync inicial al restaurar sesion; accion manual desde Usuario.
 - Incorporado despues de Entrega 2: edicion de vehiculos, odometro rapido, sugerencias proactivas de recordatorios desde el vehiculo y CI con calidad, tests y APK debug.
-- Diferido: integracion del recordatorio desde mantenimiento, coste acumulado, invitaciones familiares completas, aplicacion Desktop, posible iOS, exportacion PDF/CSV, release y test E2E completo.
-- Roadmap de sincronizacion: `docs/sync-roadmap.md`.
+- Implementado despues de Entrega 2: Desktop local y autenticado, OAuth PKCE, vault nativo, importacion consentida, recordatorios desde mantenimiento, hardening RLS y confirmaciones de sync condicionadas por version.
+- Pendiente: coste acumulado, invitaciones, iOS, exportacion PDF/CSV, aceptacion manual final, paquetes instalados y evidencias de release.
+- Fuente de sincronizacion: `openspec/specs/sync-v0/spec.md` y `readme.md` secciones 2.1, 2.4 y 2.6.
 
-## Estado actual Entrega 2
+## Estado actual
 
 - Android MVP local-first + sync v0: completado para la demo de Entrega 2 y ampliado con edicion y recordatorios proactivos.
-- La vision multiplataforma continua con Desktop como siguiente producto e iOS como posibilidad posterior; no condiciona el cierre Android actual.
+- Android y Desktop son clientes funcionales. Android es la unica plataforma con notificaciones nativas; iOS queda fuera de alcance.
 - OpenSpec archivados relevantes: `add-sync-v0`, `add-reminders-mvp-edge-to-edge`, `add-user-family-mvp`, `add-date-pickers-delete-mvp`, `add-local-reminder-notifications`, `harden-sync-offline`.
 - Cambios recientes archivados: `add-vehicle-editing-odometer` y `add-proactive-vehicle-reminders`.
 
 ## Sync v0 implementado
 
-- Fuente de alcance: `docs/sync-roadmap.md`.
+- Fuente de alcance: `openspec/specs/sync-v0/spec.md`.
 - Es funcional end-to-end, no solo preparatorio: sube cambios locales pendientes a Supabase y baja datos remotos de la familia.
 - Alcance v0: vehiculos, mantenimientos y recordatorios; ejecucion manual, tras login/restauracion y durante el uso de app; resolucion simple por `updated_at` con `last-write-wins`.
 - Fuera de v0: realtime, background sync periodico, merge manual de conflictos, colas complejas, adjuntos y notificaciones remotas.
@@ -98,7 +99,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Tipo:** feature / auth.
 
-**Descripcion:** implementar el flujo inicial de autenticacion con Google mediante Supabase Auth y creacion/carga del garaje familiar. Android usa Credential Manager con Google ID; un fallback OAuth alternativo queda como mejora posterior.
+**Descripcion:** implementar autenticacion Google/Supabase y creacion/carga del garaje familiar. Android usa Credential Manager con Google ID y Desktop Authorization Code con PKCE S256, navegador del sistema y vault nativo.
 
 **Proposito:** permitir que el usuario entre en la app y tenga un espacio de datos aislado antes de registrar vehiculos.
 
@@ -116,7 +117,8 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 - Configurar login Google en Supabase Auth.
 - Implementar login Android con Credential Manager y Google ID.
-- Permitir reintentar el flujo ante errores de Credential Manager; evaluar un fallback OAuth posterior.
+- Permitir reintentar errores Android y restaurar/refrescar de forma segura la sesion Desktop.
+- Mantener tokens Desktop solo en Keychain o Windows Credential Manager.
 - Crear o cargar `UserProfile` tras login.
 - Crear `Family` si el usuario no tiene garaje.
 - Exponer estado de sesion a la UI.
@@ -465,9 +467,9 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Estimacion:** 5 story points.
 
-**Responsable:** plataforma / Android / Desktop.
+**Responsable:** plataforma / Android.
 
-**Etiquetas:** `notifications`, `android`, `desktop`, `reminders`.
+**Etiquetas:** `notifications`, `android`, `reminders`.
 
 **Alcance:**
 
@@ -482,6 +484,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 - Dado un recordatorio con antelacion, cuando llega la fecha de aviso, entonces se muestra notificacion local.
 - Dado Android sin permiso, cuando se necesita avisar, entonces la app solicita o explica el permiso.
 - Dado dispositivo offline, cuando llega el aviso, entonces no depende del backend.
+- Dado un recordatorio creado en Desktop, cuando Android sincroniza, entonces Android lo incorpora al outbox y programa el aviso.
 
 **Tests TDD previstos:**
 
@@ -516,7 +519,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 - Workflow de GitHub Actions que compila y ejecuta `./gradlew test` en cada push y PR.
 - Quality gate actual con `./gradlew qualityCheck test assembleDebug --stacktrace`.
 - Gestion de secretos via GitHub Secrets (sin credenciales en el repositorio).
-- Workflow de release que genera artefactos: APK Android y, solo si entra en alcance final, paquete Desktop.
+- Release con APK Android y paquetes Desktop DMG/MSI generados en su sistema objetivo.
 - Publicacion de artefactos en GitHub Releases con tag `v1.0-final-AAC`.
 - Evidencia de despliegue: backend Supabase activo, instrucciones de instalacion y video demo de 2-3 minutos del flujo E2E.
 
@@ -526,18 +529,28 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 - Dado un push a una rama con PR, cuando se ejecuta el pipeline, entonces compila el proyecto y ejecuta la suite de tests.
 - Dado un fallo de tests, cuando se ejecuta el pipeline, entonces la PR queda marcada en rojo.
-- Dada la rama final, cuando se genera la release, entonces incluye APK Android descargable y paquete Desktop solo si ese target entra en alcance final.
+- Dada la rama final, cuando se genera la release, entonces incluye APK Android y los paquetes Desktop que hayan sido instalados y validados en su sistema objetivo.
 - Dado el repositorio publico, cuando se inspecciona, entonces no contiene secretos ni credenciales.
 
 **Tests TDD previstos:**
 
 - Verificacion del pipeline en verde sobre un cambio trivial.
 - Verificacion de fallo del pipeline ante un test roto (prueba controlada).
-- Checklist manual de release: instalacion del APK y, si aplica, arranque del Desktop desde artefactos.
+- Checklist manual de release: instalacion del APK, DMG en macOS y MSI/Credential Manager en Windows.
 
 **Referencias:** instrucciones del proyecto final (artefactos de infra y despliegue), `readme.md` seccion 2.4.
 
 **Historial:** creado tras auditoria pre-Entrega 1.
+
+## Cierre tecnico de Desktop y seguridad
+
+- **Desktop Compose:** Garaje, Mantenimiento, Recordatorios y Cuenta son interactivos en modo local y autenticado.
+- **OAuth y vault:** callback exacto `127.0.0.1`, PKCE S256, Keychain/Credential Manager y ausencia de fallback en texto plano.
+- **Consentimiento local:** importar, excluir o cancelar datos `local-family` antes del primer sync.
+- **Sync seguro:** aislamiento por familia, tombstones, LWW y acknowledgement por `updatedAt` para no perder mutaciones concurrentes.
+- **Cuenta:** cierre de sesion local y eliminacion permanente single-flight con limpieza convergente.
+- **Backend:** ocho migraciones, RPC de eliminacion y hardening de familias/perfiles.
+- **Release pendiente:** instalacion DMG, validacion MSI/Windows, firma/notarizacion y checklist manual multi-dispositivo.
 
 ## T-12 - Test E2E del flujo principal
 

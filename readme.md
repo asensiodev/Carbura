@@ -27,7 +27,7 @@ Carbura
 
 ### **0.3. Descripción breve del proyecto:**
 
-Carbura es una aplicación Android local-first, construida sobre una arquitectura Kotlin Multiplatform, para gestionar los vehículos de un garaje familiar. Permite registrar vehículos, mantenimientos, costes, kilometraje y recordatorios; persiste la información con SQLDelight y sincroniza vehículos, mantenimientos y recordatorios con Supabase. Android es el entregable funcional actual, mientras que Desktop e iOS se conservan como visión futura multiplataforma.
+Carbura ofrece clientes funcionales Android y Desktop sobre una arquitectura Kotlin Multiplatform para gestionar los vehículos de un garaje familiar. Ambos trabajan local-first con SQLDelight y sincronizan vehículos, mantenimientos y recordatorios mediante Supabase. Android añade Google ID con Credential Manager y notificaciones locales; Desktop usa OAuth PKCE en navegador, almacenamiento seguro nativo y no programa alertas del sistema. iOS y Linux quedan fuera de la entrega.
 
 ### **0.4. URL del proyecto:**
 
@@ -49,26 +49,28 @@ El valor principal consiste en reducir olvidos y pérdida de información median
 
 ### **1.2. Características y funcionalidades principales:**
 
-Funcionalidades disponibles en el entregable Android:
+Funcionalidades disponibles en Android y Desktop:
 
-- Autenticación con Google ID mediante Credential Manager y sesión de Supabase Auth.
+- Autenticación Android con Google ID mediante Credential Manager y autenticación Desktop mediante navegador, Authorization Code y PKCE S256.
 - Creación o recuperación de una familia personal y su perfil con la RPC `ensure_user_profile`.
 - Alta, consulta, edición y borrado lógico de vehículos.
 - Actualización rápida del odómetro, con confirmación cuando disminuye.
-- Registro, consulta y borrado lógico de mantenimientos, incluidos coste opcional, taller y notas.
+- Registro, consulta, edición y borrado lógico de mantenimientos, incluidos coste opcional, taller, notas y próxima fecha.
 - Creación manual, finalización y borrado de recordatorios por fecha, kilometraje o ambos.
 - Sugerencias proactivas de recordatorios al crear o editar un vehículo con próxima ITV, renovación del seguro o próxima revisión por kilometraje. El usuario confirma su creación y la reconciliación utiliza identificadores estables para evitar duplicados.
-- Notificaciones locales Android para recordatorios con fecha.
-- Persistencia local con SQLDelight y sincronización v0 con Supabase para vehículos, mantenimientos y recordatorios.
+- Creación opcional de un recordatorio al guardar un mantenimiento futuro, sin duplicados y con la posibilidad de guardar solo el mantenimiento.
+- Notificaciones locales Android para recordatorios con fecha. Desktop conserva y sincroniza recordatorios, pero no programa alertas nativas.
+- Persistencia local con SQLDelight, tombstones y sincronización v0 bidireccional entre Android y Desktop.
+- Modo Desktop local sin Supabase e importación explícita, exclusión o cancelación de datos `local-family` antes del primer sync autenticado.
+- Sesiones Desktop almacenadas solo en macOS Keychain o Windows Credential Manager.
+- Cierre de sesión local y eliminación permanente de cuenta con limpieza convergente en Android y Desktop.
 
 Trabajo pendiente o evolución dentro del alcance descrito por las historias:
 
-- Integrar el recordatorio desde el formulario de mantenimiento. El dominio ya contiene `CreateAutomaticReminderUseCase` y `MaintenanceRecord.nextDueDate`, pero el formulario y su ViewModel todavía no capturan ni conectan ese vencimiento.
 - Calcular y presentar el coste acumulado por vehículo.
-- Completar el test E2E Android, la publicación de la entrega y sus evidencias.
+- Completar la aceptación manual Android/Desktop, la instalación del DMG, la validación MSI en Windows y las evidencias de release.
 - Incorporar invitaciones familiares y exportación PDF/CSV en evoluciones posteriores.
-- Mantener Desktop e iOS como visión futura sobre la base compartida KMP. Android es el único cliente funcional y el entregable actual.
-- Evaluar un fallback OAuth mediante navegador como evolución futura. Actualmente Android solo usa Credential Manager + Google ID y permite reintentar ese mismo flujo ante un error.
+- Mantener iOS fuera del alcance actual.
 
 La priorización se documenta en [`openspec/prd.md`](openspec/prd.md) y [`docs/user-stories.md`](docs/user-stories.md).
 
@@ -79,49 +81,63 @@ La experiencia se organiza alrededor de estas áreas:
 - **Garaje:** listado de vehículos, alta, edición, borrado y actualización rápida del odómetro.
 - **Detalle de vehículo:** acceso al historial y registro de mantenimientos.
 - **Recordatorios:** creación manual, consulta de próximos avisos, finalización y borrado.
-- **Usuario:** sesión, estado de sincronización y acción de sincronización manual.
+- **Cuenta:** modo local, autenticación, importación, estado de sincronización, cierre de sesión y eliminación permanente.
 
 El flujo principal disponible es:
 
 ```text
-Inicio de sesión con Google ID
+Modo local o inicio de sesión
   -> Crear o recuperar familia personal
   -> Añadir o editar vehículo
   -> Confirmar recordatorios proactivos del vehículo, si procede
   -> Registrar mantenimiento
   -> Consultar historial
   -> Crear o consultar recordatorios
-  -> Sincronizar con Supabase
+  -> Sincronizar entre Android y Desktop
 ```
 
-La interfaz está implementada con Compose para Android. La arquitectura comparte modelo, dominio, datos y parte de la presentación para facilitar una evolución futura a Desktop e iOS, sin presentar esas plataformas como parte del entregable funcional actual.
+Android usa Compose para Android y Desktop usa Compose Desktop con áreas de Garaje, Mantenimiento, Recordatorios y Cuenta. En Android, los recordatorios con fecha pueden convertirse en alarmas y notificaciones locales; Desktop solo los persiste y sincroniza para que la aplicación móvil entregue esos avisos.
 
 ### **1.4. Instrucciones de instalación:**
 
 Requisitos:
 
-- JDK 17.
+- JDK 17. Para paquetes Desktop nativos se necesita además un JDK completo que incluya `jpackage`.
 - Android Studio y un SDK Android compatible.
-- Proyecto Supabase configurado según [`docs/supabase-setup.md`](docs/supabase-setup.md).
-- Cliente OAuth web y cliente OAuth Android configurados según [`docs/supabase-login-runtime.md`](docs/supabase-login-runtime.md).
+- macOS para generar y validar DMG; Windows para generar y validar MSI y Credential Manager.
+- Proyecto Supabase con Google habilitado y las ocho migraciones de `supabase/migrations/` aplicadas en orden.
 
 Crear `local.properties` a partir de [`local.properties.example`](local.properties.example) y completar:
 
 ```properties
 SUPABASE_URL=https://xxxx.supabase.co
-SUPABASE_ANON_KEY=xxxx
-GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
+SUPABASE_ANON_KEY=<ANON_OR_PUBLISHABLE_KEY>
+GOOGLE_CLIENT_ID=<WEB_CLIENT_ID>.apps.googleusercontent.com
 ```
 
-`GOOGLE_CLIENT_ID` corresponde al cliente OAuth de tipo Web application. El cliente Android se registra en Google Cloud con el paquete `com.asensiodev.carbura` y las huellas SHA de firma, pero su identificador no se copia en `local.properties`.
+`SUPABASE_URL` y `SUPABASE_ANON_KEY` son configuración pública incorporada a los clientes; la autorización depende de RLS. Nunca deben incluirse `service_role`, contraseña de base de datos, Google Client Secret, tokens o sesiones. Desktop usa esas dos propiedades y mantiene el modo local si están vacías. Android necesita además `GOOGLE_CLIENT_ID`, correspondiente al cliente OAuth de tipo Web application. El cliente Android se registra para `com.asensiodev.carbura` con las huellas SHA-1 y, cuando proceda, SHA-256 obtenidas con `./gradlew :app:android:signingReport`.
+
+Google Cloud debe autorizar el callback de Supabase `https://<PROJECT_REF>.supabase.co/auth/v1/callback`. Supabase debe permitir exactamente el callback Desktop `http://127.0.0.1:43821/auth/callback`. Google vuelve a Supabase y Supabase vuelve al listener loopback de Desktop; no se debe registrar el loopback en Google ni sustituir `127.0.0.1` por `localhost`, `0.0.0.0` o comodines.
+
+Comandos principales:
+
+```bash
+./gradlew :app:android:assembleDebug
+./gradlew :app:android:installDebug
+./gradlew :app:desktop:run
+./gradlew :app:desktop:packageDmg   # macOS con jpackage
+./gradlew :app:desktop:packageMsi   # Windows con jpackage
+```
 
 Verificación local equivalente a CI:
 
 ```bash
-./gradlew qualityCheck test assembleDebug --stacktrace
+./gradlew qualityCheck test assembleDebug :app:desktop:jar --stacktrace
+openspec validate prepare-final-delivery --strict
+git diff --check
 ```
 
-La APK debug se genera desde `app:android`. `local.properties` y cualquier secreto deben permanecer fuera de Git.
+La APK debug se genera desde `app:android`. Configurar DMG o MSI no equivale a validar el artefacto instalado: cada paquete debe instalarse y probarse en su sistema objetivo. `local.properties` y cualquier secreto deben permanecer fuera de Git.
 
 ---
 
@@ -134,9 +150,8 @@ flowchart TD
     User[Usuario]
 
     subgraph Clients[Clientes]
-        Android[Android actual\nCompose]
-        Desktop[Desktop futuro]
-        IOS[iOS futuro]
+        Android[Android\nCompose]
+        Desktop[Desktop\nCompose Desktop]
     end
 
     subgraph Shared[Kotlin Multiplatform]
@@ -154,11 +169,9 @@ flowchart TD
     end
 
     User --> Android
-    User -. visión futura .-> Desktop
-    User -. visión futura .-> IOS
+    User --> Desktop
     Android --> Presentation
-    Desktop -. reutilización futura .-> Presentation
-    IOS -. reutilización futura .-> Presentation
+    Desktop --> Presentation
     Presentation --> Domain
     Domain --> Repositories
     Repositories --> Local
@@ -166,12 +179,13 @@ flowchart TD
     Sync --> Local
     Sync --> Remote
     Android --> Auth
+    Desktop --> Auth
     Remote --> DB
 ```
 
 La arquitectura sigue Clean Architecture, modularización Gradle y una estrategia local-first. La UI observa SQLDelight y las mutaciones se guardan primero en local. Cuando existe una sesión válida, `LocalFirstSyncManager` hace converger los cambios con Supabase.
 
-Las dependencias nativas se aíslan mediante contratos cuando existe una implementación real. Android integra Credential Manager, Google ID, ciclo de vida y notificaciones locales. Desktop e iOS permanecen como dirección futura: no existe actualmente una aplicación Desktop ejecutable, target iOS ni fallback OAuth por navegador conectado.
+Las dependencias nativas se aíslan mediante contratos. Android integra Credential Manager, Google ID, ciclo de vida y notificaciones locales. Desktop integra navegador externo, callback loopback estricto, Keychain/Credential Manager y empaquetado nativo. No existe target iOS y Desktop no implementa notificaciones nativas.
 
 Beneficios principales:
 
@@ -179,21 +193,21 @@ Beneficios principales:
 - Uso de la aplicación y mutaciones sin conexión.
 - Aislamiento entre familias mediante sesión y Row Level Security.
 - Tests unitarios sobre dominio, repositorios y sincronización.
-- Posibilidad de evolucionar a Desktop e iOS sin declarar soporte funcional prematuro.
+- Dos clientes funcionales con una base compartida y límites nativos explícitos.
 
 Sacrificios o riesgos:
 
 - La sincronización local-first añade complejidad y lecturas remotas completas.
 - `last-write-wins` puede ocultar cambios concurrentes.
-- No hay sincronización con la aplicación cerrada, Realtime, `WorkManager` ni `Service`.
-- Las capacidades nativas requerirán adaptadores específicos para cada plataforma futura.
+- No hay sincronización de datos con la aplicación cerrada, Realtime ni `Service`; Android usa `WorkManager` únicamente para recuperar el outbox de notificaciones.
+- La instalación, firma y validación de paquetes debe repetirse por sistema operativo.
 
 ### **2.2. Descripción de componentes principales:**
 
 | Componente | Tecnología | Responsabilidad |
 |---|---|---|
-| Android App | Compose para Android | UI funcional, navegación, ciclo de vida, autenticación y notificaciones locales. |
-| Clientes futuros | Desktop e iOS | Visión multiplataforma; no forman parte del entregable funcional actual. |
+| Android App | Compose para Android | UI móvil, Credential Manager, ciclo de vida y notificaciones locales. |
+| Desktop App | Compose Desktop | UI macOS/Windows, OAuth PKCE, modo local, sync y almacenamiento seguro nativo. |
 | ViewModels + UiState | Kotlin Multiplatform | Estado de pantalla, eventos y coordinación con casos de uso. |
 | Use Cases | Kotlin común | Reglas de negocio para vehículos, mantenimientos, recordatorios y sesión. |
 | Domain Models | Kotlin común | Entidades e identificadores independientes de infraestructura. |
@@ -211,6 +225,7 @@ Carbura/
 ├── build-logic/               # Convention plugins Gradle
 ├── app/
 │   ├── android/               # Cliente funcional Android
+│   ├── desktop/               # Cliente funcional Desktop macOS/Windows
 │   └── shared/                # Rutas y contratos compartidos
 ├── core/
 │   ├── model/                 # Modelos e identificadores
@@ -222,7 +237,7 @@ Carbura/
 │   └── testing/               # Utilidades de test
 ├── feature/                   # Onboarding, garaje, mantenimiento y recordatorios
 ├── quality/architecture/      # Reglas de dependencias modulares
-├── supabase/migrations/       # Cinco migraciones SQL vigentes
+├── supabase/migrations/       # Ocho migraciones SQL vigentes
 ├── docs/                      # Documentación técnica y funcional
 ├── openspec/
 │   ├── specs/                 # Especificaciones vigentes
@@ -235,22 +250,23 @@ Carbura/
 
 ```mermaid
 flowchart LR
-    Android[Android actual] <--> LocalDB[(SQLDelight)]
+    Android[Android] <--> LocalDB[(SQLDelight)]
+    Desktop[Desktop] <--> DesktopDB[(SQLDelight Desktop)]
     Android --> GoogleID[Google ID]
     GoogleID --> SupabaseAuth[Supabase Auth]
     Android <--> SupabaseDB[(Supabase PostgreSQL\nRLS)]
-    Desktop[Desktop futuro] -. arquitectura compartida .-> SupabaseDB
-    IOS[iOS futuro] -. arquitectura compartida .-> SupabaseDB
+    Desktop <--> SupabaseDB
+    Desktop --> SupabaseAuth
 ```
 
-No existe servidor propio. Supabase proporciona Auth, PostgreSQL, PostgREST y RLS. Android es el artefacto instalable actual; Desktop e iOS se mantienen como evolución futura multiplataforma.
+No existe servidor propio. Supabase proporciona Auth, PostgreSQL, PostgREST y RLS. Android genera APK y Desktop configura DMG/MSI. La validación instalada de cada paquete es dependiente del sistema operativo.
 
 **CI/CD y evidencia de despliegue (ticket T-11):**
 
 - `.github/workflows/ci.yml` se ejecuta en `push` y `pull_request` sobre Ubuntu con JDK 17.
 - El job real ejecuta `./gradlew qualityCheck test assembleDebug --stacktrace`.
 - `qualityCheck` agrega ktlint, detekt y `:quality:architecture:test`.
-- La publicación de una release instalable y las capturas o vídeo de evidencia siguen pendientes para el cierre final.
+- La instalación del DMG, la validación MSI/Windows y las capturas o vídeo de evidencia forman parte del cierre final.
 - Las credenciales permanecen fuera del repositorio; CI no necesita secretos de producción para las comprobaciones actuales.
 
 ### **2.5. Seguridad**
@@ -260,6 +276,10 @@ No existe servidor propio. Supabase proporciona Auth, PostgreSQL, PostgREST y RL
 - RLS habilitado en las tablas públicas y políticas basadas en `can_access_family`.
 - `family_id` limita las operaciones remotas al garaje accesible por el JWT.
 - Variables sensibles excluidas del repositorio mediante `local.properties` y `.gitignore`.
+- Tokens Desktop almacenados únicamente en macOS Keychain o Windows Credential Manager, sin fallback en texto plano.
+- Listener OAuth Desktop limitado a `127.0.0.1`, callback exacto y PKCE S256.
+- La anon/publishable key no es una credencial privilegiada; RLS constituye la frontera de autorización.
+- Eliminación de cuenta mediante RPC autenticada y limpieza local convergente.
 - `invite_code` existe como campo opcional, pero todavía no constituye un flujo ni una API de invitación.
 
 ### **2.6. Tests**
@@ -275,9 +295,9 @@ Spec OpenSpec
   -> verificación y archivo del cambio
 ```
 
-La suite actual incluye tests comunes y JVM/desktop de dominio, repositorios y sincronización, además de reglas de arquitectura, ktlint y detekt. El pipeline ejecuta `qualityCheck`, `test` y `assembleDebug` en cada push y pull request.
+La suite incluye tests comunes, Android/Robolectric y Desktop para dominio, repositorios, sync, OAuth, vaults, composición local, importación, eliminación de cuenta y propagación de recordatorios. El pipeline ejecuta `qualityCheck`, `test` y `assembleDebug`; el gate local añade `:app:desktop:jar`, OpenSpec estricto e inspección de artefactos.
 
-Como cierre de calidad permanece pendiente el test E2E Android del recorrido principal. Debe evitar depender del selector real de Google en CI y cubrir una sesión de prueba, alta o edición de vehículo, mantenimiento, historial y recordatorio.
+La aceptación final manual debe comprobar la misma familia en Android/Desktop, propagación bidireccional y tombstones, cambios offline, reinicio, LWW, importación/exclusión local, restauración segura de sesión, RLS hostil con dos cuentas, eliminación de cuenta y recordatorios Desktop programados únicamente por Android.
 
 ### **2.7. Diseño de dominio y principios de código**
 
@@ -296,7 +316,7 @@ SOLID y CUPID se aplican como criterios pragmáticos: responsabilidades acotadas
 
 ### **3.1. Diagrama del modelo de datos:**
 
-El esquema remoto vigente resulta de aplicar, en orden, las cinco migraciones de `supabase/migrations/`. La última añade los campos de planificación del vehículo. Vehículos, mantenimientos y recordatorios usan IDs de texto estables; familias, perfiles y tipos de mantenimiento mantienen UUID.
+El esquema remoto vigente resulta de aplicar, en orden, las ocho migraciones de `supabase/migrations/`. Vehículos, mantenimientos y recordatorios usan IDs de texto estables; familias, perfiles y tipos de mantenimiento mantienen UUID.
 
 ```mermaid
 erDiagram
@@ -364,6 +384,7 @@ erDiagram
         uuid maintenance_type_id FK
         string maintenance_type_key
         string maintenance_type_code
+        string maintenance_type_label
         date performed_on
         integer odometer_km
         integer cost_cents
@@ -401,7 +422,7 @@ erDiagram
 | `UserProfile` | Perfil vinculado a Supabase Auth. | UUID, `user_id`, `family_id`, nombre y correo. | `user_id` único y `family_id` obligatorio. |
 | `Vehicle` | Vehículo del garaje. | ID texto, familia, nombre, tipo, marca, modelo, matrícula, odómetro y objetivos de ITV, seguro y revisión. | Nombre y tipo obligatorios; kilómetros no negativos. |
 | `MaintenanceType` | Catálogo global o específico de familia. | UUID, familia opcional, código, nombre e `is_global`. | Global sin familia o personalizado con familia. |
-| `MaintenanceRecord` | Evento del historial. | ID texto, familia, vehículo, tipo/key/code, fecha, odómetro, coste en céntimos, moneda, taller, notas y `next_due_date`. | Vehículo y familia relacionados; tipo remoto opcional desde sync v0. |
+| `MaintenanceRecord` | Evento del historial. | ID texto, familia, vehículo, tipo/key/code/label, fecha, odómetro, coste en céntimos, moneda, taller, notas y `next_due_date`. | Vehículo y familia relacionados; tipo remoto opcional desde sync v0. |
 | `Reminder` | Aviso por fecha o kilometraje. | ID texto, familia, vehículo, título, tipo/key, vencimientos, antelación y `completed_at`. | Debe tener fecha, kilometraje o ambos. |
 
 Las migraciones vigentes son:
@@ -411,6 +432,11 @@ Las migraciones vigentes son:
 3. `202607080001_sync_v0_schema.sql`: tipo de mantenimiento opcional, claves de tipo y `next_due_date`.
 4. `202607080002_sync_v0_text_entity_ids.sql`: IDs de texto para vehículos, mantenimientos y recordatorios.
 5. `202607120001_vehicle_planning_fields.sql`: próxima ITV, renovación del seguro y próxima revisión por kilometraje.
+6. `202607190001_delete_user_account.sql`: RPC autenticada `delete_current_user_account()` y semántica familiar de eliminación.
+7. `202607200001_maintenance_type_label.sql`: etiqueta estable para tipos personalizados de mantenimiento sincronizados.
+8. `202607220001_harden_family_profile_authorization.sql`: endurecimiento de familias/perfiles, columnas mutables y `ensure_user_profile`.
+
+La migración 8 debe estar aplicada antes de habilitar Desktop autenticado. La validación de backend debe incluir intentos hostiles con dos cuentas para confirmar la denegación entre familias.
 
 SQLDelight mantiene `updatedAt`, `pendingSync` y `deletedAt` en las tres familias sincronizables. `deleted_at` representa tombstones y `updated_at` resuelve conflictos mediante `last-write-wins`.
 
@@ -443,7 +469,7 @@ operaciones:
 seguridad: JWT de usuario y rol authenticated
 ```
 
-No existe actualmente fallback OAuth mediante navegador conectado. Puede mantenerse como evolución futura para plataformas o dispositivos que lo requieran.
+Android intercambia Google ID mediante Credential Manager. Desktop realiza Authorization Code con PKCE S256 en el navegador del sistema y callback loopback exacto; ambos terminan en una sesión Supabase vinculada al mismo perfil familiar.
 
 ### **4.2. Sincronización de garaje**
 
@@ -579,18 +605,19 @@ Las especificaciones vigentes de backend y sesión están en [`openspec/specs/su
 
 ## 5. Historias de Usuario
 
-Las historias completas y sus criterios de aceptación están en [`docs/user-stories.md`](docs/user-stories.md). Todas las historias completadas se refieren al cliente Android actual; Desktop e iOS representan la visión futura multiplataforma.
+Las historias completas y sus criterios de aceptación están en [`docs/user-stories.md`](docs/user-stories.md). Android y Desktop son clientes funcionales; iOS permanece fuera del alcance.
 
 Historias principales de la entrega:
 
-- **US-01 - Iniciar sesión y disponer de un garaje personal:** completada en Android con Google ID, Supabase Auth y `ensure_user_profile`; sin fallback OAuth conectado actualmente.
+- **US-01 - Iniciar sesión y disponer de un garaje personal:** completada en Android con Google ID y en Desktop con OAuth PKCE, Supabase Auth y `ensure_user_profile`.
 - **US-02 - Gestionar vehículos:** completada para alta, consulta, edición, borrado lógico, objetivos de planificación y odómetro rápido.
 - **US-04 - Registrar mantenimiento o avería:** completada para alta, listado y borrado, incluidos kilometraje, coste opcional, taller y notas.
 - **US-07 - Gestionar recordatorios:** completada para creación manual, listado, finalización y borrado.
 - **US-08 - Recibir una notificación local:** completada en Android para recordatorios con fecha.
 - **US-10 - Sincronizar entre sesiones o dispositivos:** completada con los límites de sync v0, full pull y ejecución solo dentro del proceso de la app.
 - **US-13 - Obtener sugerencias proactivas desde el vehículo:** completada. Crear o editar un vehículo puede sugerir ITV, seguro y revisión por kilometraje; la confirmación reconcilia IDs estables sin duplicados.
-- **US-06 - Generar un recordatorio desde un mantenimiento:** pendiente de integración. El caso de uso y `nextDueDate` existen, pero el formulario y el ViewModel de mantenimiento todavía no los conectan. Esta historia es distinta de US-13.
+- **US-06 - Generar un recordatorio desde un mantenimiento:** completada con decisión explícita de guardar con o sin recordatorio futuro.
+- **Cuenta y modo local Desktop:** completados para importación/exclusión previa al sync, sesión segura, cierre local y eliminación permanente.
 
 ---
 
@@ -603,33 +630,33 @@ El backlog completo está en [`docs/backlog.md`](docs/backlog.md). Los tickets r
 | Ticket | Área | Historia relacionada | Prioridad | Estado / resultado |
 |---|---|---|---|---|
 | T-01 | Datos | US-01, US-02, US-04, US-06 | Cerrado | SQLDelight, Supabase, RLS y RPC de perfil implementados. |
-| T-02 | Auth / onboarding | US-01 | Cerrado | Google ID y Supabase Auth implementados; fallback OAuth no conectado. |
+| T-02 | Auth / onboarding | US-01 | Cerrado | Google ID Android, OAuth PKCE Desktop y Supabase Auth implementados. |
 | T-03 | Vehículos | US-02 | Cerrado | Alta, listado y borrado local-first implementados. |
 | T-04 | Mantenimiento | US-04, US-05 | Cerrado parcial | Historial y costes individuales disponibles; total pendiente. |
-| T-05 | Recordatorios | US-06 | Alta | Caso de uso aislado; integración desde mantenimiento pendiente. |
+| T-05 | Recordatorios | US-06 | Cerrado | Integración desde mantenimiento con decisión guardar/crear recordatorio. |
 | T-06 | Sincronización | US-02, US-04, US-07 | Cerrado | Sync v0 con full pull, pendientes, tombstones y LWW. |
 | T-07 | Presentación | US-02 | Cerrado | Formulario Android de vehículo implementado. |
 | T-08 | Presentación | US-04, US-05 | Cerrado | Formulario de mantenimiento e historial implementados. |
 | T-09 | Recordatorios | US-07 | Cerrado | Lista y gestión manual implementadas. |
 | T-10 | Plataforma | US-08 | Cerrado Android | Alarmas y notificaciones locales para fechas. |
-| T-11 | CI/CD | Transversal | Alta | CI implementada; release y evidencias pendientes. |
+| T-11 | CI/CD | Transversal | En cierre | CI y empaquetado configurados; instalación, firma y evidencias pendientes. |
 | T-12 | Calidad | Flujo principal | Alta | E2E Android pendiente. |
 | T-13 | Vehículos | US-02, US-09 | Cerrado | Edición y actualización rápida del odómetro. |
 | T-14 | Recordatorios | US-13 | Cerrado | Sugerencias proactivas desde vehículo implementadas. |
 | T-15 | Costes | US-14 | Alta | Coste acumulado pendiente. |
-| T-18 | Multiplataforma | Visión futura | Diferido | Desktop e iOS no son entregables funcionales actuales. |
+| T-18 | Multiplataforma | Desktop | Cerrado funcional | Desktop local/auth/sync implementado; iOS fuera de alcance. |
 
 ### **6.2. Tickets principales detallados para la entrega**
 
 #### **Ticket 1 - Frontend: alta de vehículo en el garaje**
 
-**Tipo:** frontend / presentación compartida con UI Android
+**Tipo:** frontend / presentación Android y Desktop
 
 **Historia relacionada:** US-02 - Gestionar vehículos
 
 **Objetivo:** permitir que el usuario autenticado cree y edite vehículos, actualice el odómetro y confirme sugerencias proactivas.
 
-**Resultado:** implementado en Android con validaciones, estados de carga/error, borrado lógico y persistencia local-first. Los campos opcionales `next_itv_date`, `insurance_renewal_date` y `next_service_odometer_km` generan sugerencias confirmables y reconciliadas mediante IDs estables.
+**Resultado:** implementado en Android y Desktop con validaciones, estados de carga/error, borrado lógico y persistencia local-first. Los campos opcionales `next_itv_date`, `insurance_renewal_date` y `next_service_odometer_km` generan sugerencias confirmables y reconciliadas mediante IDs estables.
 
 **Criterios de aceptación verificados:**
 
@@ -640,7 +667,7 @@ El backlog completo está en [`docs/backlog.md`](docs/backlog.md). Los tickets r
 
 #### **Ticket 2 - Backend/datos: registro de mantenimiento e historial**
 
-**Tipo:** datos / dominio / repositorio / presentación Android
+**Tipo:** datos / dominio / repositorio / presentación Android y Desktop
 
 **Historia relacionada:** US-04 - Registrar mantenimiento o avería
 
@@ -648,7 +675,7 @@ El backlog completo está en [`docs/backlog.md`](docs/backlog.md). Los tickets r
 
 **Resultado:** implementado para fecha, kilometraje, coste opcional en céntimos, moneda, taller, notas, listado y borrado lógico. Los registros se marcan como pendientes y participan en sync v0.
 
-**Pendiente asociado:** el formulario no captura todavía `nextDueDate` ni invoca `CreateAutomaticReminderUseCase`. Por ello, registrar una ITV o un seguro desde mantenimiento no crea aún su recordatorio asociado. La integración requiere ID estable o política de duplicados, notificación y tests de extremo a extremo.
+**Recordatorio asociado:** una próxima fecha abre una decisión explícita para guardar solo el mantenimiento o guardar también un recordatorio determinista. Desktop lo sincroniza y Android programa sus avisos nativos.
 
 **Criterios de aceptación verificados:**
 
@@ -664,7 +691,7 @@ El backlog completo está en [`docs/backlog.md`](docs/backlog.md). Los tickets r
 
 **Objetivo:** soportar familias, perfiles, vehículos, catálogo de mantenimiento, historial, recordatorios y sincronización local-first.
 
-**Resultado:** implementado mediante cinco migraciones Supabase, esquemas SQLDelight, índices, constraints, triggers, grants, RPC de perfil/familia y políticas RLS. Las entidades sincronizables utilizan IDs de texto estables y campos `updated_at`/`deleted_at`; el cliente mantiene además `pendingSync`.
+**Resultado:** implementado mediante ocho migraciones Supabase, esquemas SQLDelight, índices, constraints, triggers, grants, RPC de perfil/familia, eliminación de cuenta y políticas RLS endurecidas. Las entidades sincronizables utilizan IDs de texto estables y campos `updated_at`/`deleted_at`; el cliente mantiene además `pendingSync`.
 
 **Criterios de aceptación verificados:**
 
@@ -685,4 +712,4 @@ PRs previstas:
 
 - **PR 1 - Entrega 1 / Documentación técnica:** `feature-entrega1-AAC` hacia `dev`, con PRD, historias, arquitectura, modelo, API y tickets iniciales.
 - **PR 2 - Entrega 2 / MVP funcional:** `feature-entrega2-AAC` hacia `dev`, con autenticación, datos, UI Android, sync v0, recordatorios y notificaciones locales.
-- **PR 3 - Entrega final:** `finalproject-AAC` hacia `main`, con cierre del flujo Android, integración pendiente priorizada, E2E, release/evidencias y documentación académica final.
+- **PR 3 - Entrega final:** `finalproject-AAC` hacia `main`, con clientes Android/Desktop, OAuth seguro, sync endurecido, eliminación de cuenta, paquetes/evidencias y documentación académica final.

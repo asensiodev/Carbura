@@ -28,21 +28,21 @@
 
 ## 4. Final Product Scope
 
-- [ ] 4.1 Update Desktop reminder copy to state that native alerts are delivered only by the mobile app
-- [ ] 4.2 Verify Desktop-created reminders synchronize to Android and enter Android notification scheduling
+- [x] 4.1 Update Desktop reminder copy to state that native alerts are delivered only by the mobile app
+- [x] 4.2 Verify Desktop-created reminders synchronize to Android and enter Android notification scheduling
 - [ ] 4.3 Complete manual acceptance for maintenance save-only and save-with-reminder flows
-- [ ] 4.4 Update active OpenSpec checklists to reflect verified Google/Supabase configuration and final platform scope
-- [ ] 4.5 Confirm no preview or unavailable interactive workflow remains in the Desktop shell
+- [x] 4.4 Update active OpenSpec checklists to reflect verified Google/Supabase configuration and final platform scope
+- [x] 4.5 Confirm no preview or unavailable interactive workflow remains in the Desktop shell
 
 ## 5. Documentation Cleanup
 
-- [ ] 5.1 Remove `.DS_Store`, Entrega 2 planning/reading files, superseded Desktop deferral/final plans, product and sync roadmaps, account-deletion release notes, Supabase runtime/setup guides, and Desktop auth threat/setup guides approved by the user
-- [ ] 5.2 Condense essential build, public configuration, migration, OAuth callback, and run instructions into Spanish `readme.md`
-- [ ] 5.3 Refresh `docs/user-stories.md` to describe implemented Android/Desktop behavior and mobile-only native notifications
-- [ ] 5.4 Refresh `docs/backlog.md` and remove references to deleted files
-- [ ] 5.5 Refresh `docs/toolchain/carbura_toolchain.md` with the final modules, migrations, security boundaries, and validation commands
-- [ ] 5.6 Search README, docs, prompts, and OpenSpec for broken references to deleted files and repair them
-- [ ] 5.7 Review, commit, and push the product-scope and documentation block
+- [x] 5.1 Remove `.DS_Store`, Entrega 2 planning/reading files, superseded Desktop deferral/final plans, product and sync roadmaps, account-deletion release notes, Supabase runtime/setup guides, and Desktop auth threat/setup guides approved by the user
+- [x] 5.2 Condense essential build, public configuration, migration, OAuth callback, and run instructions into Spanish `readme.md`
+- [x] 5.3 Refresh `docs/user-stories.md` to describe implemented Android/Desktop behavior and mobile-only native notifications
+- [x] 5.4 Refresh `docs/backlog.md` and remove references to deleted files
+- [x] 5.5 Refresh `docs/toolchain/carbura_toolchain.md` with the final modules, migrations, security boundaries, and validation commands
+- [x] 5.6 Search README, docs, prompts, and OpenSpec for broken references to deleted files and repair them
+- [x] 5.7 Review, commit, and push the product-scope and documentation block
 
 ## 6. Packaging And Automated Release Gate
 

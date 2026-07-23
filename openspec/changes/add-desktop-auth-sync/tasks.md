@@ -5,7 +5,7 @@
 - [x] 1.3 Add hostile RLS tests for self-reassignment, profile administration, family administration, and cross-family product data
 - [x] 1.4 Review and select maintained macOS Keychain and Windows Credential Manager adapters without a plaintext release fallback
 - [x] 1.5 Add Desktop Supabase public configuration wiring without packaging privileged keys or secrets
-- [ ] 1.6 Verify the external Supabase and Google configuration in `docs/desktop-auth-sync-setup.md`
+- [x] 1.6 Verify the external Supabase and Google configuration documented in `readme.md` section 1.4
 
 ## 2. Secure Desktop OAuth
 

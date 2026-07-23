@@ -50,7 +50,7 @@
     <string name="garage_vehicle_save_error">No se han podido guardar los cambios. Inténtalo de nuevo.</string>
     <string name="garage_save_changes_button">Guardar cambios</string>
     <string name="garage_planning_title">Planificación</string>
-    <string name="garage_planning_description">Los objetivos opcionales pueden crear recordatorios en la aplicación. Las notificaciones nativas de escritorio aún no están disponibles.</string>
+    <string name="garage_planning_description">Los objetivos opcionales pueden crear recordatorios sincronizados. Las notificaciones nativas se entregan únicamente desde Android.</string>
     <string name="garage_next_itv_date_label">Próxima ITV (AAAA-MM-DD, opcional)</string>
     <string name="garage_insurance_renewal_date_label">Renovación del seguro (AAAA-MM-DD, opcional)</string>
     <string name="garage_next_service_odometer_label">Próxima revisión en km (opcional)</string>
@@ -60,7 +60,7 @@
     <string name="garage_reminder_suggestions_title">Crear recordatorios</string>
     <string name="garage_reminder_suggestions_description">Carbura puede crear estos avisos para tu vehículo:</string>
     <string name="garage_reminder_suggestion_item">• %1$s: %2$s</string>
-    <string name="garage_desktop_notification_notice">Los recordatorios por fecha aparecerán en Carbura, pero las notificaciones del sistema de escritorio aún no están disponibles.</string>
+    <string name="garage_desktop_notification_notice">Los recordatorios por fecha se sincronizan en Carbura; Android se encarga de las notificaciones nativas.</string>
     <string name="garage_create_reminders_button">Guardar y crear avisos</string>
     <string name="garage_save_without_reminders_button">Guardar sin avisos</string>
     <string name="garage_kilometers_format">%1$d km</string>

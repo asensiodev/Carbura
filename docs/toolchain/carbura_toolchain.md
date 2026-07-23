@@ -227,7 +227,7 @@ El agente implementa el código mínimo necesario para que los tests pasen:
   ```bash
   ./gradlew assembleDebug
   ```
-- Verificar el flujo visualmente en emulador o dispositivo Android. Desktop queda diferido para Entrega 2.
+- Verificar Android en emulador/dispositivo y Desktop con `./gradlew :app:desktop:run`.
 
 #### Paso 7 — Archive (cierre del cambio SDD)
 ```text
@@ -269,17 +269,21 @@ Ramas y PRs oficiales:
    - `202607080001_sync_v0_schema.sql`
    - `202607080002_sync_v0_text_entity_ids.sql`
    - `202607120001_vehicle_planning_fields.sql`
-   La migracion `202607070001_ensure_user_profile_rpc.sql` incluye la RPC y los grants para `authenticated`; no hay un fichero de grants separado.
+   - `202607190001_delete_user_account.sql`
+   - `202607200001_maintenance_type_label.sql`
+   - `202607220001_harden_family_profile_authorization.sql`
+   La ultima migracion endurece familias/perfiles y debe aplicarse antes de habilitar Desktop autenticado.
 3. Configurar **Row Level Security (RLS)** por `family_id` para cada tabla.
 4. Configurar **Google OAuth** en Supabase Auth.
 5. Añadir las variables de entorno a `local.properties`:
    ```properties
-   SUPABASE_URL=https://xxxx.supabase.co
-   SUPABASE_ANON_KEY=xxxx
-   GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
-   ```
-6. Verificar conectividad desde la app Android.
-7. Ejecutar los tests de sync (`:core:data:desktopTest`) y dominio.
+    SUPABASE_URL=https://<PROJECT_REF>.supabase.co
+    SUPABASE_ANON_KEY=<ANON_OR_PUBLISHABLE_KEY>
+    GOOGLE_CLIENT_ID=<WEB_CLIENT_ID>.apps.googleusercontent.com
+    ```
+6. Configurar OAuth: callback Google `https://<PROJECT_REF>.supabase.co/auth/v1/callback` y redirect Supabase Desktop `http://127.0.0.1:43821/auth/callback`.
+7. Verificar Android con Credential Manager y Desktop con PKCE S256, Keychain/Credential Manager y sin secretos privilegiados.
+8. Ejecutar los tests de sync (`:core:data:desktopTest`) y dominio.
 
 ---
 
@@ -287,11 +291,12 @@ Ramas y PRs oficiales:
 
 **Herramientas:** todas
 
-1. Revisar UX en emulador o dispositivo Android.
-2. Ejecutar la verificacion reproducible `./gradlew qualityCheck test assembleDebug`; no hay una tarea Kover configurada actualmente.
+1. Revisar UX en Android y Desktop, incluido modo local sin Supabase.
+2. Ejecutar `./gradlew qualityCheck test assembleDebug :app:desktop:jar --stacktrace`; no hay una tarea Kover configurada actualmente.
 3. Añadir tests de integración para flujos críticos (auth, sync, reminders).
 4. Pulir animaciones, estados vacíos, estados de error, estados de carga.
-5. Revisar el flujo de sincronización (offline → online → sync).
+5. Revisar el flujo de sincronización Android/Desktop (offline → online → sync), tombstones y LWW.
+6. Generar DMG/MSI con un JDK que incluya `jpackage`, inspeccionar secretos e instalar el artefacto exacto en su sistema objetivo.
 
 ---
 
@@ -317,7 +322,8 @@ Ramas y PRs oficiales:
 - `openspec/changes/`: proposals y tareas durante la implementación.
 - `openspec/changes/archive/`: historial de cambios aplicados y cerrados.
 - Commits y PRs: trazabilidad entre documentación, specs, código y entregas.
-- Comandos de verificacion local y CI: `./gradlew qualityCheck test assembleDebug --stacktrace` y revisiones manuales en Android Studio/emulador.
+- Comandos de verificacion local y CI: `./gradlew qualityCheck test assembleDebug :app:desktop:jar --stacktrace`, OpenSpec estricto y `git diff --check`.
+- Evidencia dependiente de plataforma: APK Android, DMG instalado en macOS y MSI/Credential Manager validados en Windows.
 
 ---
 
@@ -360,6 +366,7 @@ carbura/
 ├── build-logic/                ← convention plugins Gradle
 ├── app/
 │   ├── android/                ← UI Android, navegación y adapters Android
+│   ├── desktop/                ← UI Desktop, OAuth, modo local y paquetes nativos
 │   └── shared/                 ← rutas/contratos compartidos de app
 ├── core/
 │   ├── model/                  ← modelos compartidos
@@ -391,7 +398,7 @@ carbura/
 5. /opsx-explore o /opsx-propose → revisar propuesta + tests TDD → aprobar
 6. /opsx-apply (tests primero: Red) → verificar que fallan
 7. /opsx-apply (código: Green) → verificar que pasan
-8. Refactor → re-ejecutar tests → compilar en Android Studio → testear
+8. Refactor → re-ejecutar tests → compilar Android/Desktop → testear
 9. /opsx-archive → commit local
 10. Agrupar cambios en la PR oficial correspondiente a la entrega
 ```

@@ -9,7 +9,7 @@
 
 ## 1. Vision del producto
 
-**Carbura** es una aplicacion multiplataforma para gestionar el mantenimiento de los vehiculos de una familia. La entrega actual materializa el producto en Android sobre una base Kotlin Multiplatform; la vision incorpora una aplicacion Desktop para macOS y Windows y mantiene iOS como posible evolucion. Permite registrar revisiones, ITVs, seguros, averias y cambios de aceite o neumaticos, recibir recordatorios antes de fechas clave y consultar el historial y los costes de cada vehiculo.
+**Carbura** es una aplicacion multiplataforma para gestionar el mantenimiento de los vehiculos de una familia. La entrega materializa clientes Android y Desktop para macOS/Windows sobre una base Kotlin Multiplatform; iOS queda fuera del alcance. Permite registrar revisiones, ITVs, seguros, averias y cambios de aceite o neumaticos, sincronizar recordatorios y consultar el historial y los costes de cada vehiculo. Android es la unica plataforma que entrega notificaciones nativas.
 
 **Slogan:** *Tu garaje, siempre a punto.*
 
@@ -71,7 +71,7 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 ### MVP extendido (Should-Have / Could-Have)
 
 - Pantalla de proximos recordatorios y **notificaciones locales** con antelacion configurable (por defecto: 30 dias antes para ITV y seguro). *(Should)*
-- App Desktop (macOS y Windows via Compose Multiplatform) desde la misma base KMP. *(Should, evolucion futura)*
+- App Desktop (macOS y Windows via Compose Desktop) desde la misma base KMP. *(Implementada)*
 - Recordatorios por kilometros y actualizacion rapida del odometro. *(Implementado en Android)*
 - Sincronizacion en la nube entre instalaciones autenticadas de la misma familia. *(Implementado como sync v0)*
 - Sistema de invitacion para unirse al garaje familiar (codigo de 6 caracteres). *(Could)*
@@ -79,7 +79,7 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 
 ### Fuera del MVP
 
-- iOS (posible evolucion futura a evaluar sobre la arquitectura KMP).
+- iOS (fuera del alcance de la entrega).
 - Registro de combustible y coste por km.
 - Integracion con OBD2 o telemetria del vehiculo.
 - Notificaciones push remotas (el MVP usa solo notificaciones locales).
@@ -112,7 +112,7 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 - **Local-first**: las mutaciones de vehiculos, mantenimientos y recordatorios se guardan primero en SQLDelight y quedan pendientes ante fallos remotos. El arranque autenticado resuelve sesion y familia e intenta una sincronizacion inicial antes de mostrar el contenido principal.
 - **Privacidad**: los datos no se comparten con terceros. Sin anuncios. Sin analiticas de uso.
 - **Rendimiento**: la app debe arrancar en menos de 2 segundos en condiciones normales.
-- **Multiplataforma**: Android (API 26+) es el entregable ejecutable actual; la base KMP comparte dominio, datos y presentacion para evolucionar hacia Desktop y, si se valida, iOS.
+- **Multiplataforma**: Android (API 26+) y Desktop macOS/Windows son entregables ejecutables; la base KMP comparte dominio, datos y presentacion. iOS no forma parte del alcance.
 - **Escalabilidad del backend**: arquitectura Supabase con Row Level Security por `family_id`, preparada para multiples familias independientes desde el dia 1.
 - **Seguridad**: autenticacion con Google ID mediante Credential Manager y Supabase Auth. El flujo actual permite reintentar ante error; un fallback OAuth alternativo queda como mejora. Tokens JWT gestionados por Supabase Auth y secretos fuera del repositorio.
 
@@ -123,14 +123,14 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 | Capa | Tecnologia |
 |---|---|
 | UI Android | Compose for Android |
-| UI Desktop futura | Compose for Desktop, reutilizando logica y componentes compartidos cuando aporte valor |
+| UI Desktop | Compose Desktop, reutilizando logica y componentes compartidos cuando aporta valor |
 | UI iOS posible | SwiftUI o Compose Multiplatform a evaluar en una fase posterior |
 | Logica compartida | Kotlin Multiplatform (commonMain) para dominio, casos de uso, contratos, modelos, validaciones y UiState |
 | Modularizacion | Modulos Gradle con convention plugins en `build-logic` |
 | Design system | `core:designsystem` con tema y tokens Android; evolucion multiplataforma futura |
 | Base de datos local | SQLDelight |
 | HTTP Client | Ktor Client (KMP) |
-| Autenticacion cliente | Contrato KMP comun; adaptador Android con Credential Manager + Google ID; adaptadores Desktop/iOS futuros |
+| Autenticacion cliente | Android con Credential Manager + Google ID; Desktop con OAuth PKCE y vault nativo |
 | Inyeccion de dependencias | Koin (KMP) |
 | Serializacion | kotlinx.serialization |
 | Backend / Auth | Supabase Auth, PostgreSQL, PostgREST y RLS |
@@ -144,7 +144,7 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 Clean Architecture modular. Se comparte en `commonMain` todo lo que sea dominio, contratos, modelos, estado y logica testeable. Las integraciones nativas viven detras de contratos comunes y se implementan por plataforma:
 
 ```text
-Presentation (Compose Android; Compose Desktop futuro)
+Presentation (Compose Android; Compose Desktop)
       ↓
 ViewModel + UiState (commonMain)
       ↓
@@ -157,7 +157,7 @@ Platform adapters + LocalDataSource (SQLDelight) + RemoteDataSource (Ktor + Supa
 SyncManager (commonMain) - gestiona conflictos last-write-wins
 ```
 
-Patron general para dependencias de plataforma: auth, permisos, notificaciones, secure storage, deep links y APIs del sistema se definen como contratos en KMP. Android aporta los adaptadores productivos actuales; Desktop e iOS los incorporaran cuando entren en alcance.
+Patron general para dependencias de plataforma: auth, permisos, notificaciones, secure storage y APIs del sistema se definen como contratos cuando comparten semantica. Android y Desktop aportan adaptadores productivos; las notificaciones nativas son exclusivas de Android.
 
 ---
 
@@ -192,7 +192,7 @@ Patron general para dependencias de plataforma: auth, permisos, notificaciones, 
 |---|---|
 | **12 junio 2026** | Entrega de documentacion (PRD, user stories, tickets, readme.md y toolchain de IA/proceso) |
 | **10 julio 2026** | Codigo funcional: MVP Android con auth, vehiculos, mantenimientos, historial, recordatorios, notificaciones locales y sync con backend/base de datos conectados |
-| **29 julio 2026** | Entrega final refinada: UX pulida, tests, CI, evidencia de despliegue y documentacion completa; Desktop solo si no compromete el cierre Android |
+| **29 julio 2026** | Entrega final refinada: Android/Desktop, UX pulida, tests, CI, evidencia de despliegue y documentacion completa |
 
 ### Fases de desarrollo
 

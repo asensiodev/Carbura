@@ -37,7 +37,7 @@ Usuario inicia sesion
   -> crea un recordatorio o acepta una sugerencia proactiva del vehiculo
 ```
 
-Para Entrega 2, este flujo queda implementado en Android-first con persistencia local, sincronizacion v0 y notificaciones locales. La aplicacion Desktop forma parte de la evolucion multiplataforma e iOS se mantiene como posibilidad posterior; invitaciones y exportacion quedan para iteraciones futuras.
+El flujo esta implementado en Android y Desktop con persistencia local y sincronizacion v0. Android entrega las notificaciones locales; Desktop conserva y sincroniza los recordatorios sin programar avisos nativos. iOS, invitaciones y exportacion quedan fuera de la entrega.
 
 ## Must-Have - Entrega E2E
 
@@ -70,6 +70,7 @@ Para Entrega 2, este flujo queda implementado en Android-first con persistencia 
 - Dado un vehiculo guardado, cuando el usuario vuelve a la pantalla principal, entonces el vehiculo aparece en la lista del garaje.
 - Dado un formulario incompleto, cuando el usuario intenta guardar, entonces la app indica los campos obligatorios.
 - Dado que el usuario esta offline, cuando guarda un vehiculo, entonces queda disponible localmente y pendiente de sincronizacion.
+- Dado Android o Desktop, cuando crea, edita o elimina un vehiculo, entonces el cambio converge en el otro cliente tras sincronizar.
 
 **Datos minimos del MVP:** nombre, tipo, matricula opcional, kilometros actuales.
 
@@ -87,6 +88,7 @@ Para Entrega 2, este flujo queda implementado en Android-first con persistencia 
 - Dado un mantenimiento con coste informado, cuando se guarda, entonces el coste queda asociado al registro.
 - Dado un formulario incompleto, cuando el usuario intenta guardar, entonces la app muestra validaciones claras.
 - Dado que el usuario esta offline, cuando registra un mantenimiento, entonces queda disponible localmente y pendiente de sincronizacion.
+- Dado Android o Desktop, cuando crea, edita o elimina un mantenimiento, entonces el historial converge en ambos clientes.
 
 **Tipos iniciales del MVP:** ITV, aceite, neumaticos, seguro, revision general, averia, personalizado.
 
@@ -107,7 +109,7 @@ Para Entrega 2, este flujo queda implementado en Android-first con persistencia 
 
 ### US-06 - Generar recordatorio automatico tras registrar ITV o seguro
 
-**Estado actual:** pendiente de integracion. El dominio dispone de `CreateAutomaticReminderUseCase` y `MaintenanceRecord.nextDueDate`, pero el formulario de mantenimiento aun no captura esa fecha ni invoca el caso de uso. Las sugerencias proactivas desde el vehiculo son una capacidad distinta.
+**Estado actual:** implementada. El formulario captura la proxima fecha y solicita una decision explicita entre guardar solo el mantenimiento o guardar tambien un recordatorio determinista.
 
 **Como** propietario del vehiculo,
 **quiero** que la app cree recordatorios automaticamente tras registrar una ITV o seguro,
@@ -119,12 +121,13 @@ Para Entrega 2, este flujo queda implementado en Android-first con persistencia 
 
 - Dado un registro de ITV, cuando se guarda con fecha de vencimiento o fecha de proxima ITV, entonces la app crea un recordatorio asociado.
 - Dado un registro de seguro, cuando se guarda con fecha de vencimiento, entonces la app crea un recordatorio asociado.
-- Dado un recordatorio automatico, cuando se crea, entonces usa 30 dias de antelacion por defecto.
+- Dado un mantenimiento con proxima fecha, cuando el usuario elige guardar sin recordatorio, entonces no se crea ningun aviso.
+- Dado que el usuario confirma el recordatorio, cuando se guarda, entonces usa un ID estable y no se duplica al reintentar.
 - Dado un vehiculo con recordatorio creado, cuando el usuario abre la pantalla de recordatorios, entonces el recordatorio aparece visible.
 
 ---
 
-## Should-Have - Implementados en Entrega 2 Android-first
+## Should-Have - Implementados en Android y Desktop
 
 ### US-07 - Ver proximos recordatorios
 
@@ -140,6 +143,7 @@ Para Entrega 2, este flujo queda implementado en Android-first con persistencia 
 - Dado un recordatorio, cuando se muestra, entonces incluye vehiculo, tipo, fecha objetivo y antelacion configurada.
 - Dado que no hay recordatorios, cuando el usuario abre la pantalla, entonces ve un estado vacio comprensible.
 - Dado un recordatorio vencido, cuando aparece en la lista, entonces se identifica visualmente como vencido.
+- Dado un recordatorio creado, completado o eliminado en Desktop, cuando Android sincroniza, entonces refleja el mismo estado.
 
 ### US-08 - Recibir notificacion local de un recordatorio
 
@@ -155,6 +159,8 @@ Para Entrega 2, este flujo queda implementado en Android-first con persistencia 
 - Dado que el usuario pulsa la notificacion, cuando la app se abre, entonces navega al contexto del vehiculo o recordatorio.
 - Dado que las notificaciones no tienen permiso en Android, cuando la app necesita avisar, entonces solicita o explica el permiso necesario.
 - Dado que el dispositivo esta offline, cuando llega el momento del aviso, entonces la notificacion local puede mostrarse sin depender del backend.
+- Dado un recordatorio sincronizado desde Desktop, cuando Android lo descarga, entonces entra en el outbox de notificaciones y Android programa el aviso.
+- Dado Desktop, cuando muestra un recordatorio, entonces informa de que las alertas nativas se entregan solo desde Android.
 
 ---
 
@@ -164,7 +170,7 @@ Para Entrega 2, este flujo queda implementado en Android-first con persistencia 
 
 > **Nota de alcance:** la version minima de esta historia (lista basica del garaje y acceso al detalle) queda absorbida por el flujo E2E Must-Have y se implementa dentro de los tickets T-07 y T-08, ya que sin lista de vehiculos no se puede completar el flujo principal. Lo que permanece como Could-Have es el refinamiento: estado resumido por vehiculo, proximos avisos en la tarjeta y detalle enriquecido.
 
-**Estado actual:** la lista, el detalle, la edicion y el borrado logico estan integrados en Android; permanecen como evolucion los refinamientos visuales adicionales.
+**Estado actual:** la lista, el detalle, la edicion y el borrado logico estan integrados en Android y Desktop; permanecen como evolucion los refinamientos visuales adicionales.
 
 **Como** miembro de la familia,
 **quiero** ver los vehiculos del garaje y abrir el detalle de cada uno,
@@ -181,7 +187,7 @@ Para Entrega 2, este flujo queda implementado en Android-first con persistencia 
 
 ### US-09 - Actualizar odometro rapidamente
 
-**Estado actual:** implementada en Android, incluida la confirmacion cuando el valor desciende y su persistencia local-first.
+**Estado actual:** implementada en Android y Desktop, incluida la confirmacion cuando el valor desciende y su persistencia local-first.
 
 **Como** miembro de la familia,
 **quiero** actualizar rapidamente los kilometros actuales de un vehiculo,
@@ -197,7 +203,7 @@ Para Entrega 2, este flujo queda implementado en Android-first con persistencia 
 
 ### US-10 - Sincronizar datos entre dispositivos
 
-**Estado actual:** sync v0 implementada para instalaciones Android autenticadas y reutilizable por una futura aplicacion Desktop. Usa full pull, push de pendientes, tombstones y `last-write-wins` mientras la app esta activa.
+**Estado actual:** sync v0 implementada entre Android y Desktop. Usa full pull, push de pendientes, tombstones, confirmacion condicionada por version y `last-write-wins` mientras cada app esta activa.
 
 **Como** miembro de una familia,
 **quiero** que los datos del garaje se sincronicen entre mis dispositivos,
@@ -211,6 +217,35 @@ Para Entrega 2, este flujo queda implementado en Android-first con persistencia 
 - Dado un cambio realizado offline, cuando el dispositivo recupera conexion, entonces el cambio se sincroniza con el backend.
 - Dado dos cambios sobre el mismo dato, cuando se sincronizan, entonces se aplica la estrategia last-write-wins definida en arquitectura.
 - Dado un error de sincronizacion, cuando ocurre, entonces la app conserva los datos locales y reintenta posteriormente.
+
+### US-13 - Obtener sugerencias proactivas desde el vehiculo
+
+**Como** propietario del vehiculo,
+**quiero** convertir la proxima ITV, seguro o revision por kilometraje en recordatorios,
+**para** anticiparme sin introducir los mismos datos dos veces.
+
+**Estado actual:** implementada en Android y Desktop con confirmacion explicita e IDs estables.
+
+**Criterios de aceptacion:**
+
+- Dado un objetivo futuro, cuando el usuario acepta la sugerencia, entonces se crea el recordatorio correspondiente.
+- Dado que el usuario rechaza la sugerencia, cuando guarda, entonces el vehiculo se conserva sin crear el aviso.
+- Dado un reintento o una edicion equivalente, cuando se reconcilia, entonces no se crean duplicados.
+
+### US-14 - Usar y proteger la cuenta Desktop
+
+**Como** usuario Desktop,
+**quiero** elegir entre modo local y cuenta sincronizada,
+**para** controlar mis datos sin exponer credenciales ni subir registros sin consentimiento.
+
+**Estado actual:** implementada para OAuth PKCE, Keychain/Credential Manager, importacion/exclusion de `local-family`, cierre local y eliminacion permanente.
+
+**Criterios de aceptacion:**
+
+- Sin configuracion Supabase, Desktop permite usar Garaje, Mantenimiento, Recordatorios y Cuenta en local.
+- Antes del primer sync, los datos heredados solo se importan con consentimiento ligado a un snapshot.
+- Cerrar sesion elimina la credencial Desktop sin borrar la cache familiar ni cerrar Android.
+- Eliminar la cuenta exige confirmacion irreversible, limpia la cache familiar y converge a modo local aunque la respuesta remota sea incierta.
 
 ### US-11 - Invitar a un familiar al garaje
 
@@ -277,4 +312,4 @@ Los tickets se derivan de las historias Must-Have y Should-Have. Cada ticket deb
 
 ## Siguiente paso
 
-Las historias Must-Have y los Should-Have principales ya fueron convertidos en specs OpenSpec, implementados y archivados, salvo la integracion de US-06 desde mantenimiento y el coste acumulado de US-05. Edicion de vehiculos, odometro rapido, recordatorios proactivos y CI ya estan incorporados; permanecen E2E, release/evidencias y la seleccion de capacidades posteriores sin renunciar a la vision Desktop y posible iOS.
+Las historias Must-Have, sincronizacion Android/Desktop, US-06, recordatorios proactivos y cuenta Desktop estan implementadas. Permanecen el coste acumulado de US-05, la aceptacion manual final, los paquetes instalados y sus evidencias; iOS no forma parte del alcance.

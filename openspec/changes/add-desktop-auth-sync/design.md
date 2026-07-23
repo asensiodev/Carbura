@@ -97,7 +97,7 @@ Logs and user-visible diagnostics may include stable error categories and correl
 ## Migration Plan
 
 1. Create and apply the profile/family RLS hardening migration, then run hostile authorization tests.
-2. Confirm Supabase Google provider and exact Desktop redirect allowlist using `docs/desktop-auth-sync-setup.md`.
+2. Confirm the Supabase Google provider and exact Desktop redirect allowlist using `readme.md` section 1.4.
 3. Add Desktop Supabase public settings wiring and secure credential-store abstractions.
 4. Implement and test the hardened loopback OAuth coordinator.
 5. Add session restoration and authenticated shell state.
