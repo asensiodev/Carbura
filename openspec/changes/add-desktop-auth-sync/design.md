@@ -53,7 +53,7 @@ If local records exist and no decision has been recorded for their immutable sna
 
 The import approval is bound to a digest of the exact legacy record IDs, family ownership, deletion state, and update versions shown to the user. New or changed local records invalidate prior import approval and require a new decision. The real sync manager must no longer adopt legacy data unconditionally. Adoption becomes an explicit orchestration step or a policy supplied to sync. The decision and adoption operation are idempotent so interrupted startup cannot duplicate records or repeat consent for the same committed snapshot.
 
-Before adoption or authenticated pull, Desktop performs a collision preflight. If a legacy ID already exists in the target family or incoming remote data, Desktop transactionally remaps the legacy ID and every child/source reference before any push or pull can overwrite a row. Excluded local records receive the same collision protection so `INSERT OR REPLACE` cannot destroy them.
+Before adoption or authenticated pull, Desktop performs a collision preflight. Every imported legacy record receives a deterministic namespace-safe ID and every child/source reference is updated in the same transaction, eliminating the remote check/use race while preserving logical relationships. Excluded records remain separately keyed by family and receive collision remapping when needed so an authenticated pull cannot destroy them.
 
 ### Scope all local operations to the active family
 

@@ -49,11 +49,11 @@ Desktop SHALL associate local-data decisions with the authenticated user, family
 - **THEN** Carbura does not reuse the earlier import approval and requests a new decision before uploading them
 
 ### Requirement: Adoption Preserves Relationships
-Importing local data SHALL preserve vehicle, maintenance, reminder, generated-reminder, and tombstone relationships while replacing legacy family ownership and remapping identifiers only when collision safety requires it.
+Importing local data SHALL preserve vehicle, maintenance, reminder, generated-reminder, and tombstone relationships while replacing legacy family ownership and assigning deterministic namespace-safe identifiers.
 
 #### Scenario: Related local records are imported
 - **WHEN** a vehicle with maintenance and reminders is adopted
-- **THEN** all collision-free records retain their identifiers, any colliding legacy records receive new identifiers, and every relationship remains valid under the authenticated family
+- **THEN** imported legacy records receive deterministic namespace-safe identifiers and every relationship remains valid under the authenticated family
 
 ### Requirement: Collision-Safe Legacy Data
 Desktop MUST prevent legacy local IDs from overwriting authenticated-family or incoming remote records during adoption or account-data pull.
