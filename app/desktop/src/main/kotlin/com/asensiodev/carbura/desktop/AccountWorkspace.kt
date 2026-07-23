@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.CloudOff
@@ -21,6 +23,7 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -58,6 +61,14 @@ import com.asensiodev.carbura.desktop.resources.account_cancel
 import com.asensiodev.carbura.desktop.resources.account_data_folder_action
 import com.asensiodev.carbura.desktop.resources.account_data_folder_action_name
 import com.asensiodev.carbura.desktop.resources.account_database_label
+import com.asensiodev.carbura.desktop.resources.account_delete_button
+import com.asensiodev.carbura.desktop.resources.account_delete_cancel
+import com.asensiodev.carbura.desktop.resources.account_delete_confirm
+import com.asensiodev.carbura.desktop.resources.account_delete_dialog_description
+import com.asensiodev.carbura.desktop.resources.account_delete_dialog_title
+import com.asensiodev.carbura.desktop.resources.account_deleting_button
+import com.asensiodev.carbura.desktop.resources.account_deletion_description
+import com.asensiodev.carbura.desktop.resources.account_deletion_title
 import com.asensiodev.carbura.desktop.resources.account_excluded_description
 import com.asensiodev.carbura.desktop.resources.account_excluded_title
 import com.asensiodev.carbura.desktop.resources.account_family_value
@@ -89,16 +100,37 @@ import java.nio.file.Path
 
 internal val CARBURA_PROJECT_URI: URI = URI("https://github.com/asensiodev/Carbura")
 
+internal class AccountDeletionConfirmation {
+    var isVisible by mutableStateOf(false)
+        private set
+
+    fun request() {
+        isVisible = true
+    }
+
+    fun cancel() {
+        isVisible = false
+    }
+
+    fun confirm(onDeleteAccount: () -> Unit) {
+        if (!isVisible) return
+        isVisible = false
+        onDeleteAccount()
+    }
+}
+
 @Composable
 internal fun AccountWorkspace(
     compact: Boolean,
     startupState: DesktopStartupState,
     syncStatus: SyncStatus,
     excludedLocalData: LocalDataCounts?,
+    isDeletingAccount: Boolean,
     onSignIn: () -> Unit,
     onSyncNow: () -> Unit,
     onRetry: () -> Unit,
     onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
     modifier: Modifier = Modifier,
     dataDirectory: Path = desktopDataDirectory(),
     databasePath: Path = desktopDatabasePath(dataDirectory),
@@ -107,6 +139,7 @@ internal fun AccountWorkspace(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var confirmSignOut by remember { mutableStateOf(false) }
+    val deletionConfirmation = remember { AccountDeletionConfirmation() }
     val account = startupState.accountForWorkspace()
     val unsupportedActionMessage = stringResource(Res.string.account_action_unsupported)
     val failedActionMessage = stringResource(Res.string.account_action_failed)
@@ -132,6 +165,7 @@ internal fun AccountWorkspace(
             modifier =
                 Modifier
                     .fillMaxHeight()
+                    .verticalScroll(rememberScrollState())
                     .padding(contentPadding)
                     .padding(if (compact) 28.dp else 48.dp),
             verticalArrangement = Arrangement.spacedBy(22.dp),
@@ -162,6 +196,7 @@ internal fun AccountWorkspace(
                             onSyncNow,
                             onRetry,
                             { confirmSignOut = true },
+                            isDeletingAccount,
                             Modifier.fillMaxWidth(),
                         )
                     }
@@ -179,6 +214,7 @@ internal fun AccountWorkspace(
                             onSyncNow,
                             onRetry,
                             { confirmSignOut = true },
+                            isDeletingAccount,
                             Modifier.weight(0.85f),
                         )
                     }
@@ -193,6 +229,13 @@ internal fun AccountWorkspace(
                         Text(stringResource(Res.string.account_excluded_description, counts.total), color = Muted)
                     }
                 }
+            }
+
+            if (account != null) {
+                AccountDeletionCard(
+                    isDeletingAccount = isDeletingAccount,
+                    onRequestDeletion = deletionConfirmation::request,
+                )
             }
 
             Surface(color = PaleBlue, shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) {
@@ -229,15 +272,44 @@ internal fun AccountWorkspace(
             title = { Text(stringResource(Res.string.account_sign_out_title)) },
             text = { Text(stringResource(Res.string.account_sign_out_description)) },
             confirmButton = {
-                Button(onClick = {
-                    confirmSignOut = false
-                    onSignOut()
-                }) {
+                Button(
+                    onClick = {
+                        confirmSignOut = false
+                        onSignOut()
+                    },
+                    enabled = !isDeletingAccount,
+                ) {
                     Text(stringResource(Res.string.account_sign_out))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmSignOut = false }) { Text(stringResource(Res.string.account_cancel)) }
+            },
+        )
+    }
+    if (deletionConfirmation.isVisible) {
+        AlertDialog(
+            onDismissRequest = { if (!isDeletingAccount) deletionConfirmation.cancel() },
+            title = { Text(stringResource(Res.string.account_delete_dialog_title)) },
+            text = { Text(stringResource(Res.string.account_delete_dialog_description)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        deletionConfirmation.confirm(onDeleteAccount)
+                    },
+                    enabled = !isDeletingAccount,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                ) {
+                    Text(stringResource(Res.string.account_delete_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = deletionConfirmation::cancel,
+                    enabled = !isDeletingAccount,
+                ) {
+                    Text(stringResource(Res.string.account_delete_cancel))
+                }
             },
         )
     }
@@ -281,6 +353,7 @@ private fun AuthenticatedAccountCard(
     onSyncNow: () -> Unit,
     onRetry: () -> Unit,
     onSignOut: () -> Unit,
+    isDeletingAccount: Boolean,
     modifier: Modifier,
 ) {
     AccountCard(modifier) {
@@ -299,11 +372,49 @@ private fun AuthenticatedAccountCard(
         )
         (startupState as? DesktopStartupState.RecoverableFailure)?.let {
             Text(it.message, color = MaterialTheme.colorScheme.error)
-            OutlinedButton(onClick = onRetry) { Text(stringResource(Res.string.account_retry)) }
+            OutlinedButton(onClick = onRetry, enabled = !isDeletingAccount) { Text(stringResource(Res.string.account_retry)) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(onClick = onSyncNow, enabled = !syncStatus.isSyncing) { Text(stringResource(Res.string.account_sync_now)) }
-            OutlinedButton(onClick = onSignOut) { Text(stringResource(Res.string.account_sign_out)) }
+            Button(onClick = onSyncNow, enabled = !syncStatus.isSyncing && !isDeletingAccount) {
+                Text(stringResource(Res.string.account_sync_now))
+            }
+            OutlinedButton(onClick = onSignOut, enabled = !isDeletingAccount) { Text(stringResource(Res.string.account_sign_out)) }
+        }
+    }
+}
+
+@Composable
+private fun AccountDeletionCard(
+    isDeletingAccount: Boolean,
+    onRequestDeletion: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f),
+        shape = RoundedCornerShape(22.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                stringResource(Res.string.account_deletion_title),
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+            )
+            Text(
+                stringResource(Res.string.account_deletion_description),
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            OutlinedButton(
+                onClick = onRequestDeletion,
+                enabled = !isDeletingAccount,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) {
+                Text(
+                    stringResource(
+                        if (isDeletingAccount) Res.string.account_deleting_button else Res.string.account_delete_button,
+                    ),
+                )
+            }
         }
     }
 }

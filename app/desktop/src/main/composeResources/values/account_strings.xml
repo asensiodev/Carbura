@@ -30,6 +30,14 @@
     <string name="account_sign_out_title">¿Cerrar la sesión de Desktop?</string>
     <string name="account_sign_out_description">Se eliminarán las credenciales seguras de este equipo. Los datos locales no se borrarán y Android seguirá conectado.</string>
     <string name="account_cancel">Cancelar</string>
+    <string name="account_deletion_title">Eliminar cuenta permanentemente</string>
+    <string name="account_deletion_description">La eliminación es irreversible. Si eres el último miembro, también se eliminarán los datos de la familia. Si hay otros miembros, sus datos compartidos permanecerán disponibles para ellos.</string>
+    <string name="account_delete_button">Eliminar mi cuenta</string>
+    <string name="account_deleting_button">Eliminando cuenta…</string>
+    <string name="account_delete_dialog_title">¿Eliminar tu cuenta definitivamente?</string>
+    <string name="account_delete_dialog_description">Esta acción no se puede deshacer. Se cerrará tu sesión, se borrará la caché local de esta familia y la solicitud de eliminación no podrá cancelarse después de confirmarla.</string>
+    <string name="account_delete_confirm">Eliminar definitivamente</string>
+    <string name="account_delete_cancel">Conservar mi cuenta</string>
     <string name="account_excluded_title">Datos solo locales conservados</string>
     <string name="account_excluded_description">%1$d registros locales permanecen separados. No se han subido ni eliminado.</string>
 </resources>

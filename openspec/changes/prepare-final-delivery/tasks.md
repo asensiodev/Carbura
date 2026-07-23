@@ -18,13 +18,13 @@
 
 ## 3. Desktop Account Deletion
 
-- [ ] 3.1 Extend `DesktopAppController` with a single-flight convergent account-deletion operation
-- [ ] 3.2 Add a destructive Account section and explicit irreversible confirmation dialog on Desktop
-- [ ] 3.3 Clear the authenticated family cache, secure session, and active scope after confirmed deletion dispatch
-- [ ] 3.4 Test cancellation before confirmation, duplicate clicks, confirmed success, unconfirmed response, and cleanup failure
-- [ ] 3.5 Verify sign-out remains session-local and distinct from permanent deletion
-- [ ] 3.6 Run Desktop account/auth tests and quality checks
-- [ ] 3.7 Review, commit, and push the Desktop account-deletion block
+- [x] 3.1 Extend `DesktopAppController` with a single-flight convergent account-deletion operation
+- [x] 3.2 Add a destructive Account section and explicit irreversible confirmation dialog on Desktop
+- [x] 3.3 Clear the authenticated family cache, secure session, and active scope after confirmed deletion dispatch
+- [x] 3.4 Test cancellation before confirmation, duplicate clicks, confirmed success, unconfirmed response, and cleanup failure
+- [x] 3.5 Verify sign-out remains session-local and distinct from permanent deletion
+- [x] 3.6 Run Desktop account/auth tests and quality checks
+- [x] 3.7 Review, commit, and push the Desktop account-deletion block
 
 ## 4. Final Product Scope
 

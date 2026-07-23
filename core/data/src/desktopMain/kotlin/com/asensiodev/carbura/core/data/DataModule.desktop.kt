@@ -32,7 +32,7 @@ actual val dataModule: Module =
         single<NotificationOutbox> { SqlDelightNotificationOutbox(get()) }
         single { NotificationOutboxProcessor(get(), get()) }
         single<NotificationOutboxRecovery> { NoOpNotificationOutboxRecovery }
-        single<AccountLocalDataCleaner> { SqlDelightAccountLocalDataCleaner(get(), get(), get(), get()) }
+        single<AccountLocalDataCleaner> { SqlDelightAccountLocalDataCleaner(get(), get(), get(), get(), get()) }
         single<VehicleRepository> { LocalVehicleRepository(get(), get()) }
         single<MaintenanceRecordRepository> { LocalMaintenanceRecordRepository(get(), get()) }
         single<ReminderRepository> { LocalReminderRepository(get(), get()) }

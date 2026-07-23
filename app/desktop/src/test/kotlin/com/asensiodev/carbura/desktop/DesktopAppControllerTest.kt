@@ -1,5 +1,6 @@
 package com.asensiodev.carbura.desktop
 
+import com.asensiodev.carbura.core.domain.auth.AccountLocalDataCleaner
 import com.asensiodev.carbura.core.domain.auth.AuthGateway
 import com.asensiodev.carbura.core.domain.auth.AuthSession
 import com.asensiodev.carbura.core.domain.auth.AuthUser
@@ -16,13 +17,17 @@ import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
 import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DesktopAppControllerTest {
@@ -122,6 +127,93 @@ class DesktopAppControllerTest {
             assertEquals(FamilyId("local-family"), fixture.scope.current().familyId)
         }
 
+    @Test
+    fun confirmedAccountDeletionIsSingleFlightAndBlocksOtherAccountOperations() =
+        runTest {
+            val fixture = Fixture(backgroundScope)
+            fixture.auth.session = SESSION
+            fixture.controller.start()
+            runCurrent()
+            val deletionGate = CompletableDeferred<Unit>()
+            fixture.auth.deletionGate = deletionGate
+            val syncCallsBeforeDeletion = fixture.sync.calls
+
+            fixture.controller.deleteAccount()
+            fixture.controller.deleteAccount()
+            runCurrent()
+            fixture.controller.signOut()
+            fixture.controller.syncNow()
+            runCurrent()
+
+            assertEquals(1, fixture.auth.deleteAccountCalls)
+            assertTrue(fixture.controller.isDeletingAccount.value)
+            assertEquals(0, fixture.auth.signOutCalls)
+            assertEquals(syncCallsBeforeDeletion, fixture.sync.calls)
+
+            deletionGate.complete(Unit)
+            runCurrent()
+
+            assertEquals(listOf(FAMILY), fixture.cleaner.attemptedFamilies)
+            assertEquals(listOf(FAMILY), fixture.cleaner.activeFamiliesDuringClear)
+            assertIs<DesktopStartupState.LocalMode>(fixture.controller.state.value)
+            assertEquals(FamilyId("local-family"), fixture.scope.current().familyId)
+            assertFalse(fixture.controller.isDeletingAccount.value)
+        }
+
+    @Test
+    fun unconfirmedDeletionResponseStillConvergesToCleanLocalMode() =
+        runTest {
+            val fixture = Fixture(backgroundScope)
+            fixture.auth.session = SESSION
+            fixture.controller.start()
+            runCurrent()
+            fixture.auth.deletionError = IllegalStateException("response lost")
+
+            fixture.controller.deleteAccount()
+            runCurrent()
+
+            assertEquals(1, fixture.auth.deleteAccountCalls)
+            assertNull(fixture.auth.session)
+            assertEquals(listOf(FAMILY), fixture.cleaner.attemptedFamilies)
+            val localMode = assertIs<DesktopStartupState.LocalMode>(fixture.controller.state.value)
+            assertNull(localMode.authError)
+        }
+
+    @Test
+    fun localCleanupFailureDoesNotRestoreDeletedAuthenticatedState() =
+        runTest {
+            val fixture = Fixture(backgroundScope)
+            fixture.auth.session = SESSION
+            fixture.controller.start()
+            runCurrent()
+            fixture.cleaner.failure = IllegalStateException("cleanup failed")
+
+            fixture.controller.deleteAccount()
+            runCurrent()
+
+            assertEquals(listOf(FAMILY), fixture.cleaner.attemptedFamilies)
+            assertIs<DesktopStartupState.LocalMode>(fixture.controller.state.value)
+            assertEquals(FamilyId("local-family"), fixture.scope.current().familyId)
+            assertFalse(fixture.controller.isDeletingAccount.value)
+        }
+
+    @Test
+    fun signOutClearsOnlySessionAndPreservesAuthenticatedFamilyCache() =
+        runTest {
+            val fixture = Fixture(backgroundScope)
+            fixture.auth.session = SESSION
+            fixture.controller.start()
+            runCurrent()
+
+            fixture.controller.signOut()
+            runCurrent()
+
+            assertEquals(1, fixture.auth.signOutCalls)
+            assertEquals(0, fixture.auth.deleteAccountCalls)
+            assertTrue(fixture.cleaner.attemptedFamilies.isEmpty())
+            assertIs<DesktopStartupState.LocalMode>(fixture.controller.state.value)
+        }
+
     private class Fixture(
         scope: kotlinx.coroutines.CoroutineScope,
         configurationAvailable: Boolean = true,
@@ -131,6 +223,7 @@ class DesktopAppControllerTest {
         val adoption = FakeAdoptionGateway()
         val sync = FakeSyncManager()
         val scope = FakeFamilyScopeGateway()
+        val cleaner = FakeAccountLocalDataCleaner(this.scope)
         val controller =
             DesktopAppController(
                 configurationAvailable = configurationAvailable,
@@ -138,6 +231,7 @@ class DesktopAppControllerTest {
                 profileGateway = { profile },
                 adoptionGateway = { adoption },
                 syncManager = { sync },
+                accountLocalDataCleaner = { cleaner },
                 familyScope = this.scope,
                 coroutineScope = scope,
             )
@@ -148,6 +242,9 @@ class DesktopAppControllerTest {
         var currentSessionError: Throwable? = null
         var currentSessionCalls = 0
         var signOutCalls = 0
+        var deleteAccountCalls = 0
+        var deletionGate: CompletableDeferred<Unit>? = null
+        var deletionError: Throwable? = null
 
         override suspend fun currentSession(): AuthSession? {
             currentSessionCalls += 1
@@ -164,7 +261,12 @@ class DesktopAppControllerTest {
             session = null
         }
 
-        override suspend fun deleteAccount() = Unit
+        override suspend fun deleteAccount() {
+            deleteAccountCalls += 1
+            session = null
+            deletionGate?.await()
+            deletionError?.let { throw it }
+        }
     }
 
     private class FakeProfileGateway : RemoteUserProfileGateway {
@@ -219,6 +321,20 @@ class DesktopAppControllerTest {
         override suspend fun syncNowSilently(): SyncResult = syncNow()
 
         override fun acknowledgeFailure(failureId: Long) = Unit
+    }
+
+    private class FakeAccountLocalDataCleaner(
+        private val familyScope: ActiveFamilyScopeGateway,
+    ) : AccountLocalDataCleaner {
+        val attemptedFamilies = mutableListOf<FamilyId>()
+        val activeFamiliesDuringClear = mutableListOf<FamilyId>()
+        var failure: Throwable? = null
+
+        override suspend fun clear(familyId: FamilyId) {
+            attemptedFamilies += familyId
+            activeFamiliesDuringClear += familyScope.current().familyId
+            failure?.let { throw it }
+        }
     }
 
     private class FakeFamilyScopeGateway : ActiveFamilyScopeGateway {

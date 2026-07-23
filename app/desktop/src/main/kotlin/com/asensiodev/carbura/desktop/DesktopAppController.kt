@@ -1,5 +1,6 @@
 package com.asensiodev.carbura.desktop
 
+import com.asensiodev.carbura.core.domain.auth.AccountLocalDataCleaner
 import com.asensiodev.carbura.core.domain.auth.AuthGateway
 import com.asensiodev.carbura.core.domain.auth.AuthSession
 import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
@@ -17,10 +18,13 @@ import com.asensiodev.carbura.core.model.UserId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 
 internal data class DesktopAccount(
     val userId: UserId,
@@ -76,6 +80,7 @@ internal class DesktopAppController(
     private val profileGateway: () -> RemoteUserProfileGateway,
     private val adoptionGateway: () -> LocalDataAdoptionGateway,
     private val syncManager: () -> SyncManager,
+    private val accountLocalDataCleaner: () -> AccountLocalDataCleaner,
     private val familyScope: ActiveFamilyScopeGateway,
     private val coroutineScope: CoroutineScope,
     private val currentTimeMillis: () -> Long = System::currentTimeMillis,
@@ -85,6 +90,8 @@ internal class DesktopAppController(
     private val _syncStatus = MutableStateFlow(SyncStatus())
     private val _contentRevision = MutableStateFlow(0L)
     private val _excludedLocalData = MutableStateFlow<LocalDataCounts?>(null)
+    private val _isDeletingAccount = MutableStateFlow(false)
+    private val accountDeletionInFlight = AtomicBoolean(false)
     private var operation: Job? = null
     private var syncStatusCollection: Job? = null
     private var lastForegroundSyncAt: Long? = null
@@ -93,6 +100,7 @@ internal class DesktopAppController(
     val syncStatus: StateFlow<SyncStatus> = _syncStatus.asStateFlow()
     val contentRevision: StateFlow<Long> = _contentRevision.asStateFlow()
     val excludedLocalData: StateFlow<LocalDataCounts?> = _excludedLocalData.asStateFlow()
+    val isDeletingAccount: StateFlow<Boolean> = _isDeletingAccount.asStateFlow()
 
     fun start() {
         launchOperation {
@@ -118,6 +126,7 @@ internal class DesktopAppController(
     }
 
     fun signIn() {
+        if (accountDeletionInFlight.get()) return
         if (!configurationAvailable) {
             showLocalMode("La conexión con Supabase no está configurada para esta compilación.")
             return
@@ -145,11 +154,13 @@ internal class DesktopAppController(
     fun useAccountData() = completeDecision(LocalDataDecision.Exclude)
 
     fun cancelImportDecision() {
+        if (accountDeletionInFlight.get()) return
         adoptionGateway().cancel()
         leaveAuthenticatedMode()
     }
 
     fun retry() {
+        if (accountDeletionInFlight.get()) return
         when (val current = _state.value) {
             is DesktopStartupState.RecoverableFailure -> {
                 val account = current.account
@@ -160,6 +171,7 @@ internal class DesktopAppController(
     }
 
     fun enterLocalMode() {
+        if (accountDeletionInFlight.get()) return
         operation?.cancel()
         operation = null
         leaveAuthenticatedMode()
@@ -171,6 +183,7 @@ internal class DesktopAppController(
     }
 
     fun onForeground() {
+        if (accountDeletionInFlight.get()) return
         val now = currentTimeMillis()
         val previous = lastForegroundSyncAt
         if (activeAccount() == null || previous != null && now - previous < foregroundThrottleMillis) return
@@ -178,7 +191,9 @@ internal class DesktopAppController(
         syncSilently()
     }
 
-    fun onPeriodicTick() = syncSilently()
+    fun onPeriodicTick() {
+        if (!accountDeletionInFlight.get()) syncSilently()
+    }
 
     fun signOut() {
         launchOperation {
@@ -196,6 +211,35 @@ internal class DesktopAppController(
                     )
             }
         }
+    }
+
+    fun deleteAccount() {
+        val account = activeAccount() ?: return
+        if (!accountDeletionInFlight.compareAndSet(false, true)) return
+        _isDeletingAccount.value = true
+        operation?.cancel()
+        operation =
+            coroutineScope.launch {
+                try {
+                    withContext(NonCancellable) {
+                        try {
+                            authGateway().deleteAccount()
+                        } catch (_: Exception) {
+                            // The irreversible request may have committed despite an unconfirmed response.
+                        }
+                        try {
+                            accountLocalDataCleaner().clear(account.familyId)
+                        } catch (_: Exception) {
+                            // Never restore authenticated UI after destructive dispatch.
+                        } finally {
+                            showLocalMode()
+                        }
+                    }
+                } finally {
+                    _isDeletingAccount.value = false
+                    accountDeletionInFlight.set(false)
+                }
+            }
     }
 
     private suspend fun resolveSession(session: AuthSession) {
@@ -283,9 +327,11 @@ internal class DesktopAppController(
         reportFailure: Boolean,
         initial: Boolean,
     ) {
+        if (accountDeletionInFlight.get()) return
         familyScope.activateAuthenticated(account.userId, account.familyId)
         val manager = observedSyncManager()
         val result = if (reportFailure) manager.syncNow() else manager.syncNowSilently()
+        if (accountDeletionInFlight.get()) return
         when (result) {
             is SyncResult.Success -> {
                 _contentRevision.value += 1L
@@ -305,6 +351,7 @@ internal class DesktopAppController(
     }
 
     private fun syncSilently() {
+        if (accountDeletionInFlight.get()) return
         val account = activeAccount() ?: return
         coroutineScope.launch {
             try {
@@ -354,6 +401,7 @@ internal class DesktopAppController(
     }
 
     private fun launchOperation(block: suspend () -> Unit) {
+        if (accountDeletionInFlight.get()) return
         if (operation?.isActive == true) return
         operation = coroutineScope.launch { block() }
     }

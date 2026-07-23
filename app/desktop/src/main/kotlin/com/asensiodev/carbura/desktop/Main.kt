@@ -52,6 +52,7 @@ import androidx.compose.ui.window.rememberWindowState
 import com.asensiodev.carbura.core.auth.SupabaseSettings
 import com.asensiodev.carbura.core.auth.authModule
 import com.asensiodev.carbura.core.data.dataModule
+import com.asensiodev.carbura.core.domain.auth.AccountLocalDataCleaner
 import com.asensiodev.carbura.core.domain.auth.AuthGateway
 import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
 import com.asensiodev.carbura.core.domain.sync.LocalDataAdoptionGateway
@@ -133,6 +134,7 @@ fun main() {
             profileGateway = { koin.get<RemoteUserProfileGateway>() },
             adoptionGateway = { koin.get<LocalDataAdoptionGateway>() },
             syncManager = { koin.get<SyncManager>() },
+            accountLocalDataCleaner = { koin.get<AccountLocalDataCleaner>() },
             familyScope = koin.get<ActiveFamilyScopeGateway>(),
             coroutineScope = appScope,
         )
@@ -504,18 +506,22 @@ private fun DestinationContent(
                 onNavigateToGarage = { onNavigate(DesktopDestination.Garage) },
                 modifier = modifier,
             )
-        DesktopDestination.Account ->
+        DesktopDestination.Account -> {
+            val isDeletingAccount by controller.isDeletingAccount.collectAsState()
             AccountWorkspace(
                 compact = compact,
                 startupState = startupState,
                 syncStatus = syncStatus,
                 excludedLocalData = excludedLocalData,
+                isDeletingAccount = isDeletingAccount,
                 onSignIn = controller::signIn,
                 onSyncNow = controller::syncNow,
                 onRetry = controller::retry,
                 onSignOut = controller::signOut,
+                onDeleteAccount = controller::deleteAccount,
                 modifier = modifier,
             )
+        }
     }
 }
 

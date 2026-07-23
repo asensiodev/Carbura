@@ -508,8 +508,14 @@ class OnboardingViewModelTest {
         runTest {
             val deletionGate = CompletableDeferred<Unit>()
             val authGateway = FakeAuthGateway(currentSession = authSession(), deleteAccountGate = deletionGate)
-            val cleaner = FakeAccountLocalDataCleaner()
-            val viewModel = onboardingViewModel(authGateway = authGateway, accountLocalDataCleaner = cleaner)
+            val familyScope = FakeActiveFamilyScopeGateway()
+            val cleaner = FakeAccountLocalDataCleaner(familyScope = familyScope)
+            val viewModel =
+                onboardingViewModel(
+                    authGateway = authGateway,
+                    accountLocalDataCleaner = cleaner,
+                    familyScope = familyScope,
+                )
             viewModel.onEvent(OnboardingEvent.Started)
             advanceUntilIdle()
 
@@ -528,6 +534,7 @@ class OnboardingViewModelTest {
             }
 
             assertEquals(listOf(FamilyId("family-1")), cleaner.clearedFamilies)
+            assertEquals(listOf(FamilyId("family-1")), cleaner.activeFamiliesDuringClear)
             assertFalse(viewModel.uiState.value.isAuthenticated)
             assertFalse(viewModel.uiState.value.isDeletingAccount)
         }
@@ -730,12 +737,15 @@ private class FakeAuthGateway(
 
 private class FakeAccountLocalDataCleaner(
     private val error: Throwable? = null,
+    private val familyScope: ActiveFamilyScopeGateway? = null,
 ) : AccountLocalDataCleaner {
     val clearedFamilies = mutableListOf<FamilyId>()
+    val activeFamiliesDuringClear = mutableListOf<FamilyId>()
 
     override suspend fun clear(familyId: FamilyId) {
         error?.let { throw it }
         clearedFamilies += familyId
+        familyScope?.current()?.familyId?.let(activeFamiliesDuringClear::add)
     }
 }
 

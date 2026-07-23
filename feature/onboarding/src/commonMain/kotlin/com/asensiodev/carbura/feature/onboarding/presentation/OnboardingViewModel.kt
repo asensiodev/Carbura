@@ -340,7 +340,6 @@ class OnboardingViewModel(
         }
 
         withContext(NonCancellable) {
-            familyScope.activateLocal()
             if (familyId != null) {
                 try {
                     withContext(dispatchers.io) { accountLocalDataCleaner.clear(familyId) }
@@ -350,6 +349,7 @@ class OnboardingViewModel(
                     // Remote deletion committed; do not leave a deleted identity in authenticated UI state.
                 }
             }
+            familyScope.activateLocal()
             _uiState.value = OnboardingUiState(isInitializing = false, isLoading = false)
             _effects.send(OnboardingEffect.NavigateToLogin)
         }
