@@ -299,6 +299,8 @@ Spec OpenSpec
 
 La suite incluye tests comunes, Android/Robolectric y Desktop para dominio, repositorios, sync, OAuth, vaults, composición local, importación, eliminación de cuenta y propagación de recordatorios. El pipeline ejecuta `qualityCheck`, `test` y `assembleDebug`; el gate local añade `:app:desktop:jar`, OpenSpec estricto e inspección de artefactos.
 
+El gate instrumentado `./gradlew connectedDebugAndroidTest` se ejecutó en un Pixel 9a real y completó 51 tests de UI, navegación y entrega de notificaciones.
+
 La aceptación final manual debe comprobar la misma familia en Android/Desktop, propagación bidireccional y tombstones, cambios offline, reinicio, LWW, importación/exclusión local, restauración segura de sesión, RLS hostil con dos cuentas, eliminación de cuenta y recordatorios Desktop programados únicamente por Android.
 
 ### **2.7. Diseño de dominio y principios de código**

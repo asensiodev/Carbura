@@ -326,6 +326,7 @@ Evidencia macOS actual: DMG generado con Amazon Corretto 17, runtime corregido c
 - Commits y PRs: trazabilidad entre documentación, specs, código y entregas.
 - Comandos de verificacion local y CI: `./gradlew qualityCheck test assembleDebug :app:desktop:jar --stacktrace`, OpenSpec estricto y `git diff --check`.
 - Evidencia dependiente de plataforma: APK Android, DMG instalado en macOS y MSI/Credential Manager validados en Windows.
+- Evidencia Android física: `./gradlew connectedDebugAndroidTest` superado en Pixel 9a con 51 tests instrumentados.
 
 ---
 

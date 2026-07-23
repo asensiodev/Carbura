@@ -129,7 +129,11 @@ class GarageScreenTest {
         composeRule.setContent {
             CompactGarage {
                 TestGarageScreen(
-                    overviewState = GarageOverviewUiState(vehicles, GarageLoadState.Loaded),
+                    overviewState =
+                        GarageOverviewUiState(
+                            vehicles = vehicles,
+                            loadState = GarageLoadState.Loaded,
+                        ),
                     onDeleteVehicle = { deletedVehicle = it },
                 )
             }
@@ -261,7 +265,11 @@ class GarageScreenTest {
         composeRule.setContent {
             CompactGarage {
                 TestGarageScreen(
-                    overviewState = GarageOverviewUiState(vehicles, GarageLoadState.Loaded),
+                    overviewState =
+                        GarageOverviewUiState(
+                            vehicles = vehicles,
+                            loadState = GarageLoadState.Loaded,
+                        ),
                 )
             }
         }
@@ -281,7 +289,11 @@ class GarageScreenTest {
         composeRule.setContent {
             CompactGarage {
                 TestGarageScreen(
-                    overviewState = GarageOverviewUiState(listOf(vehicle), GarageLoadState.Loaded),
+                    overviewState =
+                        GarageOverviewUiState(
+                            vehicles = listOf(vehicle),
+                            loadState = GarageLoadState.Loaded,
+                        ),
                 )
             }
         }
