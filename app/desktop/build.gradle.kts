@@ -76,6 +76,14 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi)
+            modules(
+                "java.instrument",
+                "java.management",
+                "java.net.http",
+                "java.prefs",
+                "java.sql",
+                "jdk.unsupported",
+            )
             packageName = "Carbura"
             packageVersion = "1.0.0"
             description = "Vehicle maintenance and reminder companion"

@@ -267,6 +267,8 @@ No existe servidor propio. Supabase proporciona Auth, PostgreSQL, PostgREST y RL
 - El job real ejecuta `./gradlew qualityCheck test assembleDebug --stacktrace`.
 - `qualityCheck` agrega ktlint, detekt y `:quality:architecture:test`.
 - La instalación del DMG, la validación MSI/Windows y las capturas o vídeo de evidencia forman parte del cierre final.
+- El DMG macOS `Carbura-1.0.0.dmg` se genero con Amazon Corretto 17, se instalo y supero el smoke de arranque con runtime autocontenido; SHA-256: `0d279dbee5642afc5d34f4a63987ac69bc54a9b67af41f810c7eb5c2fbdbd71d`.
+- El bundle actual tiene firma ad-hoc valida, pero Gatekeeper lo rechaza hasta disponer de Developer ID y notarizacion. Login/restore interactivos del paquete y Windows siguen pendientes de evidencia manual.
 - Las credenciales permanecen fuera del repositorio; CI no necesita secretos de producción para las comprobaciones actuales.
 
 ### **2.5. Seguridad**

@@ -8,9 +8,9 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
@@ -141,14 +141,16 @@ internal class LoopbackCallbackListener(
     suspend fun await(server: ServerSocket): OAuthCallback =
         try {
             withTimeout(timeout) {
-                suspendCancellableCoroutine { continuation ->
-                    continuation.invokeOnCancellation { server.close() }
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            val callback = server.accept().use(::readCallback)
-                            if (continuation.isActive) continuation.resume(callback)
-                        } catch (exception: Exception) {
-                            if (continuation.isActive) continuation.resumeWithException(exception)
+                coroutineScope {
+                    suspendCancellableCoroutine { continuation ->
+                        continuation.invokeOnCancellation { server.close() }
+                        launch(Dispatchers.IO) {
+                            try {
+                                val callback = server.accept().use(::readCallback)
+                                if (continuation.isActive) continuation.resume(callback)
+                            } catch (exception: Exception) {
+                                if (continuation.isActive) continuation.resumeWithException(exception)
+                            }
                         }
                     }
                 }

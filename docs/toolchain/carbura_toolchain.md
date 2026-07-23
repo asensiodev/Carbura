@@ -298,6 +298,8 @@ Ramas y PRs oficiales:
 5. Revisar el flujo de sincronización Android/Desktop (offline → online → sync), tombstones y LWW.
 6. Generar DMG/MSI con un JDK que incluya `jpackage`, inspeccionar secretos e instalar el artefacto exacto en su sistema objetivo.
 
+Evidencia macOS actual: DMG generado con Amazon Corretto 17, runtime corregido con modulos `java.sql` y `java.net.http`, instalacion y smoke de arranque superados. La firma es ad-hoc; Developer ID/notarizacion, login interactivo del paquete y validacion MSI permanecen externos.
+
 ---
 
 ### Fase 5 — Documentación y memoria del TFM
