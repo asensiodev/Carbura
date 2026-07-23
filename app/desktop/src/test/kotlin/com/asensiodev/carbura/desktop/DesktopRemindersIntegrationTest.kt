@@ -2,14 +2,12 @@ package com.asensiodev.carbura.desktop
 
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
-import com.asensiodev.carbura.core.data.dataModule
+import com.asensiodev.carbura.core.auth.SupabaseSettings
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.model.FamilyId
-import com.asensiodev.carbura.feature.garage.di.garageModule
 import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormEffect
 import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormEvent
 import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormViewModel
-import com.asensiodev.carbura.feature.reminders.di.remindersModule
 import com.asensiodev.carbura.feature.reminders.presentation.RemindersEffect
 import com.asensiodev.carbura.feature.reminders.presentation.RemindersEvent
 import com.asensiodev.carbura.feature.reminders.presentation.RemindersViewModel
@@ -53,7 +51,7 @@ class DesktopRemindersIntegrationTest {
         koin =
             startKoin {
                 allowOverride(true)
-                modules(dataModule, garageModule, remindersModule, desktopLocalModeModule, testDatabaseModule)
+                modules(desktopModules(SupabaseSettings("", "")) + testDatabaseModule)
             }.koin
     }
 

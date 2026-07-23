@@ -30,14 +30,6 @@ dependencies {
     testImplementation(libs.sqldelight.sqlite.driver)
 }
 
-val desktopLocalProperties =
-    Properties().apply {
-        val file = rootProject.file("local.properties")
-        if (file.exists()) file.inputStream().use(::load)
-    }
-
-fun desktopPublicProperty(name: String): String = desktopLocalProperties.getProperty(name).orEmpty()
-
 fun kotlinString(value: String): String =
     value
         .replace("\\", "\\\\")
@@ -46,8 +38,15 @@ fun kotlinString(value: String): String =
 
 val generateDesktopPublicConfig by tasks.registering {
     val outputDirectory = layout.buildDirectory.dir("generated/desktopPublicConfig")
+    val desktopPublicConfigFile = rootProject.layout.projectDirectory.file("local.properties")
+    inputs.file(desktopPublicConfigFile).withPropertyName("desktopPublicConfigFile").optional()
     outputs.dir(outputDirectory)
     doLast {
+        val desktopLocalProperties =
+            Properties().apply {
+                val file = desktopPublicConfigFile.asFile
+                if (file.exists()) file.inputStream().use(::load)
+            }
         val packageDirectory = outputDirectory.get().asFile.resolve("com/asensiodev/carbura/desktop")
         packageDirectory.mkdirs()
         packageDirectory.resolve("DesktopPublicConfig.kt").writeText(
@@ -55,8 +54,8 @@ val generateDesktopPublicConfig by tasks.registering {
             package com.asensiodev.carbura.desktop
 
             internal object DesktopPublicConfig {
-                const val supabaseUrl: String = "${kotlinString(desktopPublicProperty("SUPABASE_URL"))}"
-                const val supabaseAnonKey: String = "${kotlinString(desktopPublicProperty("SUPABASE_ANON_KEY"))}"
+                const val supabaseUrl: String = "${kotlinString(desktopLocalProperties.getProperty("SUPABASE_URL").orEmpty())}"
+                const val supabaseAnonKey: String = "${kotlinString(desktopLocalProperties.getProperty("SUPABASE_ANON_KEY").orEmpty())}"
             }
             """.trimIndent() + "\n",
         )

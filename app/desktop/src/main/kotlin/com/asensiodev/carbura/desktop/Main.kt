@@ -86,6 +86,7 @@ import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
+import org.koin.core.module.Module
 import org.koin.dsl.module
 import java.awt.event.WindowEvent
 import java.awt.event.WindowFocusListener
@@ -99,6 +100,20 @@ internal val Muted = Color(0xFF607086)
 internal val Line = Color(0xFFD8E3F0)
 internal val Success = Color(0xFF2F7666)
 
+internal val SupabaseSettings.isDesktopConfigurationAvailable: Boolean
+    get() = url.isNotBlank() && anonKey.isNotBlank()
+
+internal fun desktopModules(settings: SupabaseSettings): List<Module> =
+    buildList {
+        add(authModule)
+        add(dataModule)
+        add(garageModule)
+        add(maintenanceModule)
+        add(remindersModule)
+        add(module { single { settings } })
+        if (!settings.isDesktopConfigurationAvailable) add(desktopLocalModeModule)
+    }
+
 fun main() {
     val settings =
         SupabaseSettings(
@@ -107,19 +122,13 @@ fun main() {
         )
     val koin =
         startKoin {
-            modules(
-                authModule,
-                dataModule,
-                garageModule,
-                maintenanceModule,
-                remindersModule,
-                module { single { settings } },
-            )
+            allowOverride(true)
+            modules(desktopModules(settings))
         }.koin
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val controller =
         DesktopAppController(
-            configurationAvailable = settings.url.isNotBlank() && settings.anonKey.isNotBlank(),
+            configurationAvailable = settings.isDesktopConfigurationAvailable,
             authGateway = { koin.get<AuthGateway>() },
             profileGateway = { koin.get<RemoteUserProfileGateway>() },
             adoptionGateway = { koin.get<LocalDataAdoptionGateway>() },

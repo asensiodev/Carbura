@@ -9,12 +9,12 @@
 
 ## 2. Desktop Local Composition
 
-- [ ] 2.1 Add a real Desktop Koin/composition smoke test with blank Supabase public configuration
-- [ ] 2.2 Prevent local feature ViewModels from resolving authenticated Supabase or remote-sync dependencies
-- [ ] 2.3 Verify local Garage, Maintenance, Reminders, and Account mutations persist without network configuration
-- [ ] 2.4 Declare Desktop public configuration files as inputs to generated-config Gradle tasks to prevent stale builds
-- [ ] 2.5 Run Desktop tests, static analysis, and local-mode smoke checks
-- [ ] 2.6 Review, commit, and push the Desktop local-composition block
+- [x] 2.1 Add a real Desktop Koin/composition smoke test with blank Supabase public configuration
+- [x] 2.2 Prevent local feature ViewModels from resolving authenticated Supabase or remote-sync dependencies
+- [x] 2.3 Verify local Garage, Maintenance, Reminders, and Account mutations persist without network configuration
+- [x] 2.4 Declare Desktop public configuration files as inputs to generated-config Gradle tasks to prevent stale builds
+- [x] 2.5 Run Desktop tests, static analysis, and local-mode smoke checks
+- [x] 2.6 Review, commit, and push the Desktop local-composition block
 
 ## 3. Desktop Account Deletion
 

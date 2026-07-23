@@ -2,7 +2,7 @@ package com.asensiodev.carbura.desktop
 
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
-import com.asensiodev.carbura.core.data.dataModule
+import com.asensiodev.carbura.core.auth.SupabaseSettings
 import com.asensiodev.carbura.core.data.local.CarburaDatabase
 import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
@@ -10,16 +10,13 @@ import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.MaintenanceRecordId
 import com.asensiodev.carbura.core.model.MaintenanceTypeCode
 import com.asensiodev.carbura.core.model.VehicleId
-import com.asensiodev.carbura.feature.garage.di.garageModule
 import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormEffect
 import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormEvent
 import com.asensiodev.carbura.feature.garage.presentation.vehicleform.VehicleFormViewModel
-import com.asensiodev.carbura.feature.maintenance.di.maintenanceModule
 import com.asensiodev.carbura.feature.maintenance.presentation.MaintenanceHistoryEffect
 import com.asensiodev.carbura.feature.maintenance.presentation.MaintenanceHistoryEvent
 import com.asensiodev.carbura.feature.maintenance.presentation.MaintenanceHistoryViewModel
 import com.asensiodev.carbura.feature.maintenance.presentation.MaintenanceLoadState
-import com.asensiodev.carbura.feature.reminders.di.remindersModule
 import com.asensiodev.carbura.feature.reminders.presentation.RemindersEvent
 import com.asensiodev.carbura.feature.reminders.presentation.RemindersViewModel
 import kotlinx.coroutines.CoroutineStart
@@ -63,14 +60,7 @@ class DesktopMaintenanceIntegrationTest {
         koin =
             startKoin {
                 allowOverride(true)
-                modules(
-                    dataModule,
-                    garageModule,
-                    maintenanceModule,
-                    remindersModule,
-                    desktopLocalModeModule,
-                    testDatabaseModule,
-                )
+                modules(desktopModules(SupabaseSettings("", "")) + testDatabaseModule)
             }.koin
     }
 
