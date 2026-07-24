@@ -36,6 +36,8 @@ sealed interface RemindersEvent {
 
     data object SubmitReminder : RemindersEvent
 
+    data object DismissReminderForm : RemindersEvent
+
     data class CompleteReminder(
         val reminderId: ReminderId,
     ) : RemindersEvent

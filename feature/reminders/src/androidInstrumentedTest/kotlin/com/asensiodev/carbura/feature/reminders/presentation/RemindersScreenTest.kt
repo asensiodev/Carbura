@@ -34,6 +34,7 @@ import com.asensiodev.carbura.core.model.ReminderId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
+import com.asensiodev.carbura.core.stringresources.CarburaString
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -148,6 +149,39 @@ class RemindersScreenTest {
     }
 
     @Test
+    fun optionalDueDateHasExplicitClearAction() {
+        var dueDate = "2026-08-01"
+        composeRule.setContent {
+            CarburaTheme {
+                remindersScreen(
+                    state = loadedState().copy(dueDate = dueDate),
+                    onDueDateChange = { dueDate = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Añadir recordatorio").performClick()
+        composeRule.onNodeWithText("Quitar fecha").performScrollTo().performClick()
+
+        composeRule.runOnIdle { assertTrue(dueDate.isEmpty()) }
+    }
+
+    @Test
+    fun negativeDueOdometerMarksItsFieldWithoutDiscardingInput() {
+        composeRule.setRemindersContent(
+            state =
+                loadedState().copy(
+                    dueOdometerKm = "-1",
+                    errorMessage = CarburaString.ValidationNegativeReminderDueOdometer,
+                ),
+        )
+
+        composeRule.onNodeWithText("Añadir recordatorio").performClick()
+        composeRule.onNodeWithText("-1").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Los kilómetros no pueden ser negativos.").assertIsDisplayed()
+    }
+
+    @Test
     fun expandedContentUsesReadableMaximumWidth() {
         composeRule.setContent {
             CarburaTheme {
@@ -255,6 +289,7 @@ class RemindersScreenTest {
         onVehicleSelected: (Vehicle) -> Unit = {},
         onVehicleFilterToggled: (Vehicle) -> Unit = {},
         onVehicleFiltersCleared: () -> Unit = {},
+        onDueDateChange: (String) -> Unit = {},
     ) {
         setContent {
             CarburaTheme {
@@ -267,6 +302,7 @@ class RemindersScreenTest {
                     onVehicleSelected = onVehicleSelected,
                     onVehicleFilterToggled = onVehicleFilterToggled,
                     onVehicleFiltersCleared = onVehicleFiltersCleared,
+                    onDueDateChange = onDueDateChange,
                 )
             }
         }
@@ -282,6 +318,7 @@ class RemindersScreenTest {
         onVehicleSelected: (Vehicle) -> Unit = {},
         onVehicleFilterToggled: (Vehicle) -> Unit = {},
         onVehicleFiltersCleared: () -> Unit = {},
+        onDueDateChange: (String) -> Unit = {},
     ) {
         RemindersScreen(
             state = state,
@@ -292,7 +329,7 @@ class RemindersScreenTest {
             onVehicleSelected = onVehicleSelected,
             onVehicleFilterToggled = onVehicleFilterToggled,
             onVehicleFiltersCleared = onVehicleFiltersCleared,
-            onDueDateChange = {},
+            onDueDateChange = onDueDateChange,
             onDueOdometerChange = {},
             onSubmitReminder = {},
             onCompleteReminder = {},

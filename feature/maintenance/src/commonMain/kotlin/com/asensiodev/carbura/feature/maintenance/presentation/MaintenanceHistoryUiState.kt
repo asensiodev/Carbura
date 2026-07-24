@@ -14,7 +14,7 @@ data class MaintenanceHistoryUiState(
     val customTypeLabel: String = "",
     val performedOn: String,
     val nextDueDate: String = "",
-    val odometerKm: String = "0",
+    val odometerKm: String = "",
     val cost: String = "",
     val workshop: String = "",
     val notes: String = "",
@@ -24,6 +24,7 @@ data class MaintenanceHistoryUiState(
     val activeMutation: MaintenanceMutation? = null,
     val showFutureReminderOffer: Boolean = false,
     val editingRecordId: MaintenanceRecordId? = null,
+    val isEditDirty: Boolean = false,
 ) {
     val isEmpty: Boolean = records.isEmpty() && loadState == MaintenanceLoadState.Content
 
@@ -58,12 +59,12 @@ private fun MaintenanceRecord.matchesSearch(query: String): Boolean =
 private fun MaintenanceTypeCode.searchLabel(): String =
     when (this) {
         MaintenanceTypeCode.Itv -> "ITV"
-        MaintenanceTypeCode.Insurance -> "Insurance"
-        MaintenanceTypeCode.OilChange -> "Oil change"
-        MaintenanceTypeCode.Tires -> "Tires"
-        MaintenanceTypeCode.GeneralReview -> "General review"
-        MaintenanceTypeCode.Repair -> "Repair"
-        MaintenanceTypeCode.Custom -> "Custom"
+        MaintenanceTypeCode.Insurance -> "Insurance Seguro"
+        MaintenanceTypeCode.OilChange -> "Oil change Cambio de aceite Aceite"
+        MaintenanceTypeCode.Tires -> "Tires Neumáticos Neumaticos"
+        MaintenanceTypeCode.GeneralReview -> "General review Revisión general Revision general"
+        MaintenanceTypeCode.Repair -> "Repair Reparación Reparacion"
+        MaintenanceTypeCode.Custom -> "Custom Personalizado"
     }
 
 enum class MaintenanceLoadState {

@@ -81,7 +81,7 @@ class MaintenanceCreationOrchestrationTest {
 
             val result = CreateMaintenanceRecordFromInputUseCase(CreateMaintenanceRecordUseCase(repository))(invalid.familyScoped())
 
-            assertEquals(DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceDate), result)
+            assertEquals(DomainResult.ValidationError(ValidationFailure.InvalidMaintenancePerformedDate), result)
             assertEquals(emptyList(), repository.savedRecords)
         }
 
@@ -95,7 +95,26 @@ class MaintenanceCreationOrchestrationTest {
             val invalid = useCase(input(MaintenanceTypeCode.Insurance, "2028-02-30").familyScoped())
 
             assertIs<DomainResult.Success<*>>(valid)
-            assertEquals(DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceDate), invalid)
+            assertEquals(DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceNextDueDate), invalid)
+        }
+
+    @Test
+    fun numericInputIsExactAndNeverSilentlyTruncated() =
+        runTest {
+            val repository = FakeMaintenanceRecordRepository()
+            val useCase = CreateMaintenanceRecordFromInputUseCase(CreateMaintenanceRecordUseCase(repository))
+
+            val valid = useCase(input(MaintenanceTypeCode.Repair).copy(cost = "10,25", odometerKm = "").familyScoped())
+            val excessPrecision = useCase(input(MaintenanceTypeCode.Repair).copy(cost = "10.259").familyScoped())
+            val nonFinite = useCase(input(MaintenanceTypeCode.Repair).copy(cost = "NaN").familyScoped())
+            val invalidOdometer = useCase(input(MaintenanceTypeCode.Repair).copy(odometerKm = "12.5").familyScoped())
+
+            val record = assertIs<DomainResult.Success<*>>(valid).value as com.asensiodev.carbura.core.model.MaintenanceRecord
+            assertEquals(1025, record.costCents)
+            assertNull(record.odometerKm)
+            assertEquals(DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceCost), excessPrecision)
+            assertEquals(DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceCost), nonFinite)
+            assertEquals(DomainResult.ValidationError(ValidationFailure.InvalidMaintenanceOdometer), invalidOdometer)
         }
 
     @Test

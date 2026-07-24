@@ -10,6 +10,8 @@ import com.asensiodev.carbura.core.domain.reminder.usecase.CreateReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.DeleteReminderUseCase
 import com.asensiodev.carbura.core.domain.reminder.usecase.GetPendingRemindersUseCase
 import com.asensiodev.carbura.core.domain.sync.SyncManager
+import com.asensiodev.carbura.core.domain.validation.NumericInputResult
+import com.asensiodev.carbura.core.domain.validation.parseNonNegativeIntInput
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.CalendarDate
@@ -69,6 +71,7 @@ class RemindersViewModel(
             is RemindersEvent.DueOdometerChanged ->
                 updateForm { it.copy(dueOdometerKm = event.value, errorMessage = null, hasPersistenceError = false) }
             RemindersEvent.SubmitReminder -> scope.launch { createReminder() }
+            RemindersEvent.DismissReminderForm -> dismissReminderForm()
             is RemindersEvent.CompleteReminder -> scope.launch { completeReminder(event.reminderId) }
             is RemindersEvent.DeleteReminder -> scope.launch { deleteReminder(event.reminderId) }
         }
@@ -85,6 +88,22 @@ class RemindersViewModel(
 
     private fun updateForm(transform: (RemindersUiState) -> RemindersUiState) {
         _uiState.update(transform)
+    }
+
+    private fun dismissReminderForm() {
+        if (_uiState.value.activeAction == ReminderAction.Create) return
+        _uiState.update { state ->
+            state.copy(
+                title = "",
+                selectedVehicleId =
+                    state.selectedVehicleId?.takeIf { id -> state.vehicles.any { it.id == id } }
+                        ?: state.vehicles.firstOrNull()?.id,
+                dueDate = "",
+                dueOdometerKm = "",
+                errorMessage = null,
+                hasPersistenceError = false,
+            )
+        }
     }
 
     private suspend fun loadReminders(showLoading: Boolean) {
@@ -151,10 +170,18 @@ class RemindersViewModel(
                 }
             }
         val dueOdometer =
-            state.dueOdometerKm
-                .trim()
-                .ifBlank { null }
-                ?.toIntOrNull()
+            when (val result = state.dueOdometerKm.parseNonNegativeIntInput()) {
+                NumericInputResult.Blank -> null
+                NumericInputResult.Negative -> {
+                    emitValidation(CarburaString.ValidationNegativeReminderDueOdometer)
+                    return
+                }
+                NumericInputResult.Invalid -> {
+                    emitValidation(CarburaString.ValidationInvalidReminderDueOdometer)
+                    return
+                }
+                is NumericInputResult.Value -> result.value
+            }
 
         val reminder =
             Reminder(

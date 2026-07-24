@@ -64,6 +64,8 @@ import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.desktop.resources.Res
+import com.asensiodev.carbura.desktop.resources.form_clear_date
+import com.asensiodev.carbura.desktop.resources.form_select_date
 import com.asensiodev.carbura.desktop.resources.reminders_add
 import com.asensiodev.carbura.desktop.resources.reminders_all_vehicles_filter
 import com.asensiodev.carbura.desktop.resources.reminders_cancel
@@ -108,6 +110,7 @@ import com.asensiodev.carbura.desktop.resources.reminders_unavailable_vehicle
 import com.asensiodev.carbura.desktop.resources.reminders_validation_blank_title
 import com.asensiodev.carbura.desktop.resources.reminders_validation_generic
 import com.asensiodev.carbura.desktop.resources.reminders_validation_invalid_date
+import com.asensiodev.carbura.desktop.resources.reminders_validation_invalid_due_odometer
 import com.asensiodev.carbura.desktop.resources.reminders_validation_missing_due_target
 import com.asensiodev.carbura.desktop.resources.reminders_validation_missing_vehicle
 import com.asensiodev.carbura.desktop.resources.reminders_validation_negative_due_odometer
@@ -201,7 +204,7 @@ internal fun RemindersWorkspace(
             RemindersHeader(
                 reminderCount = state.reminders.size,
                 compact = compact,
-                canCreate = !state.isLoading && !state.hasLoadError && !state.hasNoVehicles,
+                canCreate = !state.isLoading && !state.hasLoadError && !state.hasNoVehicles && state.activeAction == null,
                 onCreate = { showCreateForm = true },
             )
             NotificationAvailabilityPanel(compact)
@@ -229,7 +232,12 @@ internal fun RemindersWorkspace(
         ReminderFormDialog(
             state = state,
             onEvent = viewModel::onEvent,
-            onDismiss = { if (state.activeAction != ReminderAction.Create) showCreateForm = false },
+            onDismiss = {
+                if (state.activeAction != ReminderAction.Create) {
+                    viewModel.onEvent(RemindersEvent.DismissReminderForm)
+                    showCreateForm = false
+                }
+            },
         )
     }
 
@@ -267,6 +275,7 @@ private fun RemindersHeader(
     canCreate: Boolean,
     onCreate: () -> Unit,
 ) {
+    val addReminderLabel = stringResource(Res.string.reminders_add)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -294,10 +303,10 @@ private fun RemindersHeader(
         }
         Spacer(Modifier.width(20.dp))
         Button(onClick = onCreate, enabled = canCreate) {
-            Icon(Icons.Default.Add, contentDescription = null)
+            Icon(Icons.Default.Add, contentDescription = addReminderLabel.takeIf { compact })
             if (!compact) {
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(Res.string.reminders_add))
+                Text(addReminderLabel)
             }
         }
     }
@@ -506,20 +515,20 @@ private fun ReminderFormDialog(
     onEvent: (RemindersEvent) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val isSaving = state.activeAction == ReminderAction.Create
+    val mutationActive = state.activeAction != null
     var vehicleMenuExpanded by remember { mutableStateOf(false) }
     val selectedVehicle = state.vehicles.firstOrNull { it.id == state.selectedVehicleId }
     DesktopFormDialog(
         title = stringResource(Res.string.reminders_form_title),
         onDismissRequest = onDismiss,
-        dismissEnabled = !isSaving,
+        dismissEnabled = !mutationActive,
         actions = {
-            TextButton(onClick = onDismiss, enabled = !isSaving) {
+            TextButton(onClick = onDismiss, enabled = !mutationActive) {
                 Text(stringResource(Res.string.reminders_cancel))
             }
             Spacer(Modifier.width(8.dp))
-            Button(onClick = { onEvent(RemindersEvent.SubmitReminder) }, enabled = !isSaving) {
-                if (isSaving) {
+            Button(onClick = { onEvent(RemindersEvent.SubmitReminder) }, enabled = !mutationActive) {
+                if (state.activeAction == ReminderAction.Create) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
                     Spacer(Modifier.width(8.dp))
                 }
@@ -532,20 +541,26 @@ private fun ReminderFormDialog(
             value = state.title,
             onValueChange = { onEvent(RemindersEvent.TitleChanged(it)) },
             modifier = Modifier.fillMaxWidth(),
+            enabled = !mutationActive,
             label = { Text(stringResource(Res.string.reminders_title_label)) },
+            isError = state.errorMessage == CarburaString.ValidationBlankReminderTitle,
+            supportingText = state.errorMessage.supportingTextFor(CarburaString.ValidationBlankReminderTitle),
             singleLine = true,
         )
         ExposedDropdownMenuBox(
             expanded = vehicleMenuExpanded,
-            onExpandedChange = { vehicleMenuExpanded = it },
+            onExpandedChange = { if (!mutationActive) vehicleMenuExpanded = it },
         ) {
             OutlinedTextField(
                 value = selectedVehicle?.name.orEmpty(),
                 onValueChange = {},
                 modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
                 readOnly = true,
+                enabled = !mutationActive,
                 label = { Text(stringResource(Res.string.reminders_vehicle_label)) },
                 placeholder = { Text(stringResource(Res.string.reminders_vehicle_placeholder)) },
+                isError = state.errorMessage == CarburaString.ValidationMissingReminderVehicle,
+                supportingText = state.errorMessage.supportingTextFor(CarburaString.ValidationMissingReminderVehicle),
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = vehicleMenuExpanded) },
                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
             )
@@ -564,23 +579,48 @@ private fun ReminderFormDialog(
                 }
             }
         }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(
-                value = state.dueDate,
-                onValueChange = { onEvent(RemindersEvent.DueDateChanged(it)) },
-                modifier = Modifier.weight(1f),
-                label = { Text(stringResource(Res.string.reminders_due_date_label)) },
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = state.dueOdometerKm,
-                onValueChange = { onEvent(RemindersEvent.DueOdometerChanged(it)) },
-                modifier = Modifier.weight(1f),
-                label = { Text(stringResource(Res.string.reminders_due_odometer_label)) },
-                singleLine = true,
-            )
+        DesktopPairedFields(
+            first = { modifier ->
+                DesktopDatePickerField(
+                    value = state.dueDate,
+                    onValueChange = { onEvent(RemindersEvent.DueDateChanged(it)) },
+                    modifier = modifier,
+                    label = stringResource(Res.string.reminders_due_date_label),
+                    selectLabel = stringResource(Res.string.form_select_date),
+                    clearLabel = stringResource(Res.string.form_clear_date),
+                    optional = true,
+                    enabled = !mutationActive,
+                    errorMessage =
+                        state.errorMessage
+                            ?.takeIf { it == CarburaString.ValidationInvalidReminderDate }
+                            ?.remindersMessage(),
+                )
+            },
+            second = { modifier ->
+                OutlinedTextField(
+                    value = state.dueOdometerKm,
+                    onValueChange = { onEvent(RemindersEvent.DueOdometerChanged(it)) },
+                    modifier = modifier,
+                    enabled = !mutationActive,
+                    label = { Text(stringResource(Res.string.reminders_due_odometer_label)) },
+                    isError =
+                        state.errorMessage == CarburaString.ValidationNegativeReminderDueOdometer ||
+                            state.errorMessage == CarburaString.ValidationInvalidReminderDueOdometer,
+                    supportingText =
+                        state.errorMessage.supportingTextFor(
+                            CarburaString.ValidationNegativeReminderDueOdometer,
+                            CarburaString.ValidationInvalidReminderDueOdometer,
+                        ),
+                    singleLine = true,
+                )
+            },
+        )
+        state.errorMessage?.takeIf { it == CarburaString.ValidationMissingReminderDueTarget }?.let {
+            Text(it.remindersMessage(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
-        state.errorMessage?.let { Text(it.remindersMessage(), color = MaterialTheme.colorScheme.error) }
+        state.errorMessage?.takeUnless(::isInlineReminderError)?.let {
+            Text(it.remindersMessage(), color = MaterialTheme.colorScheme.error)
+        }
         if (state.hasPersistenceError) {
             Text(stringResource(Res.string.reminders_save_error), color = MaterialTheme.colorScheme.error)
         }
@@ -589,7 +629,7 @@ private fun ReminderFormDialog(
 
 @Composable
 private fun Reminder.dueDescription(): String {
-    val date = dueDate?.iso8601?.let { stringResource(Res.string.reminders_due_date, it) }
+    val date = dueDate?.iso8601?.let { stringResource(Res.string.reminders_due_date, formatDesktopDate(it)) }
     val odometer =
         dueOdometerKm?.let {
             stringResource(Res.string.reminders_due_odometer, NumberFormat.getIntegerInstance().format(it))
@@ -611,9 +651,24 @@ private fun CarburaString.remindersStringResource(): StringResource =
         CarburaString.ValidationMissingReminderVehicle -> Res.string.reminders_validation_missing_vehicle
         CarburaString.ValidationMissingReminderDueTarget -> Res.string.reminders_validation_missing_due_target
         CarburaString.ValidationNegativeReminderDueOdometer -> Res.string.reminders_validation_negative_due_odometer
+        CarburaString.ValidationInvalidReminderDueOdometer -> Res.string.reminders_validation_invalid_due_odometer
         CarburaString.ValidationInvalidReminderDate -> Res.string.reminders_validation_invalid_date
         else -> Res.string.reminders_validation_generic
     }
 
 @Composable
 private fun CarburaString.remindersMessage(): String = stringResource(remindersStringResource())
+
+private fun isInlineReminderError(error: CarburaString): Boolean =
+    error == CarburaString.ValidationBlankReminderTitle ||
+        error == CarburaString.ValidationMissingReminderVehicle ||
+        error == CarburaString.ValidationMissingReminderDueTarget ||
+        error == CarburaString.ValidationNegativeReminderDueOdometer ||
+        error == CarburaString.ValidationInvalidReminderDueOdometer ||
+        error == CarburaString.ValidationInvalidReminderDate
+
+@Composable
+private fun CarburaString?.supportingTextFor(vararg errors: CarburaString): (@Composable () -> Unit)? =
+    takeIf { it in errors }?.let { error ->
+        { Text(error.remindersMessage()) }
+    }

@@ -11,7 +11,7 @@ value class CalendarDate(
         val year = iso8601.substring(0, 4).toInt()
         val month = iso8601.substring(5, 7).toInt()
         val day = iso8601.substring(8, 10).toInt()
-        require(month in 1..12 && day in 1..daysInMonth(year, month)) {
+        require(year in 1..9999 && month in 1..12 && day in 1..daysInMonth(year, month)) {
             "CalendarDate must be a valid calendar date"
         }
     }

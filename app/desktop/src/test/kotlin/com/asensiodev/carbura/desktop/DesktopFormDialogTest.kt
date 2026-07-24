@@ -3,6 +3,8 @@ package com.asensiodev.carbura.desktop
 import androidx.compose.ui.unit.dp
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class DesktopFormDialogTest {
     @Test
@@ -15,5 +17,11 @@ class DesktopFormDialogTest {
     @Test
     fun formDialogHeightNeverBecomesNegative() {
         assertEquals(0.dp, desktopFormDialogMaxHeight(40.dp))
+    }
+
+    @Test
+    fun pairedFieldsStackAtConstrainedDialogWidths() {
+        assertTrue(useStackedDesktopFields(479.dp))
+        assertFalse(useStackedDesktopFields(480.dp))
     }
 }

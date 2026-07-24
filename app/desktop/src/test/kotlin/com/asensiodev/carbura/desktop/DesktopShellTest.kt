@@ -1,5 +1,7 @@
 package com.asensiodev.carbura.desktop
 
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.desktop.resources.Res
 import com.asensiodev.carbura.desktop.resources.shell_account_description
@@ -10,6 +12,7 @@ import com.asensiodev.carbura.desktop.resources.shell_destination_garage
 import com.asensiodev.carbura.desktop.resources.shell_destination_maintenance
 import com.asensiodev.carbura.desktop.resources.shell_destination_reminders
 import com.asensiodev.carbura.feature.garage.presentation.overview.GarageOverviewEffect
+import com.asensiodev.carbura.feature.maintenance.presentation.MaintenanceHistoryEvent
 import com.asensiodev.carbura.feature.reminders.presentation.RemindersEffect
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -38,6 +41,11 @@ class DesktopShellTest {
     }
 
     @Test
+    fun desktopWindowHasAPracticalMinimumSize() {
+        assertEquals(DpSize(800.dp, 600.dp), DesktopMinimumWindowSize)
+    }
+
+    @Test
     fun accountDestinationDescribesTheDedicatedLocalWorkspace() {
         assertEquals(Res.string.shell_account_eyebrow, DesktopDestination.Account.eyebrow)
         assertEquals(Res.string.shell_account_headline, DesktopDestination.Account.headline)
@@ -62,6 +70,12 @@ class DesktopShellTest {
         assertEquals(routedVehicleId, resolveMaintenanceVehicleSelection(null, routedVehicleId, availableVehicleIds))
         assertEquals(currentVehicleId, resolveMaintenanceVehicleSelection(currentVehicleId, routedVehicleId, availableVehicleIds))
         assertNull(resolveMaintenanceVehicleSelection(VehicleId("missing"), null, availableVehicleIds))
+    }
+
+    @Test
+    fun syncRevisionRefreshesTheSelectedMaintenanceHistory() {
+        assertNull(maintenanceHistoryRefreshEvent(0L))
+        assertEquals(MaintenanceHistoryEvent.Refresh, maintenanceHistoryRefreshEvent(1L))
     }
 
     @Test

@@ -14,6 +14,8 @@
     <string name="account_application_data_label">Datos de la aplicación</string>
     <string name="account_database_label">Base de datos</string>
     <string name="account_storage_description">Carbura gestiona esta base de datos. Cierra la aplicación antes de realizar una copia de seguridad externa.</string>
+    <string name="account_storage_show_details">Ver detalles</string>
+    <string name="account_storage_hide_details">Ocultar detalles</string>
     <string name="account_data_folder_action">Abrir carpeta de datos</string>
     <string name="account_data_folder_action_name">Carpeta de datos</string>
     <string name="account_action_unsupported">%1$s no es compatible con este sistema.</string>

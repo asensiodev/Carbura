@@ -15,6 +15,7 @@ import com.asensiodev.carbura.core.model.UserId
 import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
+import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.core.testing.TestDispatcherProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -66,6 +67,37 @@ class VehicleFormViewModelTest {
             advanceUntilIdle()
             assertTrue(viewModel.uiState.value.persistenceError)
             assertEquals("Coche familiar", viewModel.uiState.value.name)
+        }
+
+    @Test
+    fun malformedCreateOdometerIsRejectedWithoutPersistence() =
+        runTest {
+            val repository = FakeFormVehicleRepository()
+            val viewModel = viewModel(repository)
+            viewModel.onEvent(VehicleFormEvent.NameChanged("Coche familiar"))
+            viewModel.onEvent(VehicleFormEvent.OdometerChanged("12.5"))
+
+            viewModel.onEvent(VehicleFormEvent.SubmitVehicle)
+            advanceUntilIdle()
+
+            assertEquals(CarburaString.ValidationInvalidVehicleOdometer, viewModel.uiState.value.createValidationError)
+            assertEquals(0, repository.saveCalls)
+        }
+
+    @Test
+    fun resetCreateFormClearsAbandonedDraftAndErrors() =
+        runTest {
+            val viewModel = viewModel(FakeFormVehicleRepository())
+            viewModel.onEvent(VehicleFormEvent.NameChanged("Coche familiar"))
+            viewModel.onEvent(VehicleFormEvent.OdometerChanged("invalid"))
+            viewModel.onEvent(VehicleFormEvent.SubmitVehicle)
+            advanceUntilIdle()
+
+            viewModel.onEvent(VehicleFormEvent.ResetCreateForm)
+
+            assertEquals("", viewModel.uiState.value.name)
+            assertEquals("0", viewModel.uiState.value.odometerKm)
+            assertEquals(null, viewModel.uiState.value.createValidationError)
         }
 
     @Test
@@ -172,6 +204,40 @@ class VehicleFormViewModelTest {
             viewModel.onEvent(VehicleFormEvent.DeclineReminderSuggestions)
             advanceUntilIdle()
             assertEquals(CalendarDate("2027-05-10"), repository.vehicles.single().nextItvDate)
+        }
+
+    @Test
+    fun dismissingReminderDecisionCancelsCreateAndPreservesDraft() =
+        runTest {
+            val repository = FakeFormVehicleRepository()
+            val viewModel = viewModel(repository)
+            viewModel.onEvent(VehicleFormEvent.NameChanged("Coche"))
+            viewModel.onEvent(VehicleFormEvent.OdometerChanged("12000"))
+            viewModel.onEvent(VehicleFormEvent.NextItvDateChanged("2027-05-10"))
+            viewModel.onEvent(VehicleFormEvent.SubmitVehicle)
+            advanceUntilIdle()
+
+            viewModel.onEvent(VehicleFormEvent.DismissReminderSuggestions)
+            advanceUntilIdle()
+
+            assertEquals(null, viewModel.uiState.value.reminderConfirmationMode)
+            assertEquals("Coche", viewModel.uiState.value.name)
+            assertTrue(repository.vehicles.isEmpty())
+        }
+
+    @Test
+    fun successfulCreateResetsSelectedVehicleType() =
+        runTest {
+            val repository = FakeFormVehicleRepository()
+            val viewModel = viewModel(repository)
+            viewModel.onEvent(VehicleFormEvent.NameChanged("Moto"))
+            viewModel.onEvent(VehicleFormEvent.OdometerChanged("12000"))
+            viewModel.onEvent(VehicleFormEvent.TypeSelected(VehicleType.Motorcycle))
+
+            viewModel.onEvent(VehicleFormEvent.SubmitVehicle)
+            advanceUntilIdle()
+
+            assertEquals(VehicleType.Car, viewModel.uiState.value.selectedType)
         }
 
     @Test

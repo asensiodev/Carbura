@@ -101,6 +101,12 @@ fun OnboardingRoute(
                             viewModel.onEvent(
                                 OnboardingEvent.GoogleIdTokenReceived(googleIdTokenCredential.idToken),
                             )
+                        } else {
+                            viewModel.onEvent(
+                                OnboardingEvent.GoogleSignInError(
+                                    "Unexpected credential type: ${credential.type}",
+                                ),
+                            )
                         }
                     } catch (e: NoCredentialException) {
                         viewModel.onEvent(

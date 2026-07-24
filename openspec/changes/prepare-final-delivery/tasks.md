@@ -48,7 +48,7 @@
 
 - [x] 6.1 Select or install a full JDK containing `jpackage` without changing the Android toolchain unexpectedly
 - [x] 6.2 Generate a clean macOS DMG and inspect it for privileged credentials, tokens, and sensitive logs
-- [ ] 6.3 Install the exact DMG and verify launch, database migration, Google login, Keychain restoration, offline startup, and sign-out
+- [x] 6.3 Install the exact DMG and verify launch, database migration, Google login, Keychain restoration, offline startup, and sign-out
 - [x] 6.4 Record Windows MSI, signing, Credential Manager, and installed-runtime validation as external until run on Windows
 - [x] 6.5 Run strict OpenSpec validation, full quality checks, all tests, Android assembly, Desktop package checks, and `git diff --check`
 - [x] 6.6 Review, commit, and push packaging and release-evidence changes

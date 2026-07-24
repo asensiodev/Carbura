@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -19,6 +17,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -60,12 +60,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -80,6 +80,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.asensiodev.carbura.core.designsystem.ConstrainedScreen
 import com.asensiodev.carbura.core.designsystem.LoadingState
 import com.asensiodev.carbura.core.designsystem.RetryState
@@ -107,7 +108,10 @@ import org.koin.core.parameter.parametersOf
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import java.time.format.FormatStyle
+import java.util.Locale
 
 @Composable
 fun GarageRoute(
@@ -195,6 +199,7 @@ fun GarageRoute(
         onInsuranceRenewalDateChange = { vehicleFormViewModel.onEvent(VehicleFormEvent.InsuranceRenewalDateChanged(it)) },
         onNextServiceOdometerChange = { vehicleFormViewModel.onEvent(VehicleFormEvent.NextServiceOdometerChanged(it)) },
         onCreateVehicle = { vehicleFormViewModel.onEvent(VehicleFormEvent.SubmitVehicle) },
+        onResetCreateForm = { vehicleFormViewModel.onEvent(VehicleFormEvent.ResetCreateForm) },
         onSelectVehicle = { overviewViewModel.onEvent(GarageOverviewEvent.VehicleSelected(it.id)) },
         onDeleteVehicle = { overviewViewModel.onEvent(GarageOverviewEvent.DeleteVehicleConfirmed(it.id)) },
         onEditVehicle = { vehicleFormViewModel.onEvent(VehicleFormEvent.EditVehicleRequested(it)) },
@@ -212,6 +217,7 @@ fun GarageRoute(
         onCancelOdometerDecrease = { vehicleFormViewModel.onEvent(VehicleFormEvent.CancelOdometerDecrease) },
         onConfirmReminderSuggestions = { vehicleFormViewModel.onEvent(VehicleFormEvent.ConfirmReminderSuggestions) },
         onDeclineReminderSuggestions = { vehicleFormViewModel.onEvent(VehicleFormEvent.DeclineReminderSuggestions) },
+        onDismissReminderSuggestions = { vehicleFormViewModel.onEvent(VehicleFormEvent.DismissReminderSuggestions) },
         onRetry = { overviewViewModel.onEvent(GarageOverviewEvent.Retry) },
         modifier = modifier,
     )
@@ -219,13 +225,13 @@ fun GarageRoute(
 
 @Composable
 private fun rememberGarageOverviewViewModel(familyId: String): GarageOverviewViewModel =
-    remember(familyId) {
+    viewModel(key = "garage-overview-$familyId") {
         GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
     }
 
 @Composable
 private fun rememberVehicleFormViewModel(familyId: String): VehicleFormViewModel =
-    remember(familyId) {
+    viewModel(key = "garage-form-$familyId") {
         GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
     }
 
@@ -244,6 +250,7 @@ internal fun GarageScreen(
     onInsuranceRenewalDateChange: (String) -> Unit,
     onNextServiceOdometerChange: (String) -> Unit,
     onCreateVehicle: () -> Unit,
+    onResetCreateForm: () -> Unit = {},
     onSelectVehicle: (Vehicle) -> Unit,
     onDeleteVehicle: (Vehicle) -> Unit,
     onEditVehicle: (Vehicle) -> Unit,
@@ -261,10 +268,11 @@ internal fun GarageScreen(
     onCancelOdometerDecrease: () -> Unit,
     onConfirmReminderSuggestions: () -> Unit,
     onDeclineReminderSuggestions: () -> Unit,
+    onDismissReminderSuggestions: () -> Unit = {},
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showVehicleSheet by remember { mutableStateOf(false) }
+    var showVehicleSheet by rememberSaveable { mutableStateOf(false) }
     var vehiclePendingDeletion by remember { mutableStateOf<Vehicle?>(null) }
     var showDiscardEditConfirmation by remember(formState.editingVehicleId) { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -418,10 +426,13 @@ internal fun GarageScreen(
         )
     }
 
-    if (showVehicleSheet) {
+    if (showVehicleSheet && formState.reminderConfirmationMode == null) {
         ModalBottomSheet(
             onDismissRequest = {
-                if (formState.activeMutation != VehicleFormMutation.Creating) showVehicleSheet = false
+                if (formState.activeMutation != VehicleFormMutation.Creating) {
+                    onResetCreateForm()
+                    showVehicleSheet = false
+                }
             },
             sheetState = sheetState,
         ) {
@@ -473,7 +484,11 @@ internal fun GarageScreen(
         )
     }
 
-    if (formState.editingVehicleId != null && formState.odometerDecreaseConfirmation == null) {
+    if (
+        formState.editingVehicleId != null &&
+        formState.odometerDecreaseConfirmation == null &&
+        formState.reminderConfirmationMode == null
+    ) {
         val isSavingEdit = formState.activeMutation is VehicleFormMutation.Updating
         val requestFullEditDismiss = {
             if (!isSavingEdit) {
@@ -500,8 +515,7 @@ internal fun GarageScreen(
                     state = formState,
                     fullEdit = formState.editMode == VehicleEditMode.Full,
                     isSaving = isSavingEdit,
-                    onDismissRequest =
-                        if (formState.editMode == VehicleEditMode.Full) requestFullEditDismiss else onDismissEdit,
+                    onDismissRequest = requestFullEditDismiss,
                     onNameChange = onEditNameChange,
                     onLicensePlateChange = onEditLicensePlateChange,
                     onOdometerChange = onEditOdometerChange,
@@ -565,7 +579,7 @@ internal fun GarageScreen(
         val removesAllReminderTargets =
             formState.reminderConfirmationMode == VehicleSaveMode.Edit && formState.reminderSuggestions.isEmpty()
         AlertDialog(
-            onDismissRequest = onDeclineReminderSuggestions,
+            onDismissRequest = onDismissReminderSuggestions,
             title = {
                 Text(
                     stringResource(
@@ -639,7 +653,6 @@ private fun FullScreenVehicleEditor(
     onSubmit: () -> Unit,
 ) {
     BackHandler(onBack = onDismissRequest)
-    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Surface(
         modifier = Modifier.fillMaxSize().testTag("full_screen_vehicle_editor"),
         color = MaterialTheme.colorScheme.background,
@@ -673,20 +686,18 @@ private fun FullScreenVehicleEditor(
                 )
             },
             bottomBar = {
-                if (!imeVisible) {
-                    Surface(shadowElevation = 8.dp) {
-                        Button(
-                            onClick = onSubmit,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .navigationBarsPadding()
-                                    .padding(Spacings.spacing16)
-                                    .testTag("full_screen_vehicle_save"),
-                            enabled = !isSaving,
-                        ) {
-                            Text(stringResource(if (isSaving) R.string.saving_vehicle else R.string.save_changes_button))
-                        }
+                Surface(modifier = Modifier.imePadding(), shadowElevation = 8.dp) {
+                    Button(
+                        onClick = onSubmit,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(Spacings.spacing16)
+                                .testTag("full_screen_vehicle_save"),
+                        enabled = !isSaving,
+                    ) {
+                        Text(stringResource(if (isSaving) R.string.saving_vehicle else R.string.save_changes_button))
                     }
                 }
             },
@@ -699,8 +710,7 @@ private fun FullScreenVehicleEditor(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .imePadding(),
+                            .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
                 ) {
                     Text(
@@ -788,12 +798,20 @@ private fun VehicleEditFields(
     onInsuranceRenewalDateChange: (String) -> Unit,
     onNextServiceOdometerChange: (String) -> Unit,
 ) {
+    val validationErrorRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(state.editValidationError) {
+        if (state.editValidationError != null) validationErrorRequester.bringIntoView()
+    }
     if (fullEdit) {
         val nameError = state.editValidationError == CarburaString.ValidationBlankVehicleName
         OutlinedTextField(
             value = state.editName,
             onValueChange = onNameChange,
-            modifier = Modifier.fillMaxWidth().testTag("vehicle_edit_name"),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .testTag("vehicle_edit_name")
+                    .then(if (nameError) Modifier.bringIntoViewRequester(validationErrorRequester) else Modifier),
             label = { Text(stringResource(R.string.vehicle_name_label)) },
             isError = nameError,
             supportingText = if (nameError) ({ ValidationErrorText(state.editValidationError) }) else null,
@@ -812,24 +830,51 @@ private fun VehicleEditFields(
             label = stringResource(R.string.next_itv_date_label),
             value = state.editNextItvDate,
             onValueChange = onNextItvDateChange,
+            error = state.editValidationError == CarburaString.ValidationInvalidVehicleItvDate,
+            modifier =
+                if (state.editValidationError == CarburaString.ValidationInvalidVehicleItvDate) {
+                    Modifier.bringIntoViewRequester(validationErrorRequester)
+                } else {
+                    Modifier
+                },
         )
         OptionalDatePickerField(
             label = stringResource(R.string.insurance_renewal_date_label),
             value = state.editInsuranceRenewalDate,
             onValueChange = onInsuranceRenewalDateChange,
+            error = state.editValidationError == CarburaString.ValidationInvalidVehicleInsuranceDate,
+            modifier =
+                if (state.editValidationError == CarburaString.ValidationInvalidVehicleInsuranceDate) {
+                    Modifier.bringIntoViewRequester(validationErrorRequester)
+                } else {
+                    Modifier
+                },
         )
         OutlinedTextField(
             value = state.editNextServiceOdometerKm,
             onValueChange = onNextServiceOdometerChange,
-            modifier = Modifier.fillMaxWidth().testTag("vehicle_edit_next_service_odometer"),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .testTag("vehicle_edit_next_service_odometer")
+                    .then(
+                        if (
+                            state.editValidationError == CarburaString.ValidationNegativeVehicleServiceOdometer ||
+                            state.editValidationError == CarburaString.ValidationInvalidVehicleServiceOdometer
+                        ) {
+                            Modifier.bringIntoViewRequester(validationErrorRequester)
+                        } else {
+                            Modifier
+                        },
+                    ),
             label = { Text(stringResource(R.string.next_service_odometer_label)) },
             isError =
-                state.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
-                    state.editNextServiceOdometerKm.isInvalidOdometerInput(),
+                state.editValidationError == CarburaString.ValidationNegativeVehicleServiceOdometer ||
+                    state.editValidationError == CarburaString.ValidationInvalidVehicleServiceOdometer,
             supportingText =
                 if (
-                    state.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
-                    state.editNextServiceOdometerKm.isInvalidOdometerInput()
+                    state.editValidationError == CarburaString.ValidationNegativeVehicleServiceOdometer ||
+                    state.editValidationError == CarburaString.ValidationInvalidVehicleServiceOdometer
                 ) {
                     { ValidationErrorText(state.editValidationError) }
                 } else {
@@ -842,15 +887,27 @@ private fun VehicleEditFields(
     OutlinedTextField(
         value = state.editOdometerKm,
         onValueChange = onOdometerChange,
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .then(
+                    if (
+                        state.editValidationError == CarburaString.ValidationNegativeVehicleOdometer ||
+                        state.editValidationError == CarburaString.ValidationInvalidVehicleOdometer
+                    ) {
+                        Modifier.bringIntoViewRequester(validationErrorRequester)
+                    } else {
+                        Modifier
+                    },
+                ),
         label = { Text(stringResource(R.string.current_odometer_label)) },
         isError =
-            state.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
-                !state.editNextServiceOdometerKm.isInvalidOdometerInput(),
+            state.editValidationError == CarburaString.ValidationNegativeVehicleOdometer ||
+                state.editValidationError == CarburaString.ValidationInvalidVehicleOdometer,
         supportingText =
             if (
-                state.editValidationError == CarburaString.ValidationNegativeVehicleOdometer &&
-                !state.editNextServiceOdometerKm.isInvalidOdometerInput()
+                state.editValidationError == CarburaString.ValidationNegativeVehicleOdometer ||
+                state.editValidationError == CarburaString.ValidationInvalidVehicleOdometer
             ) {
                 { ValidationErrorText(state.editValidationError) }
             } else {
@@ -902,14 +959,15 @@ private fun OptionalDatePickerField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
+    error: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
-    val pickerState = rememberDatePickerState(initialSelectedDateMillis = value.toUtcMillisOrNull())
-    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
         Text(label, style = MaterialTheme.typography.labelLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
             OutlinedButton(onClick = { showDatePicker = true }) {
-                Text(value.ifBlank { stringResource(R.string.select_date_button) })
+                Text(value.localizedDateOrSelf().ifBlank { stringResource(R.string.select_date_button) })
             }
             if (value.isNotBlank()) {
                 TextButton(onClick = { onValueChange("") }) {
@@ -917,8 +975,14 @@ private fun OptionalDatePickerField(
                 }
             }
         }
+        if (error) ValidationErrorText(CarburaString.ValidationInvalidVehicleItvDate)
     }
     if (showDatePicker) {
+        val pickerState =
+            rememberDatePickerState(
+                initialSelectedDateMillis = value.toUtcMillisOrNull(),
+                yearRange = 1..9999,
+            )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
@@ -987,6 +1051,10 @@ internal fun VehicleForm(
     onCreateVehicle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val validationErrorRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(errorMessage) {
+        if (errorMessage != null) validationErrorRequester.bringIntoView()
+    }
     Card(
         modifier =
             modifier
@@ -1010,7 +1078,10 @@ internal fun VehicleForm(
             OutlinedTextField(
                 value = name,
                 onValueChange = onNameChange,
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(if (nameError) Modifier.bringIntoViewRequester(validationErrorRequester) else Modifier),
                 label = { Text(stringResource(R.string.vehicle_name_label)) },
                 isError = nameError,
                 supportingText =
@@ -1026,24 +1097,50 @@ internal fun VehicleForm(
                 label = stringResource(R.string.next_itv_date_label),
                 value = nextItvDate,
                 onValueChange = onNextItvDateChange,
+                error = errorMessage == CarburaString.ValidationInvalidVehicleItvDate,
+                modifier =
+                    if (errorMessage == CarburaString.ValidationInvalidVehicleItvDate) {
+                        Modifier.bringIntoViewRequester(validationErrorRequester)
+                    } else {
+                        Modifier
+                    },
             )
             OptionalDatePickerField(
                 label = stringResource(R.string.insurance_renewal_date_label),
                 value = insuranceRenewalDate,
                 onValueChange = onInsuranceRenewalDateChange,
+                error = errorMessage == CarburaString.ValidationInvalidVehicleInsuranceDate,
+                modifier =
+                    if (errorMessage == CarburaString.ValidationInvalidVehicleInsuranceDate) {
+                        Modifier.bringIntoViewRequester(validationErrorRequester)
+                    } else {
+                        Modifier
+                    },
             )
             OutlinedTextField(
                 value = nextServiceOdometer,
                 onValueChange = onNextServiceOdometerChange,
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (
+                                errorMessage == CarburaString.ValidationNegativeVehicleServiceOdometer ||
+                                errorMessage == CarburaString.ValidationInvalidVehicleServiceOdometer
+                            ) {
+                                Modifier.bringIntoViewRequester(validationErrorRequester)
+                            } else {
+                                Modifier
+                            },
+                        ),
                 label = { Text(stringResource(R.string.next_service_odometer_label)) },
                 isError =
-                    errorMessage == CarburaString.ValidationNegativeVehicleOdometer &&
-                        nextServiceOdometer.isInvalidOdometerInput(),
+                    errorMessage == CarburaString.ValidationNegativeVehicleServiceOdometer ||
+                        errorMessage == CarburaString.ValidationInvalidVehicleServiceOdometer,
                 supportingText =
                     if (
-                        errorMessage == CarburaString.ValidationNegativeVehicleOdometer &&
-                        nextServiceOdometer.isInvalidOdometerInput()
+                        errorMessage == CarburaString.ValidationNegativeVehicleServiceOdometer ||
+                        errorMessage == CarburaString.ValidationInvalidVehicleServiceOdometer
                     ) {
                         { ValidationErrorText(errorMessage) }
                     } else {
@@ -1059,15 +1156,27 @@ internal fun VehicleForm(
             OutlinedTextField(
                 value = odometer,
                 onValueChange = onOdometerChange,
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (
+                                errorMessage == CarburaString.ValidationNegativeVehicleOdometer ||
+                                errorMessage == CarburaString.ValidationInvalidVehicleOdometer
+                            ) {
+                                Modifier.bringIntoViewRequester(validationErrorRequester)
+                            } else {
+                                Modifier
+                            },
+                        ),
                 label = { Text(stringResource(R.string.current_odometer_label)) },
                 isError =
-                    errorMessage == CarburaString.ValidationNegativeVehicleOdometer &&
-                        !nextServiceOdometer.isInvalidOdometerInput(),
+                    errorMessage == CarburaString.ValidationNegativeVehicleOdometer ||
+                        errorMessage == CarburaString.ValidationInvalidVehicleOdometer,
                 supportingText =
                     if (
-                        errorMessage == CarburaString.ValidationNegativeVehicleOdometer &&
-                        !nextServiceOdometer.isInvalidOdometerInput()
+                        errorMessage == CarburaString.ValidationNegativeVehicleOdometer ||
+                        errorMessage == CarburaString.ValidationInvalidVehicleOdometer
                     ) {
                         { ValidationErrorText(errorMessage) }
                     } else {
@@ -1076,7 +1185,19 @@ internal fun VehicleForm(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
             )
-            if (errorMessage != null && !nameError && errorMessage != CarburaString.ValidationNegativeVehicleOdometer) {
+            if (
+                errorMessage != null &&
+                !nameError &&
+                errorMessage !in
+                setOf(
+                    CarburaString.ValidationNegativeVehicleOdometer,
+                    CarburaString.ValidationInvalidVehicleOdometer,
+                    CarburaString.ValidationNegativeVehicleServiceOdometer,
+                    CarburaString.ValidationInvalidVehicleServiceOdometer,
+                    CarburaString.ValidationInvalidVehicleItvDate,
+                    CarburaString.ValidationInvalidVehicleInsuranceDate,
+                )
+            ) {
                 ValidationErrorText(errorMessage)
             }
             if (persistenceError) {
@@ -1293,4 +1414,11 @@ private fun Long.toIsoDate(): String =
         .toLocalDate()
         .toString()
 
-private fun String.isInvalidOdometerInput(): Boolean = isNotBlank() && (toIntOrNull()?.let { it < 0 } != false)
+private fun String.localizedDateOrSelf(): String =
+    ifBlank { "" }.let { value ->
+        try {
+            LocalDate.parse(value).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault()))
+        } catch (_: DateTimeParseException) {
+            value
+        }
+    }

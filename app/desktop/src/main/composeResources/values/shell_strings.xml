@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="form_select_date">Seleccionar fecha</string>
+    <string name="form_clear_date">Borrar</string>
+    <string name="form_accept">Aceptar</string>
+    <string name="form_cancel">Cancelar</string>
     <string name="shell_app_name">Carbura</string>
     <string name="shell_brand">CARBURA</string>
     <string name="shell_destination_garage">Garaje</string>

@@ -278,6 +278,21 @@ class OnboardingViewModelTest {
         }
 
     @Test
+    fun unexpectedCredentialErrorClearsLoadingAndAllowsRetry() =
+        runTest {
+            val viewModel = onboardingViewModel()
+            viewModel.onEvent(OnboardingEvent.Started)
+            advanceUntilIdle()
+            viewModel.onEvent(OnboardingEvent.GoogleCredentialRequestStarted)
+
+            viewModel.onEvent(OnboardingEvent.GoogleSignInError("Unexpected credential type: password"))
+
+            assertFalse(viewModel.uiState.value.isLoading)
+            assertEquals(OnboardingError.SignInFailed, viewModel.uiState.value.error)
+            assertTrue(viewModel.uiState.value.canSubmitLogin)
+        }
+
+    @Test
     fun googleLoginAutoCreatesProfileAndNavigates() =
         runTest {
             val signInGate = CompletableDeferred<Unit>()

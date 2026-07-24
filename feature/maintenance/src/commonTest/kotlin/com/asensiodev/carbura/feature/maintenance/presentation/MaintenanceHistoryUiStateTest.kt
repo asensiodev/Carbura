@@ -46,6 +46,7 @@ class MaintenanceHistoryUiStateTest {
         val records = listOf(oil, custom)
 
         assertEquals(listOf(oil), state(records, "OIL CHANGE").visibleRecords)
+        assertEquals(listOf(oil), state(records, "cambio de aceite").visibleRecords)
         assertEquals(listOf(oil), state(records, "central").visibleRecords)
         assertEquals(listOf(custom), state(records, "ecu").visibleRecords)
         assertEquals(listOf(custom), state(records, "firmware").visibleRecords)

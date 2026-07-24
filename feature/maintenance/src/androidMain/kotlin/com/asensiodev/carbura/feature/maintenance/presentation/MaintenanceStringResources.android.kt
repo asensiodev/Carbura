@@ -9,6 +9,10 @@ internal fun CarburaString.maintenanceStringRes(): Int =
         CarburaString.MaintenanceDeletedMessage -> R.string.maintenance_deleted_message
         CarburaString.ValidationBlankMaintenanceType -> R.string.validation_blank_maintenance_type
         CarburaString.ValidationInvalidMaintenanceDate -> R.string.validation_invalid_maintenance_date
+        CarburaString.ValidationInvalidMaintenancePerformedDate -> R.string.validation_invalid_maintenance_date
+        CarburaString.ValidationInvalidMaintenanceNextDueDate -> R.string.validation_invalid_maintenance_date
+        CarburaString.ValidationInvalidMaintenanceOdometer -> R.string.validation_invalid_maintenance_odometer
+        CarburaString.ValidationInvalidMaintenanceCost -> R.string.validation_invalid_maintenance_cost
         CarburaString.ValidationNegativeMaintenanceOdometer -> R.string.validation_negative_maintenance_odometer
         CarburaString.ValidationNegativeMaintenanceCost -> R.string.validation_negative_maintenance_cost
         CarburaString.ValidationGeneric -> R.string.validation_generic

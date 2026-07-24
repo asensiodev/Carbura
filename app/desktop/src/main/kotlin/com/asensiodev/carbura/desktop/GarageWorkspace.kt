@@ -63,6 +63,8 @@ import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.desktop.resources.Res
+import com.asensiodev.carbura.desktop.resources.form_clear_date
+import com.asensiodev.carbura.desktop.resources.form_select_date
 import com.asensiodev.carbura.desktop.resources.garage_add_vehicle_button
 import com.asensiodev.carbura.desktop.resources.garage_add_vehicle_description_text
 import com.asensiodev.carbura.desktop.resources.garage_cancel_button
@@ -76,6 +78,10 @@ import com.asensiodev.carbura.desktop.resources.garage_delete_vehicle_descriptio
 import com.asensiodev.carbura.desktop.resources.garage_delete_vehicle_dialog_description
 import com.asensiodev.carbura.desktop.resources.garage_delete_vehicle_dialog_title
 import com.asensiodev.carbura.desktop.resources.garage_desktop_notification_notice
+import com.asensiodev.carbura.desktop.resources.garage_discard_cancel
+import com.asensiodev.carbura.desktop.resources.garage_discard_confirm
+import com.asensiodev.carbura.desktop.resources.garage_discard_description
+import com.asensiodev.carbura.desktop.resources.garage_discard_title
 import com.asensiodev.carbura.desktop.resources.garage_edit_vehicle_description
 import com.asensiodev.carbura.desktop.resources.garage_edit_vehicle_description_text
 import com.asensiodev.carbura.desktop.resources.garage_edit_vehicle_title
@@ -113,6 +119,8 @@ import com.asensiodev.carbura.desktop.resources.garage_update_odometer_help
 import com.asensiodev.carbura.desktop.resources.garage_update_odometer_title
 import com.asensiodev.carbura.desktop.resources.garage_validation_blank_vehicle_name
 import com.asensiodev.carbura.desktop.resources.garage_validation_generic
+import com.asensiodev.carbura.desktop.resources.garage_validation_invalid_vehicle_date
+import com.asensiodev.carbura.desktop.resources.garage_validation_invalid_vehicle_odometer
 import com.asensiodev.carbura.desktop.resources.garage_validation_negative_vehicle_odometer
 import com.asensiodev.carbura.desktop.resources.garage_vehicle_count_one
 import com.asensiodev.carbura.desktop.resources.garage_vehicle_count_other
@@ -162,6 +170,7 @@ internal fun GarageWorkspace(
     val formState by formViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var showCreateForm by remember { mutableStateOf(false) }
+    var showDiscardEditConfirmation by remember { mutableStateOf(false) }
     var pendingDeletion by remember { mutableStateOf<Vehicle?>(null) }
     val vehicleFallback = stringResource(Res.string.garage_vehicle_fallback)
     val vehicleDeletedMessage = stringResource(Res.string.garage_vehicle_deleted_message)
@@ -217,6 +226,7 @@ internal fun GarageWorkspace(
             GarageHeader(
                 vehicleCount = overviewState.vehicles.size,
                 compact = compact,
+                addEnabled = overviewState.deletingVehicleId == null && formState.activeMutation == null,
                 onAddVehicle = { showCreateForm = true },
             )
             GarageBody(
@@ -234,25 +244,62 @@ internal fun GarageWorkspace(
         }
     }
 
-    if (showCreateForm || formState.editMode == VehicleEditMode.Full) {
+    val childConfirmationVisible =
+        showDiscardEditConfirmation ||
+            formState.reminderConfirmationMode != null ||
+            formState.odometerDecreaseConfirmation != null
+    if ((showCreateForm || formState.editMode == VehicleEditMode.Full) && !childConfirmationVisible) {
         VehicleFormDialog(
             state = formState,
             isEditing = formState.editingVehicleId != null,
             onEvent = formViewModel::onEvent,
             onDismiss = {
                 if (formState.editingVehicleId != null) {
-                    formViewModel.onEvent(VehicleFormEvent.DismissVehicleEdit)
+                    if (formState.isEditDirty) {
+                        showDiscardEditConfirmation = true
+                    } else {
+                        formViewModel.onEvent(VehicleFormEvent.DismissVehicleEdit)
+                    }
                 } else {
+                    formViewModel.onEvent(VehicleFormEvent.ResetCreateForm)
                     showCreateForm = false
                 }
             },
         )
     }
 
-    if (formState.editMode == VehicleEditMode.Odometer) {
+    if (formState.editMode == VehicleEditMode.Odometer && !childConfirmationVisible) {
         QuickOdometerDialog(
             state = formState,
             onEvent = formViewModel::onEvent,
+            onDismiss = {
+                if (formState.isEditDirty) {
+                    showDiscardEditConfirmation = true
+                } else {
+                    formViewModel.onEvent(VehicleFormEvent.DismissVehicleEdit)
+                }
+            },
+        )
+    }
+
+    if (showDiscardEditConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDiscardEditConfirmation = false },
+            title = { Text(stringResource(Res.string.garage_discard_title)) },
+            text = { Text(stringResource(Res.string.garage_discard_description)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDiscardEditConfirmation = false
+                        formViewModel.onEvent(VehicleFormEvent.DismissVehicleEdit)
+                    },
+                ) { Text(stringResource(Res.string.garage_discard_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardEditConfirmation = false }) {
+                    Text(stringResource(Res.string.garage_discard_cancel))
+                }
+            },
         )
     }
 
@@ -287,8 +334,11 @@ internal fun GarageWorkspace(
     }
 
     formState.odometerDecreaseConfirmation?.let { confirmation ->
+        val mutationActive = formState.activeMutation != null
         AlertDialog(
-            onDismissRequest = { formViewModel.onEvent(VehicleFormEvent.CancelOdometerDecrease) },
+            onDismissRequest = {
+                if (!mutationActive) formViewModel.onEvent(VehicleFormEvent.CancelOdometerDecrease)
+            },
             title = { Text(stringResource(Res.string.garage_odometer_decrease_title)) },
             text = {
                 Text(
@@ -300,12 +350,18 @@ internal fun GarageWorkspace(
                 )
             },
             confirmButton = {
-                Button(onClick = { formViewModel.onEvent(VehicleFormEvent.ConfirmOdometerDecrease) }) {
+                Button(
+                    onClick = { formViewModel.onEvent(VehicleFormEvent.ConfirmOdometerDecrease) },
+                    enabled = !mutationActive,
+                ) {
                     Text(stringResource(Res.string.garage_confirm_button))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { formViewModel.onEvent(VehicleFormEvent.CancelOdometerDecrease) }) {
+                TextButton(
+                    onClick = { formViewModel.onEvent(VehicleFormEvent.CancelOdometerDecrease) },
+                    enabled = !mutationActive,
+                ) {
                     Text(stringResource(Res.string.garage_keep_current_value_button))
                 }
             },
@@ -317,8 +373,10 @@ internal fun GarageWorkspace(
 private fun GarageHeader(
     vehicleCount: Int,
     compact: Boolean,
+    addEnabled: Boolean,
     onAddVehicle: () -> Unit,
 ) {
+    val addVehicleLabel = stringResource(Res.string.garage_add_vehicle_button)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -345,11 +403,11 @@ private fun GarageHeader(
             )
         }
         Spacer(Modifier.width(20.dp))
-        Button(onClick = onAddVehicle) {
-            Icon(Icons.Default.Add, contentDescription = null)
+        Button(onClick = onAddVehicle, enabled = addEnabled) {
+            Icon(Icons.Default.Add, contentDescription = addVehicleLabel.takeIf { compact })
             if (!compact) {
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(Res.string.garage_add_vehicle_button))
+                Text(addVehicleLabel)
             }
         }
     }
@@ -433,6 +491,7 @@ private fun GarageBody(
                                     vehicle = vehicle,
                                     compact = compact,
                                     isDeleting = state.deletingVehicleId == vehicle.id,
+                                    actionsEnabled = state.deletingVehicleId == null,
                                     onOpenMaintenance = { onOpenMaintenance(vehicle) },
                                     onEdit = { onEditVehicle(vehicle) },
                                     onQuickOdometer = { onQuickOdometer(vehicle) },
@@ -452,6 +511,7 @@ private fun VehicleCard(
     vehicle: Vehicle,
     compact: Boolean,
     isDeleting: Boolean,
+    actionsEnabled: Boolean,
     onOpenMaintenance: () -> Unit,
     onEdit: () -> Unit,
     onQuickOdometer: () -> Unit,
@@ -490,28 +550,33 @@ private fun VehicleCard(
             if (isDeleting) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
             } else {
-                OutlinedButton(onClick = onOpenMaintenance) {
-                    Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp))
+                val historyLabel = stringResource(Res.string.garage_history_button)
+                OutlinedButton(onClick = onOpenMaintenance, enabled = actionsEnabled) {
+                    Icon(
+                        Icons.Default.History,
+                        contentDescription = historyLabel.takeIf { compact },
+                        modifier = Modifier.size(18.dp),
+                    )
                     if (!compact) {
                         Spacer(Modifier.width(6.dp))
-                        Text(stringResource(Res.string.garage_history_button))
+                        Text(historyLabel)
                     }
                 }
-                IconButton(onClick = onQuickOdometer) {
+                IconButton(onClick = onQuickOdometer, enabled = actionsEnabled) {
                     Icon(
                         Icons.Default.Speed,
                         contentDescription = stringResource(Res.string.garage_update_odometer_description, vehicle.name),
                         tint = Blue,
                     )
                 }
-                IconButton(onClick = onEdit) {
+                IconButton(onClick = onEdit, enabled = actionsEnabled) {
                     Icon(
                         Icons.Default.Edit,
                         contentDescription = stringResource(Res.string.garage_edit_vehicle_description, vehicle.name),
                         tint = Blue,
                     )
                 }
-                IconButton(onClick = onDelete) {
+                IconButton(onClick = onDelete, enabled = actionsEnabled) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = stringResource(Res.string.garage_delete_vehicle_description, vehicle.name),
@@ -613,7 +678,10 @@ private fun VehicleFormDialog(
                 onEvent(if (isEditing) VehicleFormEvent.EditNameChanged(it) else VehicleFormEvent.NameChanged(it))
             },
             modifier = Modifier.fillMaxWidth(),
+            enabled = !mutationActive,
             label = { Text(stringResource(Res.string.garage_vehicle_name_label)) },
+            isError = validationError == CarburaString.ValidationBlankVehicleName,
+            supportingText = validationError.supportingTextFor(CarburaString.ValidationBlankVehicleName),
             singleLine = true,
         )
         if (isEditing) {
@@ -621,6 +689,7 @@ private fun VehicleFormDialog(
                 value = state.editLicensePlate,
                 onValueChange = { onEvent(VehicleFormEvent.EditLicensePlateChanged(it)) },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = !mutationActive,
                 label = { Text(stringResource(Res.string.garage_license_plate_label)) },
                 singleLine = true,
             )
@@ -631,7 +700,16 @@ private fun VehicleFormDialog(
                 onEvent(if (isEditing) VehicleFormEvent.EditOdometerChanged(it) else VehicleFormEvent.OdometerChanged(it))
             },
             modifier = Modifier.fillMaxWidth(),
+            enabled = !mutationActive,
             label = { Text(stringResource(Res.string.garage_current_odometer_label)) },
+            isError =
+                validationError == CarburaString.ValidationNegativeVehicleOdometer ||
+                    validationError == CarburaString.ValidationInvalidVehicleOdometer,
+            supportingText =
+                validationError.supportingTextFor(
+                    CarburaString.ValidationNegativeVehicleOdometer,
+                    CarburaString.ValidationInvalidVehicleOdometer,
+                ),
             singleLine = true,
         )
         Text(stringResource(Res.string.garage_vehicle_type_label), color = Ink, fontWeight = FontWeight.SemiBold)
@@ -648,6 +726,7 @@ private fun VehicleFormDialog(
                             },
                         )
                     },
+                    enabled = !mutationActive,
                     label = { Text(type.displayName()) },
                 )
             }
@@ -658,7 +737,7 @@ private fun VehicleFormDialog(
             enabled = !mutationActive,
             onEvent = onEvent,
         )
-        validationError?.let {
+        validationError?.takeUnless(::isInlineGarageError)?.let {
             Text(it.garageMessage(), color = MaterialTheme.colorScheme.error)
         }
         if (state.persistenceError) {
@@ -680,34 +759,51 @@ private fun VehiclePlanningFields(
         color = Muted,
         style = MaterialTheme.typography.bodySmall,
     )
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(
-            value = if (isEditing) state.editNextItvDate else state.nextItvDate,
-            onValueChange = {
-                onEvent(if (isEditing) VehicleFormEvent.EditNextItvDateChanged(it) else VehicleFormEvent.NextItvDateChanged(it))
-            },
-            modifier = Modifier.weight(1f),
-            enabled = enabled,
-            label = { Text(stringResource(Res.string.garage_next_itv_date_label)) },
-            singleLine = true,
-        )
-        OutlinedTextField(
-            value = if (isEditing) state.editInsuranceRenewalDate else state.insuranceRenewalDate,
-            onValueChange = {
-                onEvent(
-                    if (isEditing) {
-                        VehicleFormEvent.EditInsuranceRenewalDateChanged(it)
-                    } else {
-                        VehicleFormEvent.InsuranceRenewalDateChanged(it)
-                    },
-                )
-            },
-            modifier = Modifier.weight(1f),
-            enabled = enabled,
-            label = { Text(stringResource(Res.string.garage_insurance_renewal_date_label)) },
-            singleLine = true,
-        )
-    }
+    val validationError = if (isEditing) state.editValidationError else state.createValidationError
+    DesktopPairedFields(
+        first = { modifier ->
+            DesktopDatePickerField(
+                value = if (isEditing) state.editNextItvDate else state.nextItvDate,
+                onValueChange = {
+                    onEvent(if (isEditing) VehicleFormEvent.EditNextItvDateChanged(it) else VehicleFormEvent.NextItvDateChanged(it))
+                },
+                modifier = modifier,
+                enabled = enabled,
+                label = stringResource(Res.string.garage_next_itv_date_label),
+                selectLabel = stringResource(Res.string.form_select_date),
+                clearLabel = stringResource(Res.string.form_clear_date),
+                optional = true,
+                errorMessage =
+                    validationError
+                        ?.takeIf { it == CarburaString.ValidationInvalidVehicleItvDate }
+                        ?.garageMessage(),
+            )
+        },
+        second = { modifier ->
+            DesktopDatePickerField(
+                value = if (isEditing) state.editInsuranceRenewalDate else state.insuranceRenewalDate,
+                onValueChange = {
+                    onEvent(
+                        if (isEditing) {
+                            VehicleFormEvent.EditInsuranceRenewalDateChanged(it)
+                        } else {
+                            VehicleFormEvent.InsuranceRenewalDateChanged(it)
+                        },
+                    )
+                },
+                modifier = modifier,
+                enabled = enabled,
+                label = stringResource(Res.string.garage_insurance_renewal_date_label),
+                selectLabel = stringResource(Res.string.form_select_date),
+                clearLabel = stringResource(Res.string.form_clear_date),
+                optional = true,
+                errorMessage =
+                    validationError
+                        ?.takeIf { it == CarburaString.ValidationInvalidVehicleInsuranceDate }
+                        ?.garageMessage(),
+            )
+        },
+    )
     OutlinedTextField(
         value = if (isEditing) state.editNextServiceOdometerKm else state.nextServiceOdometerKm,
         onValueChange = {
@@ -722,6 +818,14 @@ private fun VehiclePlanningFields(
         modifier = Modifier.fillMaxWidth(),
         enabled = enabled,
         label = { Text(stringResource(Res.string.garage_next_service_odometer_label)) },
+        isError =
+            validationError == CarburaString.ValidationNegativeVehicleServiceOdometer ||
+                validationError == CarburaString.ValidationInvalidVehicleServiceOdometer,
+        supportingText =
+            validationError.supportingTextFor(
+                CarburaString.ValidationNegativeVehicleServiceOdometer,
+                CarburaString.ValidationInvalidVehicleServiceOdometer,
+            ),
         singleLine = true,
     )
 }
@@ -730,10 +834,11 @@ private fun VehiclePlanningFields(
 private fun QuickOdometerDialog(
     state: VehicleFormUiState,
     onEvent: (VehicleFormEvent) -> Unit,
+    onDismiss: () -> Unit,
 ) {
     val mutationActive = state.activeMutation != null
     AlertDialog(
-        onDismissRequest = { if (!mutationActive) onEvent(VehicleFormEvent.DismissVehicleEdit) },
+        onDismissRequest = { if (!mutationActive) onDismiss() },
         title = { Text(stringResource(Res.string.garage_update_odometer_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -743,9 +848,19 @@ private fun QuickOdometerDialog(
                     onValueChange = { onEvent(VehicleFormEvent.EditOdometerChanged(it)) },
                     enabled = !mutationActive,
                     label = { Text(stringResource(Res.string.garage_current_odometer_label)) },
+                    isError =
+                        state.editValidationError == CarburaString.ValidationNegativeVehicleOdometer ||
+                            state.editValidationError == CarburaString.ValidationInvalidVehicleOdometer,
+                    supportingText =
+                        state.editValidationError.supportingTextFor(
+                            CarburaString.ValidationNegativeVehicleOdometer,
+                            CarburaString.ValidationInvalidVehicleOdometer,
+                        ),
                     singleLine = true,
                 )
-                state.editValidationError?.let { Text(it.garageMessage(), color = MaterialTheme.colorScheme.error) }
+                state.editValidationError?.takeUnless(::isInlineGarageError)?.let {
+                    Text(it.garageMessage(), color = MaterialTheme.colorScheme.error)
+                }
                 if (state.persistenceError) {
                     Text(stringResource(Res.string.garage_odometer_save_error), color = MaterialTheme.colorScheme.error)
                 }
@@ -765,7 +880,7 @@ private fun QuickOdometerDialog(
         },
         dismissButton = {
             TextButton(
-                onClick = { onEvent(VehicleFormEvent.DismissVehicleEdit) },
+                onClick = onDismiss,
                 enabled = !mutationActive,
             ) { Text(stringResource(Res.string.garage_cancel_button)) }
         },
@@ -777,6 +892,7 @@ private fun VehicleReminderConfirmationDialog(
     state: VehicleFormUiState,
     onEvent: (VehicleFormEvent) -> Unit,
 ) {
+    val mutationActive = state.activeMutation != null
     AlertDialog(
         onDismissRequest = {},
         title = { Text(stringResource(Res.string.garage_reminder_suggestions_title)) },
@@ -785,7 +901,9 @@ private fun VehicleReminderConfirmationDialog(
                 Text(stringResource(Res.string.garage_reminder_suggestions_description), color = Muted)
                 state.reminderSuggestions.forEach { suggestion ->
                     val target =
-                        suggestion.reminder.dueDate?.iso8601
+                        suggestion.reminder.dueDate
+                            ?.iso8601
+                            ?.let(::formatDesktopDate)
                             ?: suggestion.reminder.dueOdometerKm
                                 ?.formatKilometers()
                                 .orEmpty()
@@ -808,12 +926,18 @@ private fun VehicleReminderConfirmationDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { onEvent(VehicleFormEvent.ConfirmReminderSuggestions) }) {
+            Button(
+                onClick = { onEvent(VehicleFormEvent.ConfirmReminderSuggestions) },
+                enabled = !mutationActive,
+            ) {
                 Text(stringResource(Res.string.garage_create_reminders_button))
             }
         },
         dismissButton = {
-            TextButton(onClick = { onEvent(VehicleFormEvent.DeclineReminderSuggestions) }) {
+            TextButton(
+                onClick = { onEvent(VehicleFormEvent.DeclineReminderSuggestions) },
+                enabled = !mutationActive,
+            ) {
                 Text(stringResource(Res.string.garage_save_without_reminders_button))
             }
         },
@@ -838,5 +962,28 @@ private fun CarburaString.garageMessage(): String =
         CarburaString.ValidationBlankVehicleName -> stringResource(Res.string.garage_validation_blank_vehicle_name)
         CarburaString.ValidationNegativeVehicleOdometer ->
             stringResource(Res.string.garage_validation_negative_vehicle_odometer)
+        CarburaString.ValidationNegativeVehicleServiceOdometer ->
+            stringResource(Res.string.garage_validation_negative_vehicle_odometer)
+        CarburaString.ValidationInvalidVehicleOdometer,
+        CarburaString.ValidationInvalidVehicleServiceOdometer,
+        -> stringResource(Res.string.garage_validation_invalid_vehicle_odometer)
+        CarburaString.ValidationInvalidVehicleItvDate,
+        CarburaString.ValidationInvalidVehicleInsuranceDate,
+        -> stringResource(Res.string.garage_validation_invalid_vehicle_date)
         else -> stringResource(Res.string.garage_validation_generic)
+    }
+
+private fun isInlineGarageError(error: CarburaString): Boolean =
+    error == CarburaString.ValidationBlankVehicleName ||
+        error == CarburaString.ValidationNegativeVehicleOdometer ||
+        error == CarburaString.ValidationInvalidVehicleOdometer ||
+        error == CarburaString.ValidationNegativeVehicleServiceOdometer ||
+        error == CarburaString.ValidationInvalidVehicleServiceOdometer ||
+        error == CarburaString.ValidationInvalidVehicleItvDate ||
+        error == CarburaString.ValidationInvalidVehicleInsuranceDate
+
+@Composable
+private fun CarburaString?.supportingTextFor(vararg errors: CarburaString): (@Composable () -> Unit)? =
+    takeIf { it in errors }?.let { error ->
+        { Text(error.garageMessage()) }
     }

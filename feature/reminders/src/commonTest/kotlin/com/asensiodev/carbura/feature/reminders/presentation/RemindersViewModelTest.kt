@@ -345,6 +345,46 @@ class RemindersViewModelTest {
         }
 
     @Test
+    fun malformedOdometerIsRejectedEvenWhenDateIsValid() =
+        runTest {
+            val repository = FakeReminderRepository()
+            val viewModel =
+                remindersViewModel(
+                    vehicleRepository = FakeVehicleRepository(listOf(vehicle)),
+                    reminderRepository = repository,
+                )
+            viewModel.onEvent(RemindersEvent.Started)
+            advanceUntilIdle()
+            viewModel.onEvent(RemindersEvent.TitleChanged("Pasar ITV"))
+            viewModel.onEvent(RemindersEvent.DueDateChanged("2026-07-10"))
+            viewModel.onEvent(RemindersEvent.DueOdometerChanged("12.5"))
+
+            viewModel.onEvent(RemindersEvent.SubmitReminder)
+            advanceUntilIdle()
+
+            assertEquals(CarburaString.ValidationInvalidReminderDueOdometer, viewModel.uiState.value.errorMessage)
+            assertEquals(0, repository.saveCalls)
+        }
+
+    @Test
+    fun dismissingCreateFormClearsDraftAndErrors() =
+        runTest {
+            val viewModel = remindersViewModel(vehicleRepository = FakeVehicleRepository(listOf(vehicle)))
+            viewModel.onEvent(RemindersEvent.Started)
+            advanceUntilIdle()
+            viewModel.onEvent(RemindersEvent.TitleChanged("Pasar ITV"))
+            viewModel.onEvent(RemindersEvent.DueOdometerChanged("invalid"))
+            viewModel.onEvent(RemindersEvent.SubmitReminder)
+            advanceUntilIdle()
+
+            viewModel.onEvent(RemindersEvent.DismissReminderForm)
+
+            assertEquals("", viewModel.uiState.value.title)
+            assertEquals("", viewModel.uiState.value.dueOdometerKm)
+            assertEquals(null, viewModel.uiState.value.errorMessage)
+        }
+
+    @Test
     fun completeReminderRemovesItFromPendingList() =
         runTest {
             val repository = FakeReminderRepository(listOf(reminder("itv")))

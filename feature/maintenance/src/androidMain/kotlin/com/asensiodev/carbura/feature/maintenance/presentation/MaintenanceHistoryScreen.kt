@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -61,11 +59,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -78,6 +76,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.core.designsystem.SwipeToDeleteContainer
 import com.asensiodev.carbura.core.model.CalendarDate
@@ -234,7 +233,7 @@ private fun rememberMaintenanceHistoryViewModel(
     vehicleId: String,
     familyId: String,
 ): MaintenanceHistoryViewModel =
-    remember(vehicleId, familyId) {
+    viewModel(key = "maintenance-$familyId-$vehicleId") {
         GlobalContext.get().get { parametersOf(VehicleId(vehicleId), FamilyId(familyId)) }
     }
 
@@ -264,7 +263,8 @@ internal fun MaintenanceHistoryScreen(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showMaintenanceForm by remember { mutableStateOf(false) }
+    var showMaintenanceForm by rememberSaveable { mutableStateOf(false) }
+    var showDiscardEditConfirmation by remember { mutableStateOf(false) }
     var recordPendingDeletion by remember { mutableStateOf<MaintenanceRecord?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val isCompact = LocalConfiguration.current.screenWidthDp < 600
@@ -418,13 +418,17 @@ internal fun MaintenanceHistoryScreen(
         )
     }
 
-    if (showMaintenanceForm) {
+    if (showMaintenanceForm && !state.showFutureReminderOffer) {
         FullScreenMaintenanceForm(
             state = state,
             onDismissRequest = {
                 if (state.activeMutation == null) {
-                    if (state.isEditing) onCancelMaintenanceEdit()
-                    showMaintenanceForm = false
+                    if (state.isEditing && state.isEditDirty) {
+                        showDiscardEditConfirmation = true
+                    } else {
+                        onCancelMaintenanceEdit()
+                        showMaintenanceForm = false
+                    }
                 }
             },
             onTypeSelected = onTypeSelected,
@@ -439,9 +443,33 @@ internal fun MaintenanceHistoryScreen(
         )
     }
 
+    if (showDiscardEditConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDiscardEditConfirmation = false },
+            title = { Text(stringResource(R.string.maintenance_discard_title)) },
+            text = { Text(stringResource(R.string.maintenance_discard_description)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDiscardEditConfirmation = false
+                        onCancelMaintenanceEdit()
+                        showMaintenanceForm = false
+                    },
+                ) { Text(stringResource(R.string.maintenance_discard_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardEditConfirmation = false }) {
+                    Text(stringResource(R.string.maintenance_discard_cancel))
+                }
+            },
+        )
+    }
+
     if (state.showFutureReminderOffer) {
         AlertDialog(
-            onDismissRequest = onDismissFutureReminderOffer,
+            onDismissRequest = {
+                if (state.activeMutation == null) onDismissFutureReminderOffer()
+            },
             modifier = Modifier.testTag("future_maintenance_reminder_dialog"),
             title = { Text(stringResource(R.string.future_maintenance_reminder_title)) },
             text = {
@@ -453,12 +481,12 @@ internal fun MaintenanceHistoryScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = onSaveFutureWithReminder) {
+                TextButton(onClick = onSaveFutureWithReminder, enabled = state.activeMutation == null) {
                     Text(stringResource(R.string.future_maintenance_reminder_confirm))
                 }
             },
             dismissButton = {
-                TextButton(onClick = onSaveFutureOnly) {
+                TextButton(onClick = onSaveFutureOnly, enabled = state.activeMutation == null) {
                     Text(stringResource(R.string.future_maintenance_reminder_save_only))
                 }
             },
@@ -468,7 +496,9 @@ internal fun MaintenanceHistoryScreen(
     recordPendingDeletion?.let { record ->
         val type = record.localizedDisplayType()
         AlertDialog(
-            onDismissRequest = { recordPendingDeletion = null },
+            onDismissRequest = {
+                if (state.activeMutation == null) recordPendingDeletion = null
+            },
             title = { Text(stringResource(R.string.delete_maintenance_dialog_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
@@ -491,7 +521,7 @@ internal fun MaintenanceHistoryScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { recordPendingDeletion = null }) {
+                TextButton(onClick = { recordPendingDeletion = null }, enabled = state.activeMutation == null) {
                     Text(stringResource(R.string.delete_maintenance_cancel_button))
                 }
             },
@@ -533,7 +563,6 @@ private fun FullScreenMaintenanceForm(
     onSubmitMaintenance: () -> Unit,
 ) {
     BackHandler(onBack = onDismissRequest)
-    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Surface(
         modifier = Modifier.fillMaxSize().testTag("full_screen_maintenance_form"),
         color = MaterialTheme.colorScheme.background,
@@ -568,34 +597,32 @@ private fun FullScreenMaintenanceForm(
                 )
             },
             bottomBar = {
-                if (!imeVisible) {
-                    Surface(shadowElevation = 8.dp) {
-                        Button(
-                            onClick = onSubmitMaintenance,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .navigationBarsPadding()
-                                    .padding(Spacings.spacing16)
-                                    .testTag("save_maintenance_button"),
-                            enabled = state.activeMutation == null,
-                        ) {
-                            Text(
-                                if (state.isSaving) {
-                                    stringResource(R.string.maintenance_saving_status)
-                                } else {
-                                    stringResource(
-                                        if (state.isEditing) R.string.update_maintenance_button else R.string.save_maintenance_button,
-                                    )
-                                },
-                            )
-                        }
+                Surface(modifier = Modifier.imePadding(), shadowElevation = 8.dp) {
+                    Button(
+                        onClick = onSubmitMaintenance,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(Spacings.spacing16)
+                                .testTag("save_maintenance_button"),
+                        enabled = state.activeMutation == null,
+                    ) {
+                        Text(
+                            if (state.isSaving) {
+                                stringResource(R.string.maintenance_saving_status)
+                            } else {
+                                stringResource(
+                                    if (state.isEditing) R.string.update_maintenance_button else R.string.save_maintenance_button,
+                                )
+                            },
+                        )
                     }
                 }
             },
         ) { contentPadding ->
             Box(
-                modifier = Modifier.fillMaxSize().padding(contentPadding).imePadding(),
+                modifier = Modifier.fillMaxSize().padding(contentPadding),
                 contentAlignment = Alignment.TopCenter,
             ) {
                 MaintenanceForm(
@@ -633,10 +660,13 @@ private fun MaintenanceForm(
     modifier: Modifier = Modifier,
 ) {
     val customTypeErrorRequester = remember { BringIntoViewRequester() }
+    val validationErrorRequester = remember { BringIntoViewRequester() }
     var typeMenuExpanded by remember { mutableStateOf(false) }
     LaunchedEffect(state.validationError) {
         if (state.validationError == CarburaString.ValidationBlankMaintenanceType) {
             customTypeErrorRequester.bringIntoView()
+        } else if (state.validationError != null) {
+            validationErrorRequester.bringIntoView()
         }
     }
     Column(
@@ -700,8 +730,19 @@ private fun MaintenanceForm(
         MaintenanceDatePickerField(
             value = state.performedOn,
             onValueChange = onPerformedOnChange,
-            error = state.validationError == CarburaString.ValidationInvalidMaintenanceDate,
+            error =
+                state.validationError == CarburaString.ValidationInvalidMaintenanceDate ||
+                    state.validationError == CarburaString.ValidationInvalidMaintenancePerformedDate,
             label = stringResource(R.string.maintenance_date_label),
+            modifier =
+                if (
+                    state.validationError == CarburaString.ValidationInvalidMaintenanceDate ||
+                    state.validationError == CarburaString.ValidationInvalidMaintenancePerformedDate
+                ) {
+                    Modifier.bringIntoViewRequester(validationErrorRequester)
+                } else {
+                    Modifier
+                },
         )
         if (state.supportsNextDueDate) {
             Text(
@@ -712,7 +753,7 @@ private fun MaintenanceForm(
             MaintenanceDatePickerField(
                 value = state.nextDueDate,
                 onValueChange = onNextDueDateChange,
-                error = state.validationError == CarburaString.ValidationInvalidMaintenanceDate,
+                error = state.validationError == CarburaString.ValidationInvalidMaintenanceNextDueDate,
                 label =
                     stringResource(
                         if (state.maintenanceTypeCode == MaintenanceTypeCode.Itv) {
@@ -722,17 +763,40 @@ private fun MaintenanceForm(
                         },
                     ),
                 optional = true,
+                modifier =
+                    if (state.validationError == CarburaString.ValidationInvalidMaintenanceNextDueDate) {
+                        Modifier.bringIntoViewRequester(validationErrorRequester)
+                    } else {
+                        Modifier
+                    },
             )
         }
         OutlinedTextField(
             value = state.odometerKm,
             onValueChange = onOdometerChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (
+                            state.validationError == CarburaString.ValidationNegativeMaintenanceOdometer ||
+                            state.validationError == CarburaString.ValidationInvalidMaintenanceOdometer
+                        ) {
+                            Modifier.bringIntoViewRequester(validationErrorRequester)
+                        } else {
+                            Modifier
+                        },
+                    ),
             label = { Text(stringResource(R.string.maintenance_odometer_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            isError = state.validationError == CarburaString.ValidationNegativeMaintenanceOdometer,
+            isError =
+                state.validationError == CarburaString.ValidationNegativeMaintenanceOdometer ||
+                    state.validationError == CarburaString.ValidationInvalidMaintenanceOdometer,
             supportingText =
-                if (state.validationError == CarburaString.ValidationNegativeMaintenanceOdometer) {
+                if (
+                    state.validationError == CarburaString.ValidationNegativeMaintenanceOdometer ||
+                    state.validationError == CarburaString.ValidationInvalidMaintenanceOdometer
+                ) {
                     validationSupportingText(state.validationError)
                 } else {
                     null
@@ -742,12 +806,29 @@ private fun MaintenanceForm(
         OutlinedTextField(
             value = state.cost,
             onValueChange = onCostChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (
+                            state.validationError == CarburaString.ValidationNegativeMaintenanceCost ||
+                            state.validationError == CarburaString.ValidationInvalidMaintenanceCost
+                        ) {
+                            Modifier.bringIntoViewRequester(validationErrorRequester)
+                        } else {
+                            Modifier
+                        },
+                    ),
             label = { Text(stringResource(R.string.maintenance_cost_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            isError = state.validationError == CarburaString.ValidationNegativeMaintenanceCost,
+            isError =
+                state.validationError == CarburaString.ValidationNegativeMaintenanceCost ||
+                    state.validationError == CarburaString.ValidationInvalidMaintenanceCost,
             supportingText =
-                if (state.validationError == CarburaString.ValidationNegativeMaintenanceCost) {
+                if (
+                    state.validationError == CarburaString.ValidationNegativeMaintenanceCost ||
+                    state.validationError == CarburaString.ValidationInvalidMaintenanceCost
+                ) {
                     validationSupportingText(state.validationError)
                 } else {
                     null
@@ -797,13 +878,12 @@ private fun MaintenanceDatePickerField(
     error: Boolean,
     label: String,
     optional: Boolean = false,
+    modifier: Modifier = Modifier,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = value.toUtcMillisOrNull())
-
     val errorMessage = stringResource(R.string.validation_invalid_maintenance_date)
     Column(
-        modifier = Modifier.semantics { if (error) error(errorMessage) },
+        modifier = modifier.semantics { if (error) error(errorMessage) },
         verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
     ) {
         Text(
@@ -814,7 +894,7 @@ private fun MaintenanceDatePickerField(
             onClick = { showDatePicker = true },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(value.ifBlank { stringResource(R.string.maintenance_select_date) })
+            Text(value.localizedDateOrSelf().ifBlank { stringResource(R.string.maintenance_select_date) })
         }
         if (optional && value.isNotBlank()) {
             TextButton(onClick = { onValueChange("") }) {
@@ -827,6 +907,11 @@ private fun MaintenanceDatePickerField(
     }
 
     if (showDatePicker) {
+        val datePickerState =
+            rememberDatePickerState(
+                initialSelectedDateMillis = value.toUtcMillisOrNull(),
+                yearRange = 1..9999,
+            )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
@@ -1041,6 +1126,15 @@ private fun String.toUtcMillisOrNull(): Long? =
             .toEpochMilli()
     } catch (_: DateTimeParseException) {
         null
+    }
+
+private fun String.localizedDateOrSelf(): String =
+    ifBlank { "" }.let { value ->
+        try {
+            LocalDate.parse(value).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault()))
+        } catch (_: DateTimeParseException) {
+            value
+        }
     }
 
 private fun Long.toIsoDate(): String =

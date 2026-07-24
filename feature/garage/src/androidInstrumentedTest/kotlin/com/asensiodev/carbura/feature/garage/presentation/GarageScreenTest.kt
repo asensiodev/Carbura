@@ -188,6 +188,36 @@ class GarageScreenTest {
     }
 
     @Test
+    fun malformedPastedOdometerKeepsValueAndMarksItsField() {
+        composeRule.setContent {
+            CarburaTheme {
+                VehicleForm(
+                    title = "Añade tu primer vehículo",
+                    name = "Coche familiar",
+                    odometer = "12e3",
+                    selectedType = VehicleType.Car,
+                    nextItvDate = "",
+                    insuranceRenewalDate = "",
+                    nextServiceOdometer = "",
+                    errorMessage = CarburaString.ValidationInvalidVehicleOdometer,
+                    persistenceError = false,
+                    isSaving = false,
+                    onNameChange = {},
+                    onOdometerChange = {},
+                    onTypeSelected = {},
+                    onNextItvDateChange = {},
+                    onInsuranceRenewalDateChange = {},
+                    onNextServiceOdometerChange = {},
+                    onCreateVehicle = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("12e3").assertIsDisplayed()
+        composeRule.onNodeWithText("Introduce kilómetros enteros dentro del rango permitido.").assertIsDisplayed()
+    }
+
+    @Test
     fun compactFullEditUsesFullScreenAndKeepsSaveReachableWithLongContent() {
         var submitted = false
         composeRule.setContent {

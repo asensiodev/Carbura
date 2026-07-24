@@ -15,5 +15,6 @@ internal fun CarburaString.remindersStringRes(): Int =
         CarburaString.ValidationMissingReminderDueTarget -> R.string.validation_missing_reminder_due_target
         CarburaString.ValidationNegativeReminderDueOdometer -> R.string.validation_negative_reminder_due_odometer
         CarburaString.ValidationInvalidReminderDate -> R.string.validation_invalid_reminder_date
+        CarburaString.ValidationInvalidReminderDueOdometer -> R.string.validation_invalid_reminder_odometer
         else -> R.string.validation_generic
     }

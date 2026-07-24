@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -69,6 +71,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -91,6 +94,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.asensiodev.carbura.core.designsystem.Spacings
 import com.asensiodev.carbura.core.designsystem.SwipeToDeleteContainer
 import com.asensiodev.carbura.core.model.FamilyId
@@ -104,7 +108,10 @@ import org.koin.core.parameter.parametersOf
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import java.time.format.FormatStyle
+import java.util.Locale
 
 @Composable
 fun RemindersRoute(
@@ -206,6 +213,7 @@ fun RemindersRoute(
         onDueDateChange = { viewModel.onEvent(RemindersEvent.DueDateChanged(it)) },
         onDueOdometerChange = { viewModel.onEvent(RemindersEvent.DueOdometerChanged(it)) },
         onSubmitReminder = { viewModel.onEvent(RemindersEvent.SubmitReminder) },
+        onDismissCreate = { viewModel.onEvent(RemindersEvent.DismissReminderForm) },
         onCompleteReminder = { viewModel.onEvent(RemindersEvent.CompleteReminder(it.id)) },
         onDeleteReminder = { viewModel.onEvent(RemindersEvent.DeleteReminder(it.id)) },
         onRetry = { viewModel.onEvent(RemindersEvent.Retry) },
@@ -222,7 +230,7 @@ fun RemindersRoute(
 
 @Composable
 private fun rememberRemindersViewModel(familyId: String): RemindersViewModel =
-    remember(familyId) {
+    viewModel(key = "reminders-$familyId") {
         GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
     }
 
@@ -240,6 +248,7 @@ internal fun RemindersScreen(
     onDueDateChange: (String) -> Unit,
     onDueOdometerChange: (String) -> Unit,
     onSubmitReminder: () -> Unit,
+    onDismissCreate: () -> Unit = {},
     onCompleteReminder: (Reminder) -> Unit,
     onDeleteReminder: (Reminder) -> Unit,
     onRetry: () -> Unit,
@@ -249,7 +258,7 @@ internal fun RemindersScreen(
     onOpenNotificationSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showReminderSheet by remember { mutableStateOf(false) }
+    var showReminderSheet by rememberSaveable { mutableStateOf(false) }
     var reminderPendingDeletion by remember { mutableStateOf<Reminder?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val snackbarHostState = remember { SnackbarHostState() }
@@ -413,7 +422,12 @@ internal fun RemindersScreen(
 
     if (showReminderSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showReminderSheet = false },
+            onDismissRequest = {
+                if (state.activeAction != ReminderAction.Create) {
+                    onDismissCreate()
+                    showReminderSheet = false
+                }
+            },
             sheetState = sheetState,
         ) {
             ReminderForm(
@@ -437,7 +451,9 @@ internal fun RemindersScreen(
 
     reminderPendingDeletion?.let { reminder ->
         AlertDialog(
-            onDismissRequest = { reminderPendingDeletion = null },
+            onDismissRequest = {
+                if (state.activeAction == null) reminderPendingDeletion = null
+            },
             title = { Text(stringResource(R.string.delete_reminder_dialog_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
@@ -450,6 +466,7 @@ internal fun RemindersScreen(
             },
             confirmButton = {
                 TextButton(
+                    enabled = state.activeAction == null,
                     onClick = {
                         reminderPendingDeletion = null
                         onDeleteReminder(reminder)
@@ -459,7 +476,7 @@ internal fun RemindersScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { reminderPendingDeletion = null }) {
+                TextButton(onClick = { reminderPendingDeletion = null }, enabled = state.activeAction == null) {
                     Text(stringResource(R.string.delete_reminder_cancel_button))
                 }
             },
@@ -618,6 +635,10 @@ private fun ReminderForm(
     onSubmitReminder: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val validationErrorRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(state.errorMessage) {
+        if (state.errorMessage != null) validationErrorRequester.bringIntoView()
+    }
     Card(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier =
@@ -633,8 +654,24 @@ private fun ReminderForm(
             OutlinedTextField(
                 value = state.title,
                 onValueChange = onTitleChange,
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (state.errorMessage == CarburaString.ValidationBlankReminderTitle) {
+                                Modifier.bringIntoViewRequester(validationErrorRequester)
+                            } else {
+                                Modifier
+                            },
+                        ),
                 label = { Text(stringResource(R.string.reminder_title_label)) },
+                isError = state.errorMessage == CarburaString.ValidationBlankReminderTitle,
+                supportingText =
+                    if (state.errorMessage == CarburaString.ValidationBlankReminderTitle) {
+                        { ReminderValidationText(state.errorMessage) }
+                    } else {
+                        null
+                    },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 singleLine = true,
             )
@@ -646,16 +683,56 @@ private fun ReminderForm(
             ReminderDatePickerField(
                 value = state.dueDate,
                 onValueChange = onDueDateChange,
+                error = state.errorMessage == CarburaString.ValidationInvalidReminderDate,
+                modifier =
+                    if (state.errorMessage == CarburaString.ValidationInvalidReminderDate) {
+                        Modifier.bringIntoViewRequester(validationErrorRequester)
+                    } else {
+                        Modifier
+                    },
             )
             OutlinedTextField(
                 value = state.dueOdometerKm,
                 onValueChange = onDueOdometerChange,
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (
+                                state.errorMessage == CarburaString.ValidationNegativeReminderDueOdometer ||
+                                state.errorMessage == CarburaString.ValidationInvalidReminderDueOdometer
+                            ) {
+                                Modifier.bringIntoViewRequester(validationErrorRequester)
+                            } else {
+                                Modifier
+                            },
+                        ),
                 label = { Text(stringResource(R.string.reminder_due_odometer_label)) },
+                isError =
+                    state.errorMessage == CarburaString.ValidationNegativeReminderDueOdometer ||
+                        state.errorMessage == CarburaString.ValidationInvalidReminderDueOdometer,
+                supportingText =
+                    if (
+                        state.errorMessage == CarburaString.ValidationNegativeReminderDueOdometer ||
+                        state.errorMessage == CarburaString.ValidationInvalidReminderDueOdometer
+                    ) {
+                        { ReminderValidationText(state.errorMessage) }
+                    } else {
+                        null
+                    },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
             )
-            if (state.errorMessage != null) {
+            if (
+                state.errorMessage != null &&
+                state.errorMessage !in
+                setOf(
+                    CarburaString.ValidationBlankReminderTitle,
+                    CarburaString.ValidationInvalidReminderDate,
+                    CarburaString.ValidationNegativeReminderDueOdometer,
+                    CarburaString.ValidationInvalidReminderDueOdometer,
+                )
+            ) {
                 val validationMessage = stringResource(state.errorMessage.remindersStringRes())
                 Text(
                     text = validationMessage,
@@ -705,11 +782,12 @@ private fun ReminderForm(
 private fun ReminderDatePickerField(
     value: String,
     onValueChange: (String) -> Unit,
+    error: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = value.toUtcMillisOrNull())
 
-    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
         Text(
             text = stringResource(R.string.reminder_due_date_label),
             style = MaterialTheme.typography.labelLarge,
@@ -718,11 +796,22 @@ private fun ReminderDatePickerField(
             onClick = { showDatePicker = true },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(value.ifBlank { stringResource(R.string.select_reminder_due_date_button) })
+            Text(value.localizedDateOrSelf().ifBlank { stringResource(R.string.select_reminder_due_date_button) })
         }
+        if (value.isNotBlank()) {
+            TextButton(onClick = { onValueChange("") }) {
+                Text(stringResource(R.string.clear_reminder_due_date_button))
+            }
+        }
+        if (error) ReminderValidationText(CarburaString.ValidationInvalidReminderDate)
     }
 
     if (showDatePicker) {
+        val datePickerState =
+            rememberDatePickerState(
+                initialSelectedDateMillis = value.toUtcMillisOrNull(),
+                yearRange = 1..9999,
+            )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
@@ -935,7 +1024,7 @@ private fun ReminderCard(
                 Text(reminder.title, style = MaterialTheme.typography.titleMedium)
                 Text(vehicleName, style = MaterialTheme.typography.bodyMedium)
                 reminder.dueDate?.let {
-                    Text(it.iso8601, style = MaterialTheme.typography.bodyMedium)
+                    Text(it.iso8601.localizedDateOrSelf(), style = MaterialTheme.typography.bodyMedium)
                 }
                 reminder.dueOdometerKm?.let {
                     Text("$it km", style = MaterialTheme.typography.bodyMedium)
@@ -1015,6 +1104,27 @@ private fun String.toUtcMillisOrNull(): Long? =
             .toEpochMilli()
     } catch (_: DateTimeParseException) {
         null
+    }
+
+@Composable
+private fun ReminderValidationText(message: CarburaString?) {
+    if (message == null) return
+    val text = stringResource(message.remindersStringRes())
+    Text(
+        text = text,
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.semantics { error(text) },
+    )
+}
+
+private fun String.localizedDateOrSelf(): String =
+    ifBlank { "" }.let { value ->
+        try {
+            LocalDate.parse(value).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault()))
+        } catch (_: DateTimeParseException) {
+            value
+        }
     }
 
 private fun Long.toIsoDate(): String =

@@ -69,6 +69,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
@@ -717,7 +718,7 @@ private fun String?.cleanUserText(): String? =
 
 @Composable
 private fun rememberOnboardingViewModel(): OnboardingViewModel =
-    remember {
+    viewModel {
         GlobalContext.get().get()
     }
 

@@ -237,7 +237,7 @@ class MaintenanceHistoryViewModelTest {
             assertEquals(8950, state.records.single().costCents)
             assertEquals(MaintenanceTypeCode.Itv, state.maintenanceTypeCode)
             assertEquals("", state.customTypeLabel)
-            assertEquals("0", state.odometerKm)
+            assertEquals("", state.odometerKm)
         }
 
     @Test
@@ -457,16 +457,67 @@ class MaintenanceHistoryViewModelTest {
 
             viewModel.onEvent(MaintenanceHistoryEvent.EditMaintenance(existing.id))
             assertTrue(viewModel.uiState.value.isEditing)
+            assertFalse(viewModel.uiState.value.isEditDirty)
             assertEquals("Old garage", viewModel.uiState.value.workshop)
             assertEquals("12000", viewModel.uiState.value.odometerKm)
 
             viewModel.effects.test {
                 viewModel.onEvent(MaintenanceHistoryEvent.WorkshopChanged("New garage"))
+                assertTrue(viewModel.uiState.value.isEditDirty)
                 viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenanceEdit)
                 assertIs<MaintenanceHistoryEffect.MaintenanceUpdated>(awaitItem())
             }
             assertFalse(viewModel.uiState.value.isEditing)
             assertEquals("New garage", repository.savedRecords.single().workshop)
+        }
+
+    @Test
+    fun editingMaintenanceToFutureDateOffersAndCreatesReminder() =
+        runTest {
+            val repository = FakeMaintenanceRecordRepository()
+            val reminderRepository = FakeReminderRepository()
+            val existing = record("record-edit", "2026-06-01")
+            repository.savedRecords += existing
+            val viewModel = maintenanceHistoryViewModel(repository = repository, reminderRepository = reminderRepository)
+            viewModel.onEvent(MaintenanceHistoryEvent.Started)
+            advanceUntilIdle()
+            viewModel.onEvent(MaintenanceHistoryEvent.EditMaintenance(existing.id))
+            viewModel.onEvent(MaintenanceHistoryEvent.PerformedOnChanged("2026-08-01"))
+
+            viewModel.onEvent(MaintenanceHistoryEvent.SubmitMaintenanceEdit)
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.showFutureReminderOffer)
+            assertEquals(CalendarDate("2026-06-01"), repository.savedRecords.single().performedOn)
+
+            viewModel.onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceWithReminder)
+            advanceUntilIdle()
+
+            assertEquals(CalendarDate("2026-08-01"), repository.savedRecords.single().performedOn)
+            assertTrue(reminderRepository.savedReminders.any { it.id.value == "planned-maintenance-reminder:record-edit" })
+        }
+
+    @Test
+    fun revertingEditClearsDirtyStateAndCancellationResetsForm() =
+        runTest {
+            val repository = FakeMaintenanceRecordRepository()
+            val existing = record("record-edit", "2026-06-01").copy(workshop = "Old garage")
+            repository.savedRecords += existing
+            val viewModel = maintenanceHistoryViewModel(repository = repository)
+            viewModel.onEvent(MaintenanceHistoryEvent.Started)
+            advanceUntilIdle()
+            viewModel.onEvent(MaintenanceHistoryEvent.EditMaintenance(existing.id))
+
+            viewModel.onEvent(MaintenanceHistoryEvent.WorkshopChanged("New garage"))
+            assertTrue(viewModel.uiState.value.isEditDirty)
+            viewModel.onEvent(MaintenanceHistoryEvent.WorkshopChanged("Old garage"))
+            assertFalse(viewModel.uiState.value.isEditDirty)
+            viewModel.onEvent(MaintenanceHistoryEvent.WorkshopChanged("Discard me"))
+            viewModel.onEvent(MaintenanceHistoryEvent.CancelMaintenanceEdit)
+
+            assertFalse(viewModel.uiState.value.isEditing)
+            assertFalse(viewModel.uiState.value.isEditDirty)
+            assertEquals("", viewModel.uiState.value.workshop)
         }
 
     @Test

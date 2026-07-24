@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="maintenance_discard_title">¿Descartar cambios?</string>
+    <string name="maintenance_discard_description">Los cambios que no hayas guardado se perderán.</string>
+    <string name="maintenance_discard_confirm">Descartar</string>
+    <string name="maintenance_discard_cancel">Seguir editando</string>
     <string name="maintenance_header_kicker">HISTORIAL DE MANTENIMIENTO</string>
     <string name="maintenance_header_subtitle">Todos los mantenimientos, en una sola cronología.</string>
     <string name="maintenance_header_history_for">Historial de %1$s</string>
@@ -30,9 +34,9 @@
     <string name="maintenance_type_repair">Reparación</string>
     <string name="maintenance_type_custom">Otro</string>
     <string name="maintenance_custom_type_label">Especifica el mantenimiento</string>
-    <string name="maintenance_date_label">Fecha realizada (AAAA-MM-DD)</string>
+    <string name="maintenance_date_label">Fecha realizada</string>
     <string name="maintenance_odometer_label">Kilómetros</string>
-    <string name="maintenance_next_due_label">Próxima fecha (opcional, AAAA-MM-DD)</string>
+    <string name="maintenance_next_due_label">Próxima fecha (opcional)</string>
     <string name="maintenance_cost_label">Coste en EUR (opcional)</string>
     <string name="maintenance_workshop_label">Taller (opcional)</string>
     <string name="maintenance_notes_label">Notas (opcional)</string>
@@ -69,5 +73,7 @@
     <string name="maintenance_validation_invalid_date">Selecciona una fecha válida.</string>
     <string name="maintenance_validation_negative_odometer">Los kilómetros no pueden ser negativos.</string>
     <string name="maintenance_validation_negative_cost">El coste no puede ser negativo.</string>
+    <string name="maintenance_validation_invalid_odometer">Introduce kilómetros enteros dentro del rango permitido.</string>
+    <string name="maintenance_validation_invalid_cost">Introduce un importe válido con un máximo de dos decimales.</string>
     <string name="maintenance_validation_generic">Revisa los datos introducidos.</string>
 </resources>

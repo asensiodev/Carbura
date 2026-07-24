@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,9 +31,33 @@ import androidx.compose.ui.window.DialogProperties
 
 internal val DesktopFormDialogMaxWidth = 640.dp
 internal val DesktopFormDialogMargin = 24.dp
+internal val DesktopPairedFieldsThreshold = 480.dp
 
 internal fun desktopFormDialogMaxHeight(availableHeight: Dp): Dp = (availableHeight - DesktopFormDialogMargin * 2).coerceAtLeast(0.dp)
 
+internal fun useStackedDesktopFields(availableWidth: Dp): Boolean = availableWidth < DesktopPairedFieldsThreshold
+
+@Composable
+internal fun DesktopPairedFields(
+    first: @Composable (Modifier) -> Unit,
+    second: @Composable (Modifier) -> Unit,
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        if (useStackedDesktopFields(maxWidth)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                first(Modifier.fillMaxWidth())
+                second(Modifier.fillMaxWidth())
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                first(Modifier.weight(1f))
+                second(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun DesktopFormDialog(
     title: String,
@@ -76,7 +102,7 @@ internal fun DesktopFormDialog(
                         Column(
                             modifier =
                                 Modifier
-                                    .weight(1f, fill = false)
+                                    .weight(1f)
                                     .fillMaxWidth()
                                     .verticalScroll(rememberScrollState())
                                     .padding(28.dp),
@@ -84,10 +110,10 @@ internal fun DesktopFormDialog(
                             content = content,
                         )
                         HorizontalDivider(color = Line)
-                        Row(
+                        FlowRow(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 18.dp),
                             horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically,
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             actions()
                         }

@@ -89,6 +89,7 @@ import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.core.module.Module
 import org.koin.dsl.module
+import java.awt.Dimension
 import java.awt.event.WindowEvent
 import java.awt.event.WindowFocusListener
 
@@ -100,6 +101,7 @@ internal val PaleBlue = Color(0xFFDCEBFA)
 internal val Muted = Color(0xFF607086)
 internal val Line = Color(0xFFD8E3F0)
 internal val Success = Color(0xFF2F7666)
+internal val DesktopMinimumWindowSize = DpSize(800.dp, 600.dp)
 
 internal val SupabaseSettings.isDesktopConfigurationAvailable: Boolean
     get() = url.isNotBlank() && anonKey.isNotBlank()
@@ -150,7 +152,13 @@ fun main() {
             state = windowState,
             title = appName,
         ) {
-            DisposableEffect(window, controller) {
+            val density = LocalDensity.current
+            DisposableEffect(window, controller, density) {
+                window.minimumSize =
+                    Dimension(
+                        with(density) { DesktopMinimumWindowSize.width.roundToPx() },
+                        with(density) { DesktopMinimumWindowSize.height.roundToPx() },
+                    )
                 val listener =
                     object : WindowFocusListener {
                         override fun windowGainedFocus(event: WindowEvent?) = controller.onForeground()
@@ -162,7 +170,7 @@ fun main() {
             }
             CarburaDesktopApp(
                 controller = controller,
-                windowWidthDp = with(LocalDensity.current) { window.width.toDp().value },
+                windowWidthDp = windowState.size.width.value,
             )
         }
     }

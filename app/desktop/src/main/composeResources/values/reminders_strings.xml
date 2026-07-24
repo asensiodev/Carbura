@@ -37,14 +37,15 @@
     <string name="reminders_title_label">Título</string>
     <string name="reminders_vehicle_label">Vehículo</string>
     <string name="reminders_vehicle_placeholder">Selecciona un vehículo</string>
-    <string name="reminders_due_date_label">Fecha objetivo (YYYY-MM-DD)</string>
+    <string name="reminders_due_date_label">Fecha objetivo (opcional)</string>
     <string name="reminders_due_odometer_label">Kilómetros objetivo (km)</string>
     <string name="reminders_save_error">No se pudo guardar el recordatorio. Tus datos introducidos siguen aquí.</string>
     <string name="reminders_validation_blank_title">Introduce un título para el recordatorio.</string>
     <string name="reminders_validation_missing_vehicle">Selecciona un vehículo.</string>
     <string name="reminders_validation_missing_due_target">Introduce una fecha o kilometraje objetivo.</string>
     <string name="reminders_validation_negative_due_odometer">Los kilómetros no pueden ser negativos.</string>
-    <string name="reminders_validation_invalid_date">Usa una fecha con formato YYYY-MM-DD.</string>
+    <string name="reminders_validation_invalid_due_odometer">Introduce kilómetros enteros dentro del rango permitido.</string>
+    <string name="reminders_validation_invalid_date">Selecciona una fecha válida.</string>
     <string name="reminders_validation_generic">Revisa los datos introducidos.</string>
     <string name="reminders_due_date">Fecha objetivo: %1$s</string>
     <string name="reminders_due_odometer">%1$s km</string>

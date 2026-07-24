@@ -10,6 +10,8 @@ import com.asensiodev.carbura.core.domain.reminder.usecase.DeriveVehicleReminder
 import com.asensiodev.carbura.core.domain.reminder.usecase.SaveVehicleWithRemindersParams
 import com.asensiodev.carbura.core.domain.reminder.usecase.SaveVehicleWithRemindersUseCase
 import com.asensiodev.carbura.core.domain.sync.SyncManager
+import com.asensiodev.carbura.core.domain.validation.NumericInputResult
+import com.asensiodev.carbura.core.domain.validation.parseNonNegativeIntInput
 import com.asensiodev.carbura.core.domain.vehicle.repository.VehicleRepository
 import com.asensiodev.carbura.core.domain.vehicle.usecase.CreateVehicleUseCase
 import com.asensiodev.carbura.core.domain.vehicle.usecase.UpdateVehicleParams
@@ -92,6 +94,7 @@ class VehicleFormViewModel(
     private fun handleActionEvent(event: VehicleFormEvent) {
         when (event) {
             VehicleFormEvent.SubmitVehicle -> launchMutation(VehicleFormMutation.Creating) { createVehicle() }
+            VehicleFormEvent.ResetCreateForm -> resetCreateForm()
             VehicleFormEvent.SubmitVehicleEdit -> launchUpdate { updateVehicle() }
             VehicleFormEvent.ConfirmOdometerDecrease -> launchUpdate { updateVehicle(allowOdometerDecrease = true) }
             VehicleFormEvent.CancelOdometerDecrease ->
@@ -99,12 +102,38 @@ class VehicleFormViewModel(
             VehicleFormEvent.DismissVehicleEdit -> clearEditState()
             VehicleFormEvent.ConfirmReminderSuggestions -> launchPendingReminderSave(reconcile = true)
             VehicleFormEvent.DeclineReminderSuggestions -> launchPendingReminderSave(reconcile = false)
+            VehicleFormEvent.DismissReminderSuggestions -> dismissReminderSuggestions()
             else -> Unit
         }
     }
 
     private fun updateCreate(transform: (VehicleFormUiState) -> VehicleFormUiState) {
         _uiState.update { transform(it).copy(createValidationError = null, persistenceError = false) }
+    }
+
+    private fun resetCreateForm() {
+        if (_uiState.value.activeMutation != null) return
+        pendingReminderVehicle = null
+        _uiState.update {
+            it.copy(
+                name = "",
+                odometerKm = "0",
+                selectedType = VehicleType.Car,
+                nextItvDate = "",
+                insuranceRenewalDate = "",
+                nextServiceOdometerKm = "",
+                createValidationError = null,
+                persistenceError = false,
+                reminderSuggestions = emptyList(),
+                reminderConfirmationMode = null,
+            )
+        }
+    }
+
+    private fun dismissReminderSuggestions() {
+        if (_uiState.value.activeMutation != null) return
+        pendingReminderVehicle = null
+        _uiState.update { it.copy(reminderSuggestions = emptyList(), reminderConfirmationMode = null) }
     }
 
     private fun updateEdit(transform: (VehicleFormUiState) -> VehicleFormUiState) {
@@ -203,20 +232,17 @@ class VehicleFormViewModel(
 
     private suspend fun createVehicle() {
         val state = _uiState.value
-        if (state.nextServiceOdometerKm.isInvalidOptionalOdometer()) {
-            _uiState.update { it.copy(createValidationError = CarburaString.ValidationNegativeVehicleOdometer) }
-            return
-        }
+        val inputs = parseVehicleInputs(state, edit = false) ?: return
         val vehicle =
             Vehicle(
                 id = nextVehicleId(),
                 familyId = activeScope.familyId,
                 name = state.name.trim(),
                 type = state.selectedType,
-                currentOdometerKm = state.odometerKm.toIntOrNull() ?: -1,
-                nextItvDate = state.nextItvDate.toCalendarDateOrNull(),
-                insuranceRenewalDate = state.insuranceRenewalDate.toCalendarDateOrNull(),
-                nextServiceOdometerKm = state.nextServiceOdometerKm.toIntOrNull(),
+                currentOdometerKm = inputs.odometerKm,
+                nextItvDate = inputs.nextItvDate,
+                insuranceRenewalDate = inputs.insuranceRenewalDate,
+                nextServiceOdometerKm = inputs.nextServiceOdometerKm,
             )
         if (showReminderConfirmation(vehicle, VehicleSaveMode.Create)) return
         persistCreatedVehicle(vehicle, reconcileReminders = false)
@@ -234,6 +260,7 @@ class VehicleFormViewModel(
                     it.copy(
                         name = "",
                         odometerKm = "0",
+                        selectedType = VehicleType.Car,
                         nextItvDate = "",
                         insuranceRenewalDate = "",
                         nextServiceOdometerKm = "",
@@ -255,10 +282,7 @@ class VehicleFormViewModel(
         skipReminderConfirmation: Boolean = false,
     ) {
         val state = _uiState.value
-        if (state.editNextServiceOdometerKm.isInvalidOptionalOdometer()) {
-            _uiState.update { it.copy(editValidationError = CarburaString.ValidationNegativeVehicleOdometer) }
-            return
-        }
+        val inputs = parseVehicleInputs(state, edit = true) ?: return
         val vehicle = editingVehicle ?: return
         val params =
             UpdateVehicleParams(
@@ -267,10 +291,10 @@ class VehicleFormViewModel(
                 name = state.editName,
                 type = state.editType,
                 licensePlate = state.editLicensePlate,
-                odometerKm = state.editOdometerKm.toIntOrNull() ?: -1,
-                nextItvDate = state.editNextItvDate.toCalendarDateOrNull(),
-                insuranceRenewalDate = state.editInsuranceRenewalDate.toCalendarDateOrNull(),
-                nextServiceOdometerKm = state.editNextServiceOdometerKm.toIntOrNull(),
+                odometerKm = inputs.odometerKm,
+                nextItvDate = inputs.nextItvDate,
+                insuranceRenewalDate = inputs.insuranceRenewalDate,
+                nextServiceOdometerKm = inputs.nextServiceOdometerKm,
                 allowOdometerDecrease = allowOdometerDecrease,
             )
         val candidate =
@@ -326,6 +350,77 @@ class VehicleFormViewModel(
         _effects.send(VehicleFormEffect.ValidationFailed(message))
     }
 
+    private suspend fun parseRequiredOdometer(
+        input: String,
+        edit: Boolean,
+    ): Int? =
+        when (val result = input.parseNonNegativeIntInput()) {
+            NumericInputResult.Negative -> rejectVehicleInput(CarburaString.ValidationNegativeVehicleOdometer, edit)
+            NumericInputResult.Blank,
+            NumericInputResult.Invalid,
+            -> rejectVehicleInput(CarburaString.ValidationInvalidVehicleOdometer, edit)
+            is NumericInputResult.Value -> result.value
+        }
+
+    private suspend fun parseVehicleInputs(
+        state: VehicleFormUiState,
+        edit: Boolean,
+    ): ParsedVehicleInputs? {
+        val odometerInput = if (edit) state.editOdometerKm else state.odometerKm
+        val serviceInput = if (edit) state.editNextServiceOdometerKm else state.nextServiceOdometerKm
+        val itvInput = if (edit) state.editNextItvDate else state.nextItvDate
+        val insuranceInput = if (edit) state.editInsuranceRenewalDate else state.insuranceRenewalDate
+        val odometerKm = parseRequiredOdometer(odometerInput, edit) ?: return null
+        val serviceOdometerKm = parseOptionalServiceOdometer(serviceInput, edit) ?: return null
+        val nextItvDate = parseOptionalDate(itvInput, CarburaString.ValidationInvalidVehicleItvDate, edit) ?: return null
+        val insuranceRenewalDate =
+            parseOptionalDate(insuranceInput, CarburaString.ValidationInvalidVehicleInsuranceDate, edit) ?: return null
+        return ParsedVehicleInputs(
+            odometerKm = odometerKm,
+            nextServiceOdometerKm = serviceOdometerKm.value,
+            nextItvDate = nextItvDate.value,
+            insuranceRenewalDate = insuranceRenewalDate.value,
+        )
+    }
+
+    private suspend fun parseOptionalServiceOdometer(
+        input: String,
+        edit: Boolean,
+    ): ParsedOptionalInt? =
+        when (val result = input.parseNonNegativeIntInput()) {
+            NumericInputResult.Blank -> ParsedOptionalInt(null)
+            NumericInputResult.Negative -> rejectVehicleInput(CarburaString.ValidationNegativeVehicleServiceOdometer, edit)
+            NumericInputResult.Invalid -> rejectVehicleInput(CarburaString.ValidationInvalidVehicleServiceOdometer, edit)
+            is NumericInputResult.Value -> ParsedOptionalInt(result.value)
+        }
+
+    private suspend fun parseOptionalDate(
+        input: String,
+        invalidMessage: CarburaString,
+        edit: Boolean,
+    ): ParsedOptionalDate? {
+        val value = input.trim()
+        if (value.isEmpty()) return ParsedOptionalDate(null)
+        val date =
+            try {
+                CalendarDate(value)
+            } catch (_: IllegalArgumentException) {
+                return rejectVehicleInput(invalidMessage, edit)
+            }
+        return ParsedOptionalDate(date)
+    }
+
+    private suspend fun <T> rejectVehicleInput(
+        message: CarburaString,
+        edit: Boolean,
+    ): T? {
+        _uiState.update {
+            if (edit) it.copy(editValidationError = message) else it.copy(createValidationError = message)
+        }
+        _effects.send(VehicleFormEffect.ValidationFailed(message))
+        return null
+    }
+
     private fun showReminderConfirmation(
         vehicle: Vehicle,
         mode: VehicleSaveMode,
@@ -365,9 +460,20 @@ class VehicleFormViewModel(
 
 private fun randomVehicleId(): VehicleId = VehicleId("vehicle-${Random.nextInt(1, Int.MAX_VALUE)}")
 
-private fun String.toCalendarDateOrNull(): CalendarDate? = trim().takeIf { it.isNotEmpty() }?.let(::CalendarDate)
+private data class ParsedOptionalInt(
+    val value: Int?,
+)
 
-private fun String.isInvalidOptionalOdometer(): Boolean = isNotBlank() && (toIntOrNull()?.let { it < 0 } != false)
+private data class ParsedOptionalDate(
+    val value: CalendarDate?,
+)
+
+private data class ParsedVehicleInputs(
+    val odometerKm: Int,
+    val nextServiceOdometerKm: Int?,
+    val nextItvDate: CalendarDate?,
+    val insuranceRenewalDate: CalendarDate?,
+)
 
 private fun VehicleFormUiState.differsFrom(vehicle: Vehicle?): Boolean =
     vehicle != null &&
@@ -384,8 +490,11 @@ private fun VehicleFormUiState.differsFrom(vehicle: Vehicle?): Boolean =
 private fun ValidationFailure.toGarageMessage(): CarburaString =
     when (this) {
         ValidationFailure.BlankVehicleName -> CarburaString.ValidationBlankVehicleName
+        ValidationFailure.InvalidVehicleOdometer,
+        -> CarburaString.ValidationInvalidVehicleOdometer
+        ValidationFailure.InvalidVehicleServiceOdometer -> CarburaString.ValidationInvalidVehicleServiceOdometer
         ValidationFailure.NegativeVehicleOdometer,
-        ValidationFailure.NegativeVehicleServiceOdometer,
         -> CarburaString.ValidationNegativeVehicleOdometer
+        ValidationFailure.NegativeVehicleServiceOdometer -> CarburaString.ValidationNegativeVehicleServiceOdometer
         else -> CarburaString.ValidationGeneric
     }

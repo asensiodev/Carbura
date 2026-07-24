@@ -66,6 +66,8 @@ sealed interface VehicleFormEvent {
 
     data object SubmitVehicle : VehicleFormEvent
 
+    data object ResetCreateForm : VehicleFormEvent
+
     data object SubmitVehicleEdit : VehicleFormEvent
 
     data object ConfirmOdometerDecrease : VehicleFormEvent
@@ -77,4 +79,6 @@ sealed interface VehicleFormEvent {
     data object ConfirmReminderSuggestions : VehicleFormEvent
 
     data object DeclineReminderSuggestions : VehicleFormEvent
+
+    data object DismissReminderSuggestions : VehicleFormEvent
 }

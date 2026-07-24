@@ -61,6 +61,8 @@ import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.desktop.resources.Res
+import com.asensiodev.carbura.desktop.resources.form_clear_date
+import com.asensiodev.carbura.desktop.resources.form_select_date
 import com.asensiodev.carbura.desktop.resources.maintenance_add_button
 import com.asensiodev.carbura.desktop.resources.maintenance_add_vehicle_description
 import com.asensiodev.carbura.desktop.resources.maintenance_add_vehicle_title
@@ -77,6 +79,10 @@ import com.asensiodev.carbura.desktop.resources.maintenance_delete_dialog_descri
 import com.asensiodev.carbura.desktop.resources.maintenance_delete_dialog_title
 import com.asensiodev.carbura.desktop.resources.maintenance_delete_record_button
 import com.asensiodev.carbura.desktop.resources.maintenance_deleted_message
+import com.asensiodev.carbura.desktop.resources.maintenance_discard_cancel
+import com.asensiodev.carbura.desktop.resources.maintenance_discard_confirm
+import com.asensiodev.carbura.desktop.resources.maintenance_discard_description
+import com.asensiodev.carbura.desktop.resources.maintenance_discard_title
 import com.asensiodev.carbura.desktop.resources.maintenance_edit_content_description
 import com.asensiodev.carbura.desktop.resources.maintenance_edit_form_title
 import com.asensiodev.carbura.desktop.resources.maintenance_empty_description
@@ -125,7 +131,9 @@ import com.asensiodev.carbura.desktop.resources.maintenance_update_button
 import com.asensiodev.carbura.desktop.resources.maintenance_updated_message
 import com.asensiodev.carbura.desktop.resources.maintenance_validation_blank_type
 import com.asensiodev.carbura.desktop.resources.maintenance_validation_generic
+import com.asensiodev.carbura.desktop.resources.maintenance_validation_invalid_cost
 import com.asensiodev.carbura.desktop.resources.maintenance_validation_invalid_date
+import com.asensiodev.carbura.desktop.resources.maintenance_validation_invalid_odometer
 import com.asensiodev.carbura.desktop.resources.maintenance_validation_negative_cost
 import com.asensiodev.carbura.desktop.resources.maintenance_validation_negative_odometer
 import com.asensiodev.carbura.desktop.resources.maintenance_vehicles_load_error_description
@@ -143,7 +151,6 @@ import com.asensiodev.carbura.feature.maintenance.presentation.MaintenanceMutati
 import org.jetbrains.compose.resources.stringResource
 import org.koin.core.context.GlobalContext
 import org.koin.core.parameter.parametersOf
-import java.util.Locale
 
 @Composable
 internal fun MaintenanceWorkspace(
@@ -225,6 +232,7 @@ internal fun MaintenanceWorkspace(
                             MaintenanceVehicleContent(
                                 vehicleId = vehicleId,
                                 familyId = familyId,
+                                refreshGeneration = refreshGeneration,
                                 snackbarHostState = snackbarHostState,
                                 modifier = Modifier.weight(1f),
                             )
@@ -244,6 +252,9 @@ internal fun resolveMaintenanceVehicleSelection(
 ): VehicleId? =
     currentVehicleId?.takeIf(availableVehicleIds::contains)
         ?: initialVehicleId?.takeIf(availableVehicleIds::contains)
+
+internal fun maintenanceHistoryRefreshEvent(refreshGeneration: Long): MaintenanceHistoryEvent? =
+    MaintenanceHistoryEvent.Refresh.takeIf { refreshGeneration > 0L }
 
 @Composable
 private fun MaintenanceHeader(
@@ -304,6 +315,7 @@ private fun VehicleSelector(
 private fun MaintenanceVehicleContent(
     vehicleId: VehicleId,
     familyId: FamilyId,
+    refreshGeneration: Long,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
@@ -313,6 +325,7 @@ private fun MaintenanceVehicleContent(
         }
     val state by viewModel.uiState.collectAsState()
     var showForm by remember(vehicleId) { mutableStateOf(false) }
+    var showDiscardEditConfirmation by remember(vehicleId) { mutableStateOf(false) }
     var pendingDeletion by remember(vehicleId) { mutableStateOf<MaintenanceRecord?>(null) }
     val typeNames = MaintenanceTypeCode.entries.associateWith { it.localizedDisplayName() }
     val createdMessage = stringResource(Res.string.maintenance_created_message)
@@ -341,6 +354,9 @@ private fun MaintenanceVehicleContent(
                 is MaintenanceHistoryEffect.ValidationFailed -> Unit
             }
         }
+    }
+    LaunchedEffect(viewModel, refreshGeneration) {
+        maintenanceHistoryRefreshEvent(refreshGeneration)?.let(viewModel::onEvent)
     }
 
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -405,20 +421,48 @@ private fun MaintenanceVehicleContent(
         )
     }
 
-    if (showForm) {
+    if (showForm && !showDiscardEditConfirmation && !state.showFutureReminderOffer) {
         MaintenanceFormDialog(
             state = state,
             onEvent = viewModel::onEvent,
             onDismiss = {
                 if (state.activeMutation == null && !state.showFutureReminderOffer) {
-                    if (state.isEditing) viewModel.onEvent(MaintenanceHistoryEvent.CancelMaintenanceEdit)
-                    showForm = false
+                    if (state.isEditing && state.isEditDirty) {
+                        showDiscardEditConfirmation = true
+                    } else {
+                        viewModel.onEvent(MaintenanceHistoryEvent.CancelMaintenanceEdit)
+                        showForm = false
+                    }
+                }
+            },
+        )
+    }
+    if (showDiscardEditConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDiscardEditConfirmation = false },
+            title = { Text(stringResource(Res.string.maintenance_discard_title)) },
+            text = { Text(stringResource(Res.string.maintenance_discard_description)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDiscardEditConfirmation = false
+                        viewModel.onEvent(MaintenanceHistoryEvent.CancelMaintenanceEdit)
+                        showForm = false
+                    },
+                ) { Text(stringResource(Res.string.maintenance_discard_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardEditConfirmation = false }) {
+                    Text(stringResource(Res.string.maintenance_discard_cancel))
                 }
             },
         )
     }
     if (state.showFutureReminderOffer) {
-        FutureMaintenanceDialog(onEvent = viewModel::onEvent)
+        FutureMaintenanceDialog(
+            mutationActive = state.activeMutation != null,
+            onEvent = viewModel::onEvent,
+        )
     }
     pendingDeletion?.let { record ->
         AlertDialog(
@@ -519,7 +563,7 @@ private fun MaintenanceRecordCard(
                 Text(displayTypeName, color = Ink, fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    stringResource(Res.string.maintenance_performed_value, record.performedOn.iso8601),
+                    stringResource(Res.string.maintenance_performed_value, formatDesktopDate(record.performedOn.iso8601)),
                     color = Blue,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp,
@@ -590,6 +634,8 @@ private fun MaintenanceFormDialog(
     onEvent: (MaintenanceHistoryEvent) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val mutationActive = state.activeMutation != null
+    val validationError = state.validationError
     val dialogTitle =
         stringResource(
             if (state.isEditing) Res.string.maintenance_edit_form_title else Res.string.maintenance_form_title,
@@ -597,9 +643,9 @@ private fun MaintenanceFormDialog(
     DesktopFormDialog(
         title = dialogTitle,
         onDismissRequest = onDismiss,
-        dismissEnabled = state.activeMutation == null,
+        dismissEnabled = !mutationActive,
         actions = {
-            TextButton(onClick = onDismiss, enabled = state.activeMutation == null) {
+            TextButton(onClick = onDismiss, enabled = !mutationActive) {
                 Text(stringResource(Res.string.maintenance_cancel_button))
             }
             Spacer(Modifier.width(8.dp))
@@ -613,7 +659,7 @@ private fun MaintenanceFormDialog(
                         },
                     )
                 },
-                enabled = state.activeMutation == null,
+                enabled = !mutationActive,
             ) {
                 if (state.isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
@@ -634,6 +680,7 @@ private fun MaintenanceFormDialog(
                 FilterChip(
                     selected = state.maintenanceTypeCode == type,
                     onClick = { onEvent(MaintenanceHistoryEvent.TypeSelected(type)) },
+                    enabled = !mutationActive,
                     label = { Text(type.localizedDisplayName()) },
                 )
             }
@@ -643,60 +690,109 @@ private fun MaintenanceFormDialog(
                 value = state.customTypeLabel,
                 onValueChange = { onEvent(MaintenanceHistoryEvent.CustomTypeLabelChanged(it)) },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = !mutationActive,
                 label = { Text(stringResource(Res.string.maintenance_custom_type_label)) },
+                isError = validationError == CarburaString.ValidationBlankMaintenanceType,
+                supportingText = validationError.supportingTextFor(CarburaString.ValidationBlankMaintenanceType),
                 singleLine = true,
             )
         }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(
-                value = state.performedOn,
-                onValueChange = { onEvent(MaintenanceHistoryEvent.PerformedOnChanged(it)) },
-                modifier = Modifier.weight(1f),
-                label = { Text(stringResource(Res.string.maintenance_date_label)) },
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = state.odometerKm,
-                onValueChange = { onEvent(MaintenanceHistoryEvent.OdometerChanged(it)) },
-                modifier = Modifier.weight(1f),
-                label = { Text(stringResource(Res.string.maintenance_odometer_label)) },
-                singleLine = true,
-            )
-        }
+        DesktopPairedFields(
+            first = { modifier ->
+                DesktopDatePickerField(
+                    value = state.performedOn,
+                    onValueChange = { onEvent(MaintenanceHistoryEvent.PerformedOnChanged(it)) },
+                    modifier = modifier,
+                    label = stringResource(Res.string.maintenance_date_label),
+                    selectLabel = stringResource(Res.string.form_select_date),
+                    clearLabel = stringResource(Res.string.form_clear_date),
+                    optional = false,
+                    enabled = !mutationActive,
+                    errorMessage =
+                        state.validationError
+                            ?.takeIf {
+                                it == CarburaString.ValidationInvalidMaintenanceDate ||
+                                    it == CarburaString.ValidationInvalidMaintenancePerformedDate
+                            }?.localizedMaintenanceMessage(),
+                )
+            },
+            second = { modifier ->
+                OutlinedTextField(
+                    value = state.odometerKm,
+                    onValueChange = { onEvent(MaintenanceHistoryEvent.OdometerChanged(it)) },
+                    modifier = modifier,
+                    enabled = !mutationActive,
+                    label = { Text(stringResource(Res.string.maintenance_odometer_label)) },
+                    isError =
+                        state.validationError == CarburaString.ValidationNegativeMaintenanceOdometer ||
+                            state.validationError == CarburaString.ValidationInvalidMaintenanceOdometer,
+                    supportingText =
+                        validationError.supportingTextFor(
+                            CarburaString.ValidationNegativeMaintenanceOdometer,
+                            CarburaString.ValidationInvalidMaintenanceOdometer,
+                        ),
+                    singleLine = true,
+                )
+            },
+        )
         if (state.supportsNextDueDate) {
-            OutlinedTextField(
+            DesktopDatePickerField(
                 value = state.nextDueDate,
                 onValueChange = { onEvent(MaintenanceHistoryEvent.NextDueDateChanged(it)) },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(Res.string.maintenance_next_due_label)) },
-                singleLine = true,
+                label = stringResource(Res.string.maintenance_next_due_label),
+                selectLabel = stringResource(Res.string.form_select_date),
+                clearLabel = stringResource(Res.string.form_clear_date),
+                optional = true,
+                enabled = !mutationActive,
+                errorMessage =
+                    state.validationError
+                        ?.takeIf { it == CarburaString.ValidationInvalidMaintenanceNextDueDate }
+                        ?.localizedMaintenanceMessage(),
             )
         }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(
-                value = state.cost,
-                onValueChange = { onEvent(MaintenanceHistoryEvent.CostChanged(it)) },
-                modifier = Modifier.weight(1f),
-                label = { Text(stringResource(Res.string.maintenance_cost_label)) },
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = state.workshop,
-                onValueChange = { onEvent(MaintenanceHistoryEvent.WorkshopChanged(it)) },
-                modifier = Modifier.weight(1f),
-                label = { Text(stringResource(Res.string.maintenance_workshop_label)) },
-                singleLine = true,
-            )
-        }
+        DesktopPairedFields(
+            first = { modifier ->
+                OutlinedTextField(
+                    value = state.cost,
+                    onValueChange = { onEvent(MaintenanceHistoryEvent.CostChanged(it)) },
+                    modifier = modifier,
+                    enabled = !mutationActive,
+                    label = { Text(stringResource(Res.string.maintenance_cost_label)) },
+                    isError =
+                        state.validationError == CarburaString.ValidationNegativeMaintenanceCost ||
+                            state.validationError == CarburaString.ValidationInvalidMaintenanceCost,
+                    supportingText =
+                        validationError.supportingTextFor(
+                            CarburaString.ValidationNegativeMaintenanceCost,
+                            CarburaString.ValidationInvalidMaintenanceCost,
+                        ),
+                    singleLine = true,
+                )
+            },
+            second = { modifier ->
+                OutlinedTextField(
+                    value = state.workshop,
+                    onValueChange = { onEvent(MaintenanceHistoryEvent.WorkshopChanged(it)) },
+                    modifier = modifier,
+                    enabled = !mutationActive,
+                    label = { Text(stringResource(Res.string.maintenance_workshop_label)) },
+                    singleLine = true,
+                )
+            },
+        )
         OutlinedTextField(
             value = state.notes,
             onValueChange = { onEvent(MaintenanceHistoryEvent.NotesChanged(it)) },
             modifier = Modifier.fillMaxWidth(),
+            enabled = !mutationActive,
             label = { Text(stringResource(Res.string.maintenance_notes_label)) },
             minLines = 2,
             maxLines = 3,
         )
-        state.validationError?.let { Text(it.localizedMaintenanceMessage(), color = MaterialTheme.colorScheme.error) }
+        validationError?.takeUnless(::isInlineMaintenanceError)?.let {
+            Text(it.localizedMaintenanceMessage(), color = MaterialTheme.colorScheme.error)
+        }
         if (state.persistenceError) {
             Text(stringResource(Res.string.maintenance_record_save_error), color = MaterialTheme.colorScheme.error)
         }
@@ -704,30 +800,48 @@ private fun MaintenanceFormDialog(
 }
 
 @Composable
-private fun FutureMaintenanceDialog(onEvent: (MaintenanceHistoryEvent) -> Unit) {
-    AlertDialog(
+private fun FutureMaintenanceDialog(
+    mutationActive: Boolean,
+    onEvent: (MaintenanceHistoryEvent) -> Unit,
+) {
+    DesktopFormDialog(
+        title = stringResource(Res.string.maintenance_future_reminder_title),
         onDismissRequest = { onEvent(MaintenanceHistoryEvent.DismissFutureReminderOffer) },
-        title = { Text(stringResource(Res.string.maintenance_future_reminder_title)) },
-        text = {
-            Text(stringResource(Res.string.maintenance_future_reminder_description))
+        dismissEnabled = !mutationActive,
+        actions = {
+            TextButton(
+                onClick = { onEvent(MaintenanceHistoryEvent.DismissFutureReminderOffer) },
+                enabled = !mutationActive,
+            ) { Text(stringResource(Res.string.maintenance_cancel_button)) }
+            TextButton(
+                onClick = { onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceOnly) },
+                enabled = !mutationActive,
+            ) { Text(stringResource(Res.string.maintenance_future_reminder_save_only)) }
+            Button(
+                onClick = { onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceWithReminder) },
+                enabled = !mutationActive,
+            ) { Text(stringResource(Res.string.maintenance_future_reminder_confirm)) }
         },
-        confirmButton = {
-            Button(onClick = { onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceWithReminder) }) {
-                Text(stringResource(Res.string.maintenance_future_reminder_confirm))
-            }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = { onEvent(MaintenanceHistoryEvent.DismissFutureReminderOffer) }) {
-                    Text(stringResource(Res.string.maintenance_cancel_button))
-                }
-                TextButton(onClick = { onEvent(MaintenanceHistoryEvent.SaveFutureMaintenanceOnly) }) {
-                    Text(stringResource(Res.string.maintenance_future_reminder_save_only))
-                }
-            }
-        },
-    )
+    ) {
+        Text(stringResource(Res.string.maintenance_future_reminder_description))
+    }
 }
+
+private fun isInlineMaintenanceError(error: CarburaString): Boolean =
+    error == CarburaString.ValidationBlankMaintenanceType ||
+        error == CarburaString.ValidationInvalidMaintenanceDate ||
+        error == CarburaString.ValidationInvalidMaintenancePerformedDate ||
+        error == CarburaString.ValidationInvalidMaintenanceNextDueDate ||
+        error == CarburaString.ValidationNegativeMaintenanceOdometer ||
+        error == CarburaString.ValidationInvalidMaintenanceOdometer ||
+        error == CarburaString.ValidationNegativeMaintenanceCost ||
+        error == CarburaString.ValidationInvalidMaintenanceCost
+
+@Composable
+private fun CarburaString?.supportingTextFor(vararg errors: CarburaString): (@Composable () -> Unit)? =
+    takeIf { it in errors }?.let { error ->
+        { Text(error.localizedMaintenanceMessage()) }
+    }
 
 @Composable
 private fun MaintenanceTypeCode.localizedDisplayName(): String =
@@ -763,12 +877,12 @@ private fun MaintenanceRecord.localizedDetails(): List<String> =
         costCents?.let {
             stringResource(
                 Res.string.maintenance_cost_value,
-                String.format(Locale.ROOT, "%.2f", it / 100.0),
+                formatDesktopDecimalCurrency(it),
                 currency,
             )
         },
         workshop?.takeIf(String::isNotBlank),
-        nextDueDate?.let { stringResource(Res.string.maintenance_next_due_value, it.iso8601) },
+        nextDueDate?.let { stringResource(Res.string.maintenance_next_due_value, formatDesktopDate(it.iso8601)) },
     )
 
 @Composable
@@ -777,8 +891,13 @@ private fun CarburaString.localizedMaintenanceMessage(): String =
         when (this) {
             CarburaString.ValidationBlankMaintenanceType -> Res.string.maintenance_validation_blank_type
             CarburaString.ValidationInvalidMaintenanceDate -> Res.string.maintenance_validation_invalid_date
+            CarburaString.ValidationInvalidMaintenancePerformedDate,
+            CarburaString.ValidationInvalidMaintenanceNextDueDate,
+            -> Res.string.maintenance_validation_invalid_date
             CarburaString.ValidationNegativeMaintenanceOdometer -> Res.string.maintenance_validation_negative_odometer
+            CarburaString.ValidationInvalidMaintenanceOdometer -> Res.string.maintenance_validation_invalid_odometer
             CarburaString.ValidationNegativeMaintenanceCost -> Res.string.maintenance_validation_negative_cost
+            CarburaString.ValidationInvalidMaintenanceCost -> Res.string.maintenance_validation_invalid_cost
             else -> Res.string.maintenance_validation_generic
         },
     )

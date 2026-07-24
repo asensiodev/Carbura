@@ -8,6 +8,7 @@ internal fun ValidationFailure.toRemindersMessage(): CarburaString =
         ValidationFailure.BlankReminderTitle -> CarburaString.ValidationBlankReminderTitle
         ValidationFailure.MissingReminderVehicle -> CarburaString.ValidationMissingReminderVehicle
         ValidationFailure.MissingReminderDueTarget -> CarburaString.ValidationMissingReminderDueTarget
+        ValidationFailure.InvalidReminderDueOdometer -> CarburaString.ValidationInvalidReminderDueOdometer
         ValidationFailure.NegativeReminderDueOdometer -> CarburaString.ValidationNegativeReminderDueOdometer
         else -> CarburaString.ValidationGeneric
     }

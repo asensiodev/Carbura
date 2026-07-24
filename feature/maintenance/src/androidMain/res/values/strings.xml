@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="maintenance_discard_title">¿Descartar cambios?</string>
+    <string name="maintenance_discard_description">Los cambios que no hayas guardado se perderán.</string>
+    <string name="maintenance_discard_confirm">Descartar</string>
+    <string name="maintenance_discard_cancel">Seguir editando</string>
     <string name="maintenance_back_button">Volver</string>
     <string name="maintenance_title">Mantenimiento</string>
     <string name="maintenance_form_title">Nuevo mantenimiento</string>
@@ -64,5 +68,7 @@
     <string name="validation_invalid_maintenance_date">Selecciona una fecha válida.</string>
     <string name="validation_negative_maintenance_odometer">Los kilómetros no pueden ser negativos.</string>
     <string name="validation_negative_maintenance_cost">El coste no puede ser negativo.</string>
+    <string name="validation_invalid_maintenance_odometer">Introduce kilómetros enteros dentro del rango permitido.</string>
+    <string name="validation_invalid_maintenance_cost">Introduce un importe válido con un máximo de dos decimales.</string>
     <string name="validation_generic">Revisa los datos introducidos.</string>
 </resources>

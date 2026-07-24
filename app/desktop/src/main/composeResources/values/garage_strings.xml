@@ -49,10 +49,14 @@
     <string name="garage_vehicle_type_other">Otro</string>
     <string name="garage_vehicle_save_error">No se han podido guardar los cambios. Inténtalo de nuevo.</string>
     <string name="garage_save_changes_button">Guardar cambios</string>
+    <string name="garage_discard_title">¿Descartar cambios?</string>
+    <string name="garage_discard_description">Los cambios que no hayas guardado se perderán.</string>
+    <string name="garage_discard_confirm">Descartar</string>
+    <string name="garage_discard_cancel">Seguir editando</string>
     <string name="garage_planning_title">Planificación</string>
     <string name="garage_planning_description">Los objetivos opcionales pueden crear recordatorios sincronizados. Las notificaciones nativas se entregan únicamente desde Android.</string>
-    <string name="garage_next_itv_date_label">Próxima ITV (AAAA-MM-DD, opcional)</string>
-    <string name="garage_insurance_renewal_date_label">Renovación del seguro (AAAA-MM-DD, opcional)</string>
+    <string name="garage_next_itv_date_label">Próxima ITV (opcional)</string>
+    <string name="garage_insurance_renewal_date_label">Renovación del seguro (opcional)</string>
     <string name="garage_next_service_odometer_label">Próxima revisión en km (opcional)</string>
     <string name="garage_update_odometer_title">Actualizar kilómetros</string>
     <string name="garage_update_odometer_help">Introduce la lectura más reciente sin cambiar los demás datos del vehículo.</string>
@@ -66,5 +70,7 @@
     <string name="garage_kilometers_format">%1$d km</string>
     <string name="garage_validation_blank_vehicle_name">Introduce un nombre para el vehículo.</string>
     <string name="garage_validation_negative_vehicle_odometer">Los kilómetros no pueden ser negativos.</string>
+    <string name="garage_validation_invalid_vehicle_odometer">Introduce kilómetros enteros dentro del rango permitido.</string>
+    <string name="garage_validation_invalid_vehicle_date">Selecciona una fecha válida.</string>
     <string name="garage_validation_generic">Revisa los datos introducidos.</string>
 </resources>

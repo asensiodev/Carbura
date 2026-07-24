@@ -3,8 +3,11 @@ package com.asensiodev.carbura.desktop
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -46,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.asensiodev.carbura.core.data.desktopDataDirectory
@@ -90,6 +94,8 @@ import com.asensiodev.carbura.desktop.resources.account_sign_out
 import com.asensiodev.carbura.desktop.resources.account_sign_out_description
 import com.asensiodev.carbura.desktop.resources.account_sign_out_title
 import com.asensiodev.carbura.desktop.resources.account_storage_description
+import com.asensiodev.carbura.desktop.resources.account_storage_hide_details
+import com.asensiodev.carbura.desktop.resources.account_storage_show_details
 import com.asensiodev.carbura.desktop.resources.account_storage_title
 import com.asensiodev.carbura.desktop.resources.account_sync_now
 import com.asensiodev.carbura.desktop.resources.account_syncing
@@ -99,6 +105,9 @@ import java.net.URI
 import java.nio.file.Path
 
 internal val CARBURA_PROJECT_URI: URI = URI("https://github.com/asensiodev/Carbura")
+internal val AccountCardsStackThreshold = 760.dp
+
+internal fun useStackedAccountCards(availableWidth: Dp): Boolean = availableWidth < AccountCardsStackThreshold
 
 internal class AccountDeletionConfirmation {
     var isVisible by mutableStateOf(false)
@@ -119,6 +128,16 @@ internal class AccountDeletionConfirmation {
     }
 }
 
+internal class AccountStorageDetails {
+    var isVisible by mutableStateOf(false)
+        private set
+
+    fun toggle() {
+        isVisible = !isVisible
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun AccountWorkspace(
     compact: Boolean,
@@ -184,10 +203,10 @@ internal fun AccountWorkspace(
                 style = MaterialTheme.typography.bodyLarge,
             )
 
-            if (compact) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val accountCard: @Composable (Modifier) -> Unit = { cardModifier ->
                     if (account == null) {
-                        LocalModeCard(startupState, onSignIn, onRetry, Modifier.fillMaxWidth())
+                        LocalModeCard(startupState, onSignIn, onRetry, cardModifier)
                     } else {
                         AuthenticatedAccountCard(
                             account,
@@ -197,28 +216,20 @@ internal fun AccountWorkspace(
                             onRetry,
                             { confirmSignOut = true },
                             isDeletingAccount,
-                            Modifier.fillMaxWidth(),
+                            cardModifier,
                         )
                     }
-                    StorageCard(dataDirectory, databasePath, platformActions, reportFailure, Modifier.fillMaxWidth())
                 }
-            } else {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                    if (account == null) {
-                        LocalModeCard(startupState, onSignIn, onRetry, Modifier.weight(0.85f))
-                    } else {
-                        AuthenticatedAccountCard(
-                            account,
-                            syncStatus,
-                            startupState,
-                            onSyncNow,
-                            onRetry,
-                            { confirmSignOut = true },
-                            isDeletingAccount,
-                            Modifier.weight(0.85f),
-                        )
+                if (useStackedAccountCards(maxWidth)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        accountCard(Modifier.fillMaxWidth())
+                        StorageCard(dataDirectory, databasePath, platformActions, reportFailure, Modifier.fillMaxWidth())
                     }
-                    StorageCard(dataDirectory, databasePath, platformActions, reportFailure, Modifier.weight(1.15f))
+                } else {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                        accountCard(Modifier.weight(0.9f))
+                        StorageCard(dataDirectory, databasePath, platformActions, reportFailure, Modifier.weight(1.1f))
+                    }
                 }
             }
 
@@ -365,7 +376,7 @@ private fun AuthenticatedAccountCard(
             if (syncStatus.isSyncing) {
                 stringResource(Res.string.account_syncing)
             } else {
-                syncStatus.lastSyncedAtMillis?.let { stringResource(Res.string.account_last_sync, it.toString()) }
+                syncStatus.lastSyncedAtMillis?.let { stringResource(Res.string.account_last_sync, formatDesktopTimestamp(it)) }
                     ?: stringResource(Res.string.account_never_synced)
             },
             color = if (syncStatus.isSyncing) Blue else Muted,
@@ -374,7 +385,11 @@ private fun AuthenticatedAccountCard(
             Text(it.message, color = MaterialTheme.colorScheme.error)
             OutlinedButton(onClick = onRetry, enabled = !isDeletingAccount) { Text(stringResource(Res.string.account_retry)) }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             Button(onClick = onSyncNow, enabled = !syncStatus.isSyncing && !isDeletingAccount) {
                 Text(stringResource(Res.string.account_sync_now))
             }
@@ -436,27 +451,42 @@ private fun StorageCard(
     modifier: Modifier,
 ) {
     val dataFolderActionName = stringResource(Res.string.account_data_folder_action_name)
+    val details = remember { AccountStorageDetails() }
     AccountCard(modifier) {
         WorkspaceIcon(Icons.Default.Storage)
         Text(stringResource(Res.string.account_storage_title), color = Ink, fontWeight = FontWeight.Bold, fontSize = 19.sp)
-        PathLabel(stringResource(Res.string.account_application_data_label), dataDirectory)
-        PathLabel(stringResource(Res.string.account_database_label), databasePath)
         Text(
             stringResource(Res.string.account_storage_description),
             color = Muted,
             style = MaterialTheme.typography.bodySmall,
         )
-        Button(
-            onClick = {
-                reportFailure(
-                    dataFolderActionName,
-                    openAccountDataDirectory(platformActions, dataDirectory),
-                )
-            },
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(Res.string.account_data_folder_action))
+            Button(
+                onClick = {
+                    reportFailure(
+                        dataFolderActionName,
+                        openAccountDataDirectory(platformActions, dataDirectory),
+                    )
+                },
+            ) {
+                Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(Res.string.account_data_folder_action))
+            }
+            TextButton(onClick = details::toggle) {
+                Text(
+                    stringResource(
+                        if (details.isVisible) Res.string.account_storage_hide_details else Res.string.account_storage_show_details,
+                    ),
+                )
+            }
+        }
+        if (details.isVisible) {
+            PathLabel(stringResource(Res.string.account_application_data_label), dataDirectory)
+            PathLabel(stringResource(Res.string.account_database_label), databasePath)
         }
     }
 }

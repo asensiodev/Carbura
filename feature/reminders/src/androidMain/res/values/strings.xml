@@ -5,6 +5,7 @@
     <string name="reminder_title_label">Título</string>
     <string name="reminder_due_date_label">Fecha objetivo (opcional)</string>
     <string name="select_reminder_due_date_button">Seleccionar fecha</string>
+    <string name="clear_reminder_due_date_button">Quitar fecha</string>
     <string name="reminder_due_odometer_label">Kilómetros (opcional)</string>
     <string name="add_reminder_button">Añadir recordatorio</string>
     <string name="add_first_reminder_button">Añadir recordatorio</string>
@@ -49,5 +50,6 @@
     <string name="validation_missing_reminder_due_target">Introduce una fecha o kilometraje objetivo.</string>
     <string name="validation_negative_reminder_due_odometer">Los kilómetros no pueden ser negativos.</string>
     <string name="validation_invalid_reminder_date">Usa una fecha con formato YYYY-MM-DD.</string>
+    <string name="validation_invalid_reminder_odometer">Introduce kilómetros enteros dentro del rango permitido.</string>
     <string name="validation_generic">Revisa los datos introducidos.</string>
 </resources>
