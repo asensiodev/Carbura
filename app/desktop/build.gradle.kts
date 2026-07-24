@@ -39,7 +39,7 @@ fun kotlinString(value: String): String =
 val generateDesktopPublicConfig by tasks.registering {
     val outputDirectory = layout.buildDirectory.dir("generated/desktopPublicConfig")
     val desktopPublicConfigFile = rootProject.layout.projectDirectory.file("local.properties")
-    inputs.file(desktopPublicConfigFile).withPropertyName("desktopPublicConfigFile").optional()
+    inputs.files(desktopPublicConfigFile).withPropertyName("desktopPublicConfigFile")
     outputs.dir(outputDirectory)
     doLast {
         val desktopLocalProperties =
