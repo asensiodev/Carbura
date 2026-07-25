@@ -11,6 +11,8 @@ Carbura now has working Android and Desktop applications with real Google authen
 - Produce and inspect the available native Desktop distribution, while recording Windows-only validation as platform-dependent evidence.
 - Replace historical planning documentation with a concise final set: user stories, backlog, toolchain, and updated README delivery guidance.
 - Create automated and manual release checklists covering deletion propagation, offline recovery, account switching, authentication restoration, and Android/Desktop synchronization.
+- Add one app-level Android E2E journey through vehicle creation, future ITV maintenance, history, and the rendered planned reminder.
+- Align Android and Desktop package versions before publishing final artifacts.
 - Commit and push verified implementation blocks independently to avoid one unreviewable release commit.
 
 ## Capabilities

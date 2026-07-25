@@ -7,6 +7,24 @@ The delivery candidate SHALL pass formatting, static analysis, architecture chec
 - **WHEN** the final automated release command runs
 - **THEN** every required gate completes successfully without skipped release-blocking checks
 
+### Requirement: Primary Android journey has app-level E2E coverage
+The final delivery SHALL include an automated Android test that launches the real application composition and verifies the primary value journey through rendered UI and local persistence.
+
+#### Scenario: E2E journey completes
+- **WHEN** a deterministic restored test session creates a vehicle, records a future ITV maintenance, accepts the planned reminder, and opens Reminders
+- **THEN** the real history UI exposes the maintenance and the real Reminders UI exposes the generated planned reminder
+
+#### Scenario: External services are unavailable during E2E
+- **WHEN** Google, Supabase, or native notification delivery are not available to the test process
+- **THEN** only those external boundaries use deterministic substitutes while navigation, ViewModels, use cases, repositories, and SQLDelight remain production implementations
+
+### Requirement: Final package versions are aligned
+Android and Desktop final delivery artifacts SHALL identify the same semantic product version.
+
+#### Scenario: Version 1.0 artifacts are generated
+- **WHEN** the academic release artifacts are built
+- **THEN** Android `versionName` and Desktop `packageVersion` both report `1.0.0`
+
 ### Requirement: Installed-platform acceptance
 The delivery evidence SHALL distinguish automated verification from behavior that requires real operating systems, identity providers, secure credential vaults, and installed packages.
 

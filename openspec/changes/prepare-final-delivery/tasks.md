@@ -52,11 +52,14 @@
 - [x] 6.4 Record Windows MSI, signing, Credential Manager, and installed-runtime validation as external until run on Windows
 - [x] 6.5 Run strict OpenSpec validation, full quality checks, all tests, Android assembly, Desktop package checks, and `git diff --check`
 - [x] 6.6 Review, commit, and push packaging and release-evidence changes
+- [x] 6.7 Add an app-level Android E2E test for vehicle -> future ITV maintenance -> history -> planned reminder
+- [x] 6.8 Run the E2E test twice on an Android emulator with deterministic external boundaries
+- [x] 6.9 Align Android `versionName` and Desktop `packageVersion` at `1.0.0`
 
 ## 7. Manual Android/Desktop Acceptance
 
 - [ ] 7.1 Verify same-account family identity and bidirectional vehicle create/update/delete propagation
-- [ ] 7.2 Verify bidirectional maintenance create/update/delete propagation and accumulated history totals
+- [ ] 7.2 Verify bidirectional maintenance create/update/delete propagation and individual cost presentation
 - [ ] 7.3 Verify reminder create/complete/delete propagation and Android mobile notification scheduling
 - [ ] 7.4 Verify offline mutations, restart persistence, retry, and last-write-wins behavior
 - [ ] 7.5 Verify Desktop local-data import, exclusion, cancellation, and account switching without cross-family visibility

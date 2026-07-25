@@ -48,7 +48,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 | 11 | T-11 - CI/CD, release y evidencia de despliegue | Infraestructura | Transversal | Must | 5 SP |
 | 12 | T-12 - Test E2E del flujo principal | Calidad / tests | US-01, US-02, US-04, US-05, US-06 | Must | 5 SP |
 
-> T-11 y T-12 cubren artefactos obligatorios de la entrega final. La parte de CI de T-11 ya ejecuta `./gradlew qualityCheck test assembleDebug`; quedan release y evidencias. T-12 permanece pendiente.
+> T-11 y T-12 cubren artefactos obligatorios de la entrega final. La parte de CI de T-11 ya ejecuta `./gradlew qualityCheck test assembleDebug`; quedan release y evidencias. T-12 se cerró con un E2E Android app-level ejecutado en emulador.
 
 ## T-01 - Esquema local/remoto del MVP
 
@@ -550,7 +550,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 - **Sync seguro:** aislamiento por familia, tombstones, LWW y acknowledgement por `updatedAt` para no perder mutaciones concurrentes.
 - **Cuenta:** cierre de sesion local y eliminacion permanente single-flight con limpieza convergente.
 - **Backend:** ocho migraciones, RPC de eliminacion y hardening de familias/perfiles.
-- **Release pendiente:** instalacion DMG, validacion MSI/Windows, firma/notarizacion y checklist manual multi-dispositivo.
+- **Release pendiente:** regeneración e instalación de los artefactos finales, validación MSI/Windows, firma/notarización, vídeo y checklist manual multi-dispositivo. Una candidata DMG anterior ya superó instalación y smoke en macOS.
 
 ## T-12 - Test E2E del flujo principal
 
@@ -593,3 +593,5 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 **Referencias:** instrucciones del proyecto final (suite de tests), flujo E2E prioritario en `docs/user-stories.md`, `readme.md` seccion 2.6.
 
 **Historial:** creado tras auditoria pre-Entrega 1.
+
+**Resultado final:** implementado en `MainActivityE2ETest`. El test lanza la actividad real con una sesión restaurada determinista, crea un vehículo desde UI, registra un mantenimiento ITV futuro, confirma el recordatorio y verifica el historial y el recordatorio renderizados. Navegación, ViewModels, casos de uso, repositorios y SQLDelight son los de producción; Google, sync remoto y entrega de notificaciones se sustituyen en el límite externo.

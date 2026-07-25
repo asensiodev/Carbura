@@ -11,6 +11,7 @@ The current worktree contains a large cross-platform authentication, family-scop
 - Complete Desktop account management with convergent permanent deletion.
 - State and test the final Android/Desktop capability boundary.
 - Produce reviewable release commits, minimal documentation, package evidence, and a repeatable acceptance checklist.
+- Verify the primary value journey through the real Android application composition and local persistence stack.
 
 **Non-Goals:**
 
@@ -40,6 +41,10 @@ Desktop will not implement partially tested native schedulers. Reminder records 
 ### Validate artifacts honestly
 
 A full JDK with `jpackage` is required for DMG generation. macOS installation and runtime checks apply to the exact generated artifact. MSI configuration remains build-ready, but Windows signing, Credential Manager, and installed-runtime evidence remain explicit external validation until run on Windows.
+
+### Keep E2E external boundaries deterministic
+
+The required Android E2E test will launch the real activity and traverse production navigation, ViewModels, use cases, repositories, and SQLDelight. Authentication/profile restoration, remote synchronization, and native notification scheduling will use deterministic test boundaries so the journey verifies application behavior without depending on Google, Supabase availability, or wall-clock notification delivery.
 
 ### Reduce documentation to canonical delivery sources
 

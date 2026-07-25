@@ -22,11 +22,11 @@ Android forms and destructive actions SHALL prevent duplicate submissions while 
 - **THEN** the system ignores the duplicate activation and exposes progress for the active action
 
 ### Requirement: Responsive Android Content
-Android feature content SHALL remain usable on compact height, landscape, large font scale, and expanded width without hiding primary actions.
+Android feature content SHALL remain usable on compact height, landscape, large font scale, expanded width, and while the software keyboard is visible without hiding primary actions.
 
 #### Scenario: Long form with keyboard
 - **WHEN** a long vehicle, maintenance, or reminder form is shown with the software keyboard visible
-- **THEN** the user can scroll to every field and primary action without content being obscured by system or IME insets
+- **THEN** the user can scroll to every field and activate the primary action without first dismissing the keyboard
 
 #### Scenario: Expanded screen width
 - **WHEN** a feature is displayed on an expanded-width Android window
@@ -35,6 +35,17 @@ Android feature content SHALL remain usable on compact height, landscape, large 
 #### Scenario: Large text reflows actions
 - **WHEN** Android font scale is increased to 200 percent
 - **THEN** headings, metadata, and actions wrap or stack without clipping essential labels or controls
+
+### Requirement: Android calendar state follows field state
+Android date pickers SHALL initialize from and remain consistent with the currently displayed field value.
+
+#### Scenario: Optional date is cleared
+- **WHEN** the user clears an optional date, reopens its picker, and confirms without selecting a new date
+- **THEN** the previously cleared date is not restored
+
+#### Scenario: Date changes outside an open picker
+- **WHEN** form state changes the date value before the picker is opened again
+- **THEN** the picker reflects the updated value
 
 ### Requirement: Accessible Interaction Semantics
 Android screens SHALL expose headings, errors, selected controls, statuses, and item actions with semantics that identify their purpose and context.

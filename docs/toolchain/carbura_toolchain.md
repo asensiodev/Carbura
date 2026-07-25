@@ -294,11 +294,12 @@ Ramas y PRs oficiales:
 1. Revisar UX en Android y Desktop, incluido modo local sin Supabase.
 2. Ejecutar `./gradlew qualityCheck test assembleDebug :app:desktop:jar --stacktrace`; no hay una tarea Kover configurada actualmente.
 3. Añadir tests de integración para flujos críticos (auth, sync, reminders).
-4. Pulir animaciones, estados vacíos, estados de error, estados de carga.
-5. Revisar el flujo de sincronización Android/Desktop (offline → online → sync), tombstones y LWW.
-6. Generar DMG/MSI con un JDK que incluya `jpackage`, inspeccionar secretos e instalar el artefacto exacto en su sistema objetivo.
+4. Ejecutar `MainActivityE2ETest` en Android para verificar sesión restaurada, vehículo, mantenimiento ITV, historial y recordatorio a través de la aplicación real.
+5. Pulir animaciones, estados vacíos, estados de error, estados de carga.
+6. Revisar el flujo de sincronización Android/Desktop (offline → online → sync), tombstones y LWW.
+7. Generar DMG/MSI con un JDK que incluya `jpackage`, inspeccionar secretos e instalar el artefacto exacto en su sistema objetivo.
 
-Evidencia macOS actual: DMG generado con Amazon Corretto 17, runtime corregido con modulos `java.sql` y `java.net.http`, instalacion y smoke de arranque superados. La firma es ad-hoc; Developer ID/notarizacion, login interactivo del paquete y validacion MSI permanecen externos.
+Evidencia macOS actual: candidata DMG generada con Amazon Corretto 17, runtime corregido con módulos `java.sql` y `java.net.http`, instalación, login, restauración de Keychain, arranque offline y cierre de sesión superados. La candidata final debe regenerarse y reinstalarse tras la aceptación manual. La firma es ad-hoc; Developer ID/notarización y validación MSI permanecen externos.
 
 ---
 
@@ -326,7 +327,8 @@ Evidencia macOS actual: DMG generado con Amazon Corretto 17, runtime corregido c
 - Commits y PRs: trazabilidad entre documentación, specs, código y entregas.
 - Comandos de verificacion local y CI: `./gradlew qualityCheck test assembleDebug :app:desktop:jar --stacktrace`, OpenSpec estricto y `git diff --check`.
 - Evidencia dependiente de plataforma: APK Android, DMG instalado en macOS y MSI/Credential Manager validados en Windows.
-- Evidencia Android física: `./gradlew connectedDebugAndroidTest` superado en Pixel 9a con 51 tests instrumentados.
+- Evidencia Android: `./gradlew connectedDebugAndroidTest --max-workers=1` superado con 54 tests en Pixel 9a físico y 55 tests en emulador Pixel 9a después de incorporar el E2E app-level.
+- Checklist reproducible de aceptación, vídeo y release: `docs/guia-entrega-final.md`.
 
 ---
 

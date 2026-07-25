@@ -308,7 +308,7 @@ Los tickets se derivan de las historias Must-Have y Should-Have. Cada ticket deb
 | T-09 - Lista de recordatorios | Frontend | US-07 | Should | 5 SP | Recordatorios se muestran ordenados por proximidad con estado vacio. |
 | T-10 - Notificaciones locales | Plataforma | US-08 | Should | 5 SP | Aviso local se muestra sin depender del backend cuando llega la fecha. |
 | T-11 - CI/CD, release y evidencia de despliegue | Infraestructura | Transversal | Must (final) | 5 SP | Pipeline CI con tests en verde, secretos fuera del repo y release con artefactos instalables. |
-| T-12 - Test E2E del flujo principal | Calidad | US-01 a US-06 | Must (final) | 5 SP | Un test automatizado recorre el flujo completo hasta verificar el recordatorio. |
+| T-12 - Test E2E del flujo principal | Calidad | US-01 a US-06 | Cerrado | 5 SP | `MainActivityE2ETest` recorre el flujo completo hasta verificar el recordatorio renderizado. |
 
 ## Siguiente paso
 

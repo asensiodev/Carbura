@@ -63,7 +63,7 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 - Gestion de multiples vehiculos (coche, moto, furgoneta) bajo un garaje familiar.
 - Registro de mantenimientos: ITV, cambio de aceite, cambio de neumaticos, seguro, revision general, averias y tipos personalizados.
 - Historial por vehiculo con costes individuales; el agregado de costes queda pendiente.
-- Recordatorios manuales y sugerencias proactivas a partir de los objetivos de ITV, seguro y kilometraje del vehiculo. La generacion desde el formulario de mantenimiento sigue pendiente.
+- Recordatorios manuales y sugerencias proactivas a partir de los objetivos de ITV, seguro y kilometraje del vehículo. Un mantenimiento futuro permite guardar solo el registro o crear además un recordatorio determinista.
 - Autenticacion con cuenta de Google.
 - Persistencia local offline-first (la app funciona sin conexion en el dispositivo).
 - App Android como plataforma principal de la demo E2E.

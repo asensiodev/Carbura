@@ -2,6 +2,8 @@
 
 **Tu garaje, siempre a punto.**
 
+La preparación de pruebas manuales, vídeo e instalables está descrita en la [`guía de entrega final`](docs/guia-entrega-final.md).
+
 ## Índice
 
 0. [Ficha del proyecto](#0-ficha-del-proyecto)
@@ -68,7 +70,7 @@ Funcionalidades disponibles en Android y Desktop:
 Trabajo pendiente o evolución dentro del alcance descrito por las historias:
 
 - Calcular y presentar el coste acumulado por vehículo.
-- Completar la aceptación manual Android/Desktop, la instalación del DMG, la validación MSI en Windows y las evidencias de release.
+- Completar la aceptación manual Android/Desktop, regenerar y validar los artefactos finales, grabar el vídeo y publicar las evidencias de release.
 - Incorporar invitaciones familiares y exportación PDF/CSV en evoluciones posteriores.
 - Mantener iOS fuera del alcance actual.
 
@@ -266,9 +268,9 @@ No existe servidor propio. Supabase proporciona Auth, PostgreSQL, PostgREST y RL
 - `.github/workflows/ci.yml` se ejecuta en `push` y `pull_request` sobre Ubuntu con JDK 17.
 - El job real ejecuta `./gradlew qualityCheck test assembleDebug --stacktrace`.
 - `qualityCheck` agrega ktlint, detekt y `:quality:architecture:test`.
-- La instalación del DMG, la validación MSI/Windows y las capturas o vídeo de evidencia forman parte del cierre final.
+- Una candidata DMG fue instalada y validada en macOS; el artefacto final debe regenerarse y volver a instalarse después de cerrar la aceptación manual.
 - El DMG macOS `Carbura-1.0.0.dmg` se genero con Amazon Corretto 17, se instalo y supero el smoke de arranque con runtime autocontenido; SHA-256: `0d279dbee5642afc5d34f4a63987ac69bc54a9b67af41f810c7eb5c2fbdbd71d`.
-- El bundle actual tiene firma ad-hoc valida, pero Gatekeeper lo rechaza hasta disponer de Developer ID y notarizacion. Login/restore interactivos del paquete y Windows siguen pendientes de evidencia manual.
+- El bundle actual tiene firma ad-hoc válida, pero Gatekeeper puede rechazar su distribución hasta disponer de Developer ID y notarización. Windows/MSI sigue pendiente de evidencia en un host Windows.
 - Las credenciales permanecen fuera del repositorio; CI no necesita secretos de producción para las comprobaciones actuales.
 
 ### **2.5. Seguridad**
@@ -299,9 +301,11 @@ Spec OpenSpec
 
 La suite incluye tests comunes, Android/Robolectric y Desktop para dominio, repositorios, sync, OAuth, vaults, composición local, importación, eliminación de cuenta y propagación de recordatorios. El pipeline ejecuta `qualityCheck`, `test` y `assembleDebug`; el gate local añade `:app:desktop:jar`, OpenSpec estricto e inspección de artefactos.
 
-El gate instrumentado `./gradlew connectedDebugAndroidTest` se ejecutó en un Pixel 9a real y completó 51 tests de UI, navegación y entrega de notificaciones.
+El test app-level `MainActivityE2ETest` lanza la actividad Android real con límites externos deterministas y recorre sesión restaurada, alta de vehículo, mantenimiento ITV futuro, historial y recordatorio renderizado usando navegación, ViewModels, casos de uso, repositorios y SQLDelight de producción.
 
-La aceptación final manual debe comprobar la misma familia en Android/Desktop, propagación bidireccional y tombstones, cambios offline, reinicio, LWW, importación/exclusión local, restauración segura de sesión, RLS hostil con dos cuentas, eliminación de cuenta y recordatorios Desktop programados únicamente por Android.
+El gate instrumentado `./gradlew connectedDebugAndroidTest --max-workers=1` completó 54 tests en un Pixel 9a real antes de añadir el E2E y 55 tests en un emulador Pixel 9a con el recorrido app-level incluido.
+
+La aceptación final manual debe comprobar la misma familia en Android/Desktop, propagación bidireccional y tombstones, cambios offline, reinicio, LWW, importación/exclusión local, restauración segura de sesión, RLS hostil con dos cuentas, eliminación de cuenta y recordatorios Desktop programados únicamente por Android. La matriz reproducible está en [`docs/guia-entrega-final.md`](docs/guia-entrega-final.md).
 
 ### **2.7. Diseño de dominio y principios de código**
 
@@ -643,8 +647,8 @@ El backlog completo está en [`docs/backlog.md`](docs/backlog.md). Los tickets r
 | T-08 | Presentación | US-04, US-05 | Cerrado | Formulario de mantenimiento e historial implementados. |
 | T-09 | Recordatorios | US-07 | Cerrado | Lista y gestión manual implementadas. |
 | T-10 | Plataforma | US-08 | Cerrado Android | Alarmas y notificaciones locales para fechas. |
-| T-11 | CI/CD | Transversal | En cierre | CI y empaquetado configurados; instalación, firma y evidencias pendientes. |
-| T-12 | Calidad | Flujo principal | Alta | E2E Android pendiente. |
+| T-11 | CI/CD | Transversal | En cierre | CI y empaquetado configurados; faltan artefactos finales, vídeo y release. |
+| T-12 | Calidad | Flujo principal | Cerrado | E2E Android app-level verificado en emulador. |
 | T-13 | Vehículos | US-02, US-09 | Cerrado | Edición y actualización rápida del odómetro. |
 | T-14 | Recordatorios | US-13 | Cerrado | Sugerencias proactivas desde vehículo implementadas. |
 | T-15 | Costes | US-14 | Alta | Coste acumulado pendiente. |
@@ -712,8 +716,8 @@ Esta sección conserva las tres Pull Requests exigidas por la plantilla y las al
 
 Para la Entrega 1 se utiliza una rama `dev` como base de comparación porque la documentación inicial ya se había sincronizado con `main`. La Entrega 2 mantiene la PR académica desde `feature-entrega2-AAC` hacia `dev`; la entrega final se integra desde `finalproject-AAC` hacia `main`.
 
-PRs previstas:
+Pull Requests oficiales:
 
-- **PR 1 - Entrega 1 / Documentación técnica:** `feature-entrega1-AAC` hacia `dev`, con PRD, historias, arquitectura, modelo, API y tickets iniciales.
-- **PR 2 - Entrega 2 / MVP funcional:** `feature-entrega2-AAC` hacia `dev`, con autenticación, datos, UI Android, sync v0, recordatorios y notificaciones locales.
-- **PR 3 - Entrega final:** `finalproject-AAC` hacia `main`, con clientes Android/Desktop, OAuth seguro, sync endurecido, eliminación de cuenta, paquetes/evidencias y documentación académica final.
+- **PR 1 - Entrega 1 / Documentación técnica:** [`feature-entrega1-AAC` hacia `dev`](https://github.com/asensiodev/Carbura/pull/1), con PRD, historias, arquitectura, modelo, API y tickets iniciales.
+- **PR 2 - Entrega 2 / MVP funcional:** [`feature-entrega2-AAC` hacia `dev`](https://github.com/asensiodev/Carbura/pull/2), con autenticación, datos, UI Android, sync v0, recordatorios y notificaciones locales.
+- **PR 3 - Entrega final:** pendiente de crear desde `finalproject-AAC` hacia `main` después de completar la aceptación, los artefactos y las evidencias descritas en la [`guía de entrega final`](docs/guia-entrega-final.md).
