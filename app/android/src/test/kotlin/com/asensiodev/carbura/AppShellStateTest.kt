@@ -24,6 +24,24 @@ class AppShellStateTest {
     }
 
     @Test
+    fun emptyRestoredStackIsRebuiltWithGarageRoot() {
+        val stack = mutableListOf<NavKey>()
+
+        stack.navigateToTopLevel(CarburaRoute.User)
+
+        assertEquals(listOf<NavKey>(CarburaRoute.Garage, CarburaRoute.User), stack)
+    }
+
+    @Test
+    fun restoredNonGarageRootIsNormalizedBeforeTopLevelNavigation() {
+        val stack = mutableListOf<NavKey>(CarburaRoute.Reminders)
+
+        stack.navigateToTopLevel(CarburaRoute.User)
+
+        assertEquals(listOf<NavKey>(CarburaRoute.Garage, CarburaRoute.User), stack)
+    }
+
+    @Test
     fun selectingGarageRemovesTopLevelAndDetailDestinations() {
         val stack =
             mutableListOf<NavKey>(

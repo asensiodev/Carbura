@@ -5,10 +5,11 @@ import com.asensiodev.carbura.app.shared.CarburaRoute
 import com.asensiodev.carbura.core.domain.sync.SyncStatus
 
 internal fun MutableList<NavKey>.navigateToTopLevel(destination: CarburaRoute) {
-    if (firstOrNull() != CarburaRoute.Garage) {
-        clear()
+    if (isEmpty()) {
         add(CarburaRoute.Garage)
     } else {
+        // Normalize restored stacks without exposing an empty stack to Navigation 3.
+        if (first() != CarburaRoute.Garage) this[0] = CarburaRoute.Garage
         while (size > 1) removeLastOrNull()
     }
     if (destination != CarburaRoute.Garage) add(destination)
