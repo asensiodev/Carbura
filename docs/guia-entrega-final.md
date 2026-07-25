@@ -11,9 +11,10 @@ Esta guía convierte el cierre de Carbura en una secuencia reproducible. No se d
 - [ ] Grabar y revisar el vídeo de 2–3 minutos.
 - [ ] Generar de nuevo la APK y el DMG desde el commit final.
 - [ ] Instalar y validar exactamente esos dos artefactos, no una compilación anterior.
-- [ ] Crear la rama `finalproject-AAC`, la Pull Request final y la release `v1.0-final-AAC`.
+- [x] Crear y publicar la rama `finalproject-AAC`.
+- [ ] Crear la Pull Request final y la release `v1.0-final-AAC`.
 - [ ] Añadir al README los enlaces definitivos de PR, release y vídeo. Esta tarea queda asignada al autor de la entrega.
-- [ ] Archivar los cambios OpenSpec completados y ejecutar su validación estricta.
+- [ ] Archivar los cambios OpenSpec que queden completados después de la aceptación manual y ejecutar su validación estricta. `harden-cross-platform-inputs` ya está archivado.
 
 Windows/MSI, Developer ID y notarización macOS quedan fuera de la entrega si no se dispone del host o de las credenciales necesarias. Esta limitación debe declararse, no ocultarse.
 
@@ -396,7 +397,7 @@ Nombre recomendado tras verificarlo:
 Carbura-Android-1.0.0-debug.apk
 ```
 
-No renombrar hasta haber decidido y alineado la versión declarada dentro de la aplicación.
+Renombrar únicamente después de instalar y aceptar exactamente el APK generado.
 
 ## 8. Generar DMG macOS
 
@@ -469,7 +470,7 @@ Antes de enviar el formulario comprobar:
 - [ ] README con secciones `0–7` completas.
 - [ ] `prompts.md` actualizado.
 - [ ] URLs reales de PR 1, PR 2 y PR final.
-- [ ] Rama `finalproject-AAC` accesible.
+- [x] Rama `finalproject-AAC` accesible.
 - [ ] CI de la PR en verde.
 - [ ] Release y vídeo accesibles sin permisos especiales.
 - [ ] APK y DMG descargados desde GitHub e instalados una última vez.
