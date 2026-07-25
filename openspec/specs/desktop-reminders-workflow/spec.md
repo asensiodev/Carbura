@@ -1,7 +1,8 @@
 # desktop-reminders-workflow Specification
 
 ## Purpose
-TBD - created by archiving change add-desktop-reminders-workflow. Update Purpose after archive.
+Define the persistent Desktop workflow for listing, filtering, creating, completing, and deleting in-app reminders.
+
 ## Requirements
 ### Requirement: Desktop Reminders lists persistent pending reminders
 The Desktop application SHALL load and display pending reminders for the active Desktop local family from the persistent SQLDelight database.

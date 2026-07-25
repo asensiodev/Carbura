@@ -1,7 +1,8 @@
 # maintenance-generated-reminders Specification
 
 ## Purpose
-TBD - created by archiving change add-maintenance-generated-reminders. Update Purpose after archive.
+Define deterministic reminder generation, Android alert policies, and lifecycle reconciliation for ITV and insurance maintenance records.
+
 ## Requirements
 ### Requirement: Maintenance-Generated Logical Reminder
 The system SHALL create one deterministic logical reminder when an ITV or insurance maintenance record is saved with a next due date.

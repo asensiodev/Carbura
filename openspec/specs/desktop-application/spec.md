@@ -1,7 +1,8 @@
 # desktop-application Specification
 
 ## Purpose
-TBD - created by archiving change add-desktop-application. Update Purpose after archive.
+Define the executable Compose Desktop application, navigation shell, persistent local storage, and native package configuration.
+
 ## Requirements
 ### Requirement: Desktop application is executable from shared JVM code
 The system SHALL provide one Compose Desktop application entry point that runs on supported macOS and Windows JVM hosts.

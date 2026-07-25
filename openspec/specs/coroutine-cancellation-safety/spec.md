@@ -1,7 +1,8 @@
 # coroutine-cancellation-safety Specification
 
 ## Purpose
-TBD - created by archiving change harden-coroutine-cancellation. Update Purpose after archive.
+Define project-wide structured concurrency, cancellation propagation, transient-state cleanup, and serialized synchronization guarantees.
+
 ## Requirements
 ### Requirement: Cancellation propagates through suspend boundaries
 The system SHALL propagate `CancellationException` through suspend orchestration and SHALL NOT convert cancellation into domain failure, fallback data, telemetry failure, or user-facing error state.

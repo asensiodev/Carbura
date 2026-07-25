@@ -1,7 +1,8 @@
 # desktop-garage-planning Specification
 
 ## Purpose
-TBD - created by archiving change complete-desktop-garage-parity. Update Purpose after archive.
+Define Desktop vehicle planning fields, reminder decisions, quick odometer updates, and native-notification disclosure.
+
 ## Requirements
 ### Requirement: Desktop Vehicle Planning Fields
 The system SHALL allow the Desktop user to provide optional next ITV date, insurance renewal date, and next service odometer values during vehicle creation and editing.

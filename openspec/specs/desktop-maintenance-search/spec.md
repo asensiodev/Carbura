@@ -1,7 +1,8 @@
 # desktop-maintenance-search Specification
 
 ## Purpose
-TBD - created by archiving change add-desktop-maintenance-search. Update Purpose after archive.
+Define shared Desktop maintenance-history search behavior, supported fields, empty states, and query lifecycle.
+
 ## Requirements
 ### Requirement: Shared Maintenance Search State
 The system SHALL represent maintenance search input and derived visible records in immutable shared presentation state.

@@ -1,7 +1,8 @@
 # desktop-local-account Specification
 
 ## Purpose
-TBD - created by archiving change add-desktop-local-account-workspace. Update Purpose after archive.
+Define the Desktop account workspace, its local-mode disclosure, storage visibility, responsive actions, and safe native integrations.
+
 ## Requirements
 ### Requirement: Dedicated Desktop Account Workspace
 The Desktop app SHALL render a dedicated Account workspace instead of generic migration placeholder content.

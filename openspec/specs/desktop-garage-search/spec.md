@@ -1,7 +1,8 @@
 # desktop-garage-search Specification
 
 ## Purpose
-TBD - created by archiving change add-desktop-garage-search. Update Purpose after archive.
+Define shared Desktop Garage search behavior, supported vehicle fields, empty states, and session retention.
+
 ## Requirements
 ### Requirement: Shared Garage Search State
 The system SHALL represent Garage search input and derived visible vehicles in immutable shared presentation state.

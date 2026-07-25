@@ -1,7 +1,8 @@
 # desktop-maintenance-workflow Specification
 
 ## Purpose
-TBD - created by archiving change add-desktop-maintenance-workflow. Update Purpose after archive.
+Define the vehicle-scoped Desktop workflow for viewing, creating, planning, and deleting persistent maintenance records.
+
 ## Requirements
 ### Requirement: Desktop Maintenance is vehicle-scoped
 The Desktop Maintenance workspace SHALL load vehicles from the active Desktop local family and SHALL display or modify history only after one vehicle is explicitly selected or supplied by Garage navigation.

@@ -1,7 +1,8 @@
 # user-input-casing Specification
 
 ## Purpose
-TBD - created by archiving change preserve-user-input-casing. Update Purpose after archive.
+Define preservation of user-entered display casing while keeping technical identifiers and canonical labels deterministic.
+
 ## Requirements
 ### Requirement: User-entered display text preserves casing
 The system SHALL preserve meaningful capitalization and punctuation in user-entered display text after trimming surrounding whitespace.

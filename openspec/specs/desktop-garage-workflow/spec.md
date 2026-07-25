@@ -1,7 +1,8 @@
 # desktop-garage-workflow Specification
 
 ## Purpose
-TBD - created by archiving change add-desktop-garage-workflow. Update Purpose after archive.
+Define persistent local vehicle listing and CRUD behavior for the Desktop Garage without requiring authentication or synchronization.
+
 ## Requirements
 ### Requirement: Desktop Garage lists persistent local vehicles
 The Desktop application SHALL load and display vehicles associated with the local Desktop family from the persistent SQLDelight database.

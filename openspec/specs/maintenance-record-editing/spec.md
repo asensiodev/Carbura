@@ -1,7 +1,8 @@
 # maintenance-record-editing Specification
 
 ## Purpose
-TBD - created by archiving change edit-maintenance-records. Update Purpose after archive.
+Define safe cross-platform editing of active maintenance records and atomic convergence of their generated and planned reminders.
+
 ## Requirements
 ### Requirement: Active maintenance records are editable
 The system SHALL allow Android and Desktop users to edit an active maintenance record from its vehicle history.

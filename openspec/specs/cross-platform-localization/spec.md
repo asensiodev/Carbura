@@ -1,7 +1,8 @@
 # cross-platform-localization Specification
 
 ## Purpose
-TBD - created by archiving change share-cross-platform-localization. Update Purpose after archive.
+Define consistent Spanish product terminology and resource-backed presentation copy across Android and Desktop.
+
 ## Requirements
 ### Requirement: Consistent product language
 The application SHALL present equivalent user workflows in Spanish on Android and Desktop.

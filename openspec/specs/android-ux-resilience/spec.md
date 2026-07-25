@@ -1,7 +1,8 @@
 # android-ux-resilience Specification
 
 ## Purpose
-TBD - created by archiving change polish-android-ux. Update Purpose after archive.
+Define resilient, responsive, accessible, and mutation-safe Android presentation behavior across core feature workflows.
+
 ## Requirements
 ### Requirement: Recoverable Feature Loading
 Android list features SHALL distinguish initial loading, loaded content, empty content, and recoverable load failure without briefly presenting empty content before the first load starts.
