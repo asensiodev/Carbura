@@ -1081,6 +1081,7 @@ internal fun VehicleForm(
                 modifier =
                     Modifier
                         .fillMaxWidth()
+                        .testTag("vehicle_name_input")
                         .then(if (nameError) Modifier.bringIntoViewRequester(validationErrorRequester) else Modifier),
                 label = { Text(stringResource(R.string.vehicle_name_label)) },
                 isError = nameError,
@@ -1159,6 +1160,7 @@ internal fun VehicleForm(
                 modifier =
                     Modifier
                         .fillMaxWidth()
+                        .testTag("vehicle_odometer_input")
                         .then(
                             if (
                                 errorMessage == CarburaString.ValidationNegativeVehicleOdometer ||
@@ -1205,7 +1207,7 @@ internal fun VehicleForm(
             }
             Button(
                 onClick = onCreateVehicle,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("save_vehicle_button"),
                 enabled = !isSaving,
             ) {
                 Text(stringResource(if (isSaving) R.string.saving_vehicle else R.string.save_vehicle_button))

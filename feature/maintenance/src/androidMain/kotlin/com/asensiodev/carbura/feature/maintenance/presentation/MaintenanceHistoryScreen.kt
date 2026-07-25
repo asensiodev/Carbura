@@ -481,7 +481,11 @@ internal fun MaintenanceHistoryScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = onSaveFutureWithReminder, enabled = state.activeMutation == null) {
+                TextButton(
+                    onClick = onSaveFutureWithReminder,
+                    enabled = state.activeMutation == null,
+                    modifier = Modifier.testTag("create_future_maintenance_reminder"),
+                ) {
                     Text(stringResource(R.string.future_maintenance_reminder_confirm))
                 }
             },
@@ -706,6 +710,7 @@ private fun MaintenanceForm(
                 MaintenanceTypeCode.entries.forEach { type ->
                     DropdownMenuItem(
                         text = { Text(type.localizedLabel()) },
+                        modifier = Modifier.testTag("maintenance_type_option_${type.name}"),
                         onClick = {
                             onTypeSelected(type)
                             typeMenuExpanded = false
@@ -734,6 +739,7 @@ private fun MaintenanceForm(
                 state.validationError == CarburaString.ValidationInvalidMaintenanceDate ||
                     state.validationError == CarburaString.ValidationInvalidMaintenancePerformedDate,
             label = stringResource(R.string.maintenance_date_label),
+            testTag = "maintenance_performed_date",
             modifier =
                 if (
                     state.validationError == CarburaString.ValidationInvalidMaintenanceDate ||
@@ -763,6 +769,7 @@ private fun MaintenanceForm(
                         },
                     ),
                 optional = true,
+                testTag = "maintenance_next_due_date",
                 modifier =
                     if (state.validationError == CarburaString.ValidationInvalidMaintenanceNextDueDate) {
                         Modifier.bringIntoViewRequester(validationErrorRequester)
@@ -777,6 +784,7 @@ private fun MaintenanceForm(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .testTag("maintenance_odometer_input")
                     .then(
                         if (
                             state.validationError == CarburaString.ValidationNegativeMaintenanceOdometer ||
@@ -878,6 +886,7 @@ private fun MaintenanceDatePickerField(
     error: Boolean,
     label: String,
     optional: Boolean = false,
+    testTag: String? = null,
     modifier: Modifier = Modifier,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
@@ -892,7 +901,7 @@ private fun MaintenanceDatePickerField(
         )
         OutlinedButton(
             onClick = { showDatePicker = true },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(testTag?.let(Modifier::testTag) ?: Modifier),
         ) {
             Text(value.localizedDateOrSelf().ifBlank { stringResource(R.string.maintenance_select_date) })
         }
@@ -920,6 +929,7 @@ private fun MaintenanceDatePickerField(
                         datePickerState.selectedDateMillis?.let { onValueChange(it.toIsoDate()) }
                         showDatePicker = false
                     },
+                    modifier = Modifier.testTag("maintenance_date_confirm"),
                 ) {
                     Text(stringResource(android.R.string.ok))
                 }
@@ -930,7 +940,10 @@ private fun MaintenanceDatePickerField(
                 }
             },
         ) {
-            DatePicker(state = datePickerState)
+            DatePicker(
+                state = datePickerState,
+                modifier = Modifier.testTag("maintenance_date_picker"),
+            )
         }
     }
 }

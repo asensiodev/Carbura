@@ -404,6 +404,7 @@ private fun CarburaMainScaffold(
                     NavigationBarItem(
                         selected = currentRoute == CarburaRoute.Reminders,
                         onClick = onRemindersSelected,
+                        modifier = Modifier.testTag("reminders_tab"),
                         icon = {
                             Icon(
                                 imageVector = Icons.Filled.Notifications,
