@@ -299,7 +299,7 @@ Ramas y PRs oficiales:
 6. Revisar el flujo de sincronización Android/Desktop (offline → online → sync), tombstones y LWW.
 7. Generar DMG/MSI con un JDK que incluya `jpackage`, inspeccionar secretos e instalar el artefacto exacto en su sistema objetivo.
 
-Evidencia macOS actual: candidata DMG generada con Amazon Corretto 17, runtime corregido con módulos `java.sql` y `java.net.http`, instalación, login, restauración de Keychain, arranque offline y cierre de sesión superados. La candidata final debe regenerarse y reinstalarse tras la aceptación manual. La firma es ad-hoc; Developer ID/notarización y validación MSI permanecen externos.
+Evidencia macOS actual: candidata DMG generada con Amazon Corretto 17, runtime corregido con módulos `java.sql` y `java.net.http`, instalación, login, restauración de Keychain, arranque offline y cierre de sesión superados. La candidata final debe regenerarse y reinstalarse tras la aceptación manual. La firma es ad-hoc; Developer ID/notarización quedan fuera por falta de credenciales y MSI/Windows queda fuera del alcance validado por falta de un PC Windows.
 
 ---
 
@@ -326,7 +326,7 @@ Evidencia macOS actual: candidata DMG generada con Amazon Corretto 17, runtime c
 - `openspec/changes/archive/`: historial de cambios aplicados y cerrados.
 - Commits y PRs: trazabilidad entre documentación, specs, código y entregas.
 - Comandos de verificacion local y CI: `./gradlew qualityCheck test assembleDebug :app:desktop:jar --stacktrace`, OpenSpec estricto y `git diff --check`.
-- Evidencia dependiente de plataforma: APK Android, DMG instalado en macOS y MSI/Credential Manager validados en Windows.
+- Evidencia dependiente de plataforma: APK Android y DMG instalado en macOS. MSI, ejecución Windows y Credential Manager no se validan por falta de un PC Windows.
 - Evidencia Android: `./gradlew connectedDebugAndroidTest --max-workers=1` superado con 54 tests en Pixel 9a físico y 55 tests en emulador Pixel 9a después de incorporar el E2E app-level.
 - Checklist reproducible de aceptación, vídeo y release: `docs/guia-entrega-final.md`.
 

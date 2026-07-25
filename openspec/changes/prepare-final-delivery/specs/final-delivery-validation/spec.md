@@ -34,7 +34,7 @@ The delivery evidence SHALL distinguish automated verification from behavior tha
 
 #### Scenario: Windows validation is unavailable on the build host
 - **WHEN** no supported Windows signing and runtime environment is available
-- **THEN** the delivery records Windows validation as an explicit residual gap rather than claiming it passed
+- **THEN** the delivery records MSI, Windows runtime, signing, and Credential Manager as outside the validated delivery scope rather than claiming they passed
 
 ### Requirement: Cross-device deletion and synchronization acceptance
 The final manual checklist SHALL cover create, update, complete, and delete propagation between Android and Desktop for the same authenticated family.

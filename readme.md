@@ -29,7 +29,7 @@ Carbura
 
 ### **0.3. Descripción breve del proyecto:**
 
-Carbura ofrece clientes funcionales Android y Desktop sobre una arquitectura Kotlin Multiplatform para gestionar los vehículos de un garaje familiar. Ambos trabajan local-first con SQLDelight y sincronizan vehículos, mantenimientos y recordatorios mediante Supabase. Android añade Google ID con Credential Manager y notificaciones locales; Desktop usa OAuth PKCE en navegador, almacenamiento seguro nativo y no programa alertas del sistema. iOS y Linux quedan fuera de la entrega.
+Carbura ofrece clientes funcionales Android y Desktop sobre una arquitectura Kotlin Multiplatform para gestionar los vehículos de un garaje familiar. Ambos trabajan local-first con SQLDelight y sincronizan vehículos, mantenimientos y recordatorios mediante Supabase. Android añade Google ID con Credential Manager y notificaciones locales; Desktop usa OAuth PKCE en navegador, almacenamiento seguro nativo y no programa alertas del sistema. La entrega validada incluye Android y macOS; MSI y ejecución Windows quedan fuera del alcance comprobado porque no se dispone de un PC Windows. iOS y Linux quedan fuera de la entrega.
 
 ### **0.4. URL del proyecto:**
 
@@ -106,7 +106,7 @@ Requisitos:
 
 - JDK 17. Para paquetes Desktop nativos se necesita además un JDK completo que incluya `jpackage`.
 - Android Studio y un SDK Android compatible.
-- macOS para generar y validar DMG; Windows para generar y validar MSI y Credential Manager.
+- macOS para generar y validar DMG. Generar y validar MSI y Credential Manager requiere Windows y queda fuera del alcance comprobado de esta entrega por no disponer de ese host.
 - Proyecto Supabase con Google habilitado y las ocho migraciones de `supabase/migrations/` aplicadas en orden.
 
 Crear `local.properties` a partir de [`local.properties.example`](local.properties.example) y completar:
@@ -128,7 +128,7 @@ Comandos principales:
 ./gradlew :app:android:installDebug
 ./gradlew :app:desktop:run
 ./gradlew :app:desktop:packageDmg   # macOS con jpackage
-./gradlew :app:desktop:packageMsi   # Windows con jpackage
+./gradlew :app:desktop:packageMsi   # Configurado, no validado: requiere Windows con jpackage
 ```
 
 Verificación local equivalente a CI:
@@ -270,7 +270,7 @@ No existe servidor propio. Supabase proporciona Auth, PostgreSQL, PostgREST y RL
 - `qualityCheck` agrega ktlint, detekt y `:quality:architecture:test`.
 - Una candidata DMG fue instalada y validada en macOS; el artefacto final debe regenerarse y volver a instalarse después de cerrar la aceptación manual.
 - El DMG macOS `Carbura-1.0.0.dmg` se genero con Amazon Corretto 17, se instalo y supero el smoke de arranque con runtime autocontenido; SHA-256: `0d279dbee5642afc5d34f4a63987ac69bc54a9b67af41f810c7eb5c2fbdbd71d`.
-- El bundle actual tiene firma ad-hoc válida, pero Gatekeeper puede rechazar su distribución hasta disponer de Developer ID y notarización. Windows/MSI sigue pendiente de evidencia en un host Windows.
+- El bundle actual tiene firma ad-hoc válida, pero Gatekeeper puede rechazar su distribución hasta disponer de Developer ID y notarización. Windows/MSI queda fuera del alcance validado de la entrega porque no se dispone de un PC Windows.
 - Las credenciales permanecen fuera del repositorio; CI no necesita secretos de producción para las comprobaciones actuales.
 
 ### **2.5. Seguridad**

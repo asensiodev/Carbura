@@ -40,7 +40,7 @@ Desktop will not implement partially tested native schedulers. Reminder records 
 
 ### Validate artifacts honestly
 
-A full JDK with `jpackage` is required for DMG generation. macOS installation and runtime checks apply to the exact generated artifact. MSI configuration remains build-ready, but Windows signing, Credential Manager, and installed-runtime evidence remain explicit external validation until run on Windows.
+A full JDK with `jpackage` is required for DMG generation. macOS installation and runtime checks apply to the exact generated artifact. MSI configuration remains build-ready, but Windows signing, Credential Manager, and installed-runtime evidence are outside the validated delivery scope because no Windows PC is available.
 
 ### Keep E2E external boundaries deterministic
 

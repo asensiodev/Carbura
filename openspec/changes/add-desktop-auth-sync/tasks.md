@@ -66,5 +66,5 @@
 - [x] 7.2 Add tests proving release code cannot persist credentials outside operating-system vaults
 - [ ] 7.3 Run authenticated RLS tests proving cross-family denial plus profile and family privilege-escalation denial
 - [x] 7.4 Inspect packaged artifacts for service-role keys, OAuth client secrets, database passwords, tokens, and sensitive logs
-- [ ] 7.5 Verify signed Windows and signed/notarized macOS packages with real Google login, restore, refresh, sign-out, and offline recovery
+- [ ] 7.5 Verify signed Windows and signed/notarized macOS packages with real Google login, restore, refresh, sign-out, and offline recovery (external to the validated academic scope: no Windows host or production signing credentials)
 - [x] 7.6 Run strict OpenSpec validation and full quality, test, Android assembly, and Desktop packaging checks

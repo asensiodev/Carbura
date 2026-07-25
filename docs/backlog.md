@@ -519,7 +519,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 - Workflow de GitHub Actions que compila y ejecuta `./gradlew test` en cada push y PR.
 - Quality gate actual con `./gradlew qualityCheck test assembleDebug --stacktrace`.
 - Gestion de secretos via GitHub Secrets (sin credenciales en el repositorio).
-- Release con APK Android y paquetes Desktop DMG/MSI generados en su sistema objetivo.
+- Release académica con APK Android y DMG macOS generados e instalados en sus sistemas objetivo. MSI queda fuera del alcance validado por no disponer de un PC Windows.
 - Publicacion de artefactos en GitHub Releases con tag `v1.0-final-AAC`.
 - Evidencia de despliegue: backend Supabase activo, instrucciones de instalacion y video demo de 2-3 minutos del flujo E2E.
 
@@ -536,7 +536,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 - Verificacion del pipeline en verde sobre un cambio trivial.
 - Verificacion de fallo del pipeline ante un test roto (prueba controlada).
-- Checklist manual de release: instalacion del APK, DMG en macOS y MSI/Credential Manager en Windows.
+- Checklist manual de release: instalación del APK y DMG en macOS; MSI/Credential Manager queda registrado como no validado por falta de PC Windows.
 
 **Referencias:** instrucciones del proyecto final (artefactos de infra y despliegue), `readme.md` seccion 2.4.
 
@@ -550,7 +550,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 - **Sync seguro:** aislamiento por familia, tombstones, LWW y acknowledgement por `updatedAt` para no perder mutaciones concurrentes.
 - **Cuenta:** cierre de sesion local y eliminacion permanente single-flight con limpieza convergente.
 - **Backend:** ocho migraciones, RPC de eliminacion y hardening de familias/perfiles.
-- **Release pendiente:** regeneración e instalación de los artefactos finales, validación MSI/Windows, firma/notarización, vídeo y checklist manual multi-dispositivo. Una candidata DMG anterior ya superó instalación y smoke en macOS.
+- **Release pendiente:** regeneración e instalación de APK/DMG, vídeo y checklist manual multi-dispositivo. Una candidata DMG anterior ya superó instalación y smoke en macOS. MSI/Windows y firma/notarización quedan fuera del alcance validado por falta de host y credenciales.
 
 ## T-12 - Test E2E del flujo principal
 

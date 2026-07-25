@@ -16,7 +16,7 @@ Esta guía convierte el cierre de Carbura en una secuencia reproducible. No se d
 - [ ] Añadir al README los enlaces definitivos de PR, release y vídeo. Esta tarea queda asignada al autor de la entrega.
 - [ ] Archivar los cambios OpenSpec que queden completados después de la aceptación manual y ejecutar su validación estricta. `harden-cross-platform-inputs` ya está archivado.
 
-Windows/MSI, Developer ID y notarización macOS quedan fuera de la entrega si no se dispone del host o de las credenciales necesarias. Esta limitación debe declararse, no ocultarse.
+Windows/MSI queda fuera del alcance validado de esta entrega porque no se dispone de un PC Windows. Developer ID y notarización macOS también quedan fuera por no disponer de las credenciales necesarias. Estas limitaciones deben declararse, no ocultarse.
 
 ## 2. Preparación de la aceptación manual
 
@@ -319,7 +319,7 @@ La candidata se considera aceptada cuando:
 | 01:30–01:50 | Recordatorio en ambos clientes y notificación Android | Desktop sincroniza; Android programa la alerta local. |
 | 01:50–02:10 | Desconectar red y mostrar un cambio local | Persistencia offline, reinicio y convergencia posterior. |
 | 02:10–02:30 | Cuenta Desktop y arquitectura/CI | PKCE, Keychain, cierre/eliminación, tests y pipeline. |
-| 02:30–02:45 | Pantalla final | Repositorio, release y limitaciones: sin iOS, MSI ni firma/notarización de producción. |
+| 02:30–02:45 | Pantalla final | Repositorio, release y limitaciones: Windows/MSI no validado por falta de PC Windows, sin iOS ni firma/notarización de producción. |
 
 ### Texto de cierre sugerido
 
@@ -481,7 +481,7 @@ Antes de enviar el formulario comprobar:
 
 - Android se distribuye como APK debug mientras no se configure una firma release propia.
 - El DMG usa firma ad-hoc y no está notarizado.
-- MSI y Windows Credential Manager no están validados sin un host Windows.
+- MSI, ejecución Windows y Windows Credential Manager quedan fuera del alcance validado por no disponer de un PC Windows.
 - Desktop no entrega notificaciones nativas; las programa Android tras sincronizar.
 - iOS y Linux quedan fuera del alcance.
 - El coste acumulado por vehículo no está implementado; sí se conservan y muestran costes individuales.

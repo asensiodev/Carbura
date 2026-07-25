@@ -9,7 +9,7 @@
 
 ## 1. Vision del producto
 
-**Carbura** es una aplicacion multiplataforma para gestionar el mantenimiento de los vehiculos de una familia. La entrega materializa clientes Android y Desktop para macOS/Windows sobre una base Kotlin Multiplatform; iOS queda fuera del alcance. Permite registrar revisiones, ITVs, seguros, averias y cambios de aceite o neumaticos, sincronizar recordatorios y consultar el historial y los costes de cada vehiculo. Android es la unica plataforma que entrega notificaciones nativas.
+**Carbura** es una aplicacion multiplataforma para gestionar el mantenimiento de los vehiculos de una familia. La entrega validada materializa clientes Android y Desktop macOS sobre una base Kotlin Multiplatform. El código Desktop mantiene compatibilidad y empaquetado configurado para Windows, pero MSI, ejecución y Credential Manager quedan fuera del alcance comprobado por no disponer de un PC Windows; iOS queda fuera del alcance. Permite registrar revisiones, ITVs, seguros, averias y cambios de aceite o neumaticos, sincronizar recordatorios y consultar el historial y los costes de cada vehiculo. Android es la unica plataforma que entrega notificaciones nativas.
 
 **Slogan:** *Tu garaje, siempre a punto.*
 
@@ -71,7 +71,7 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 ### MVP extendido (Should-Have / Could-Have)
 
 - Pantalla de proximos recordatorios y **notificaciones locales** con antelacion configurable (por defecto: 30 dias antes para ITV y seguro). *(Should)*
-- App Desktop (macOS y Windows via Compose Desktop) desde la misma base KMP. *(Implementada)*
+- App Desktop macOS desde la misma base KMP. El target Windows está implementado/configurado, pero no forma parte del alcance validado de la entrega por falta de un PC Windows.
 - Recordatorios por kilometros y actualizacion rapida del odometro. *(Implementado en Android)*
 - Sincronizacion en la nube entre instalaciones autenticadas de la misma familia. *(Implementado como sync v0)*
 - Sistema de invitacion para unirse al garaje familiar (codigo de 6 caracteres). *(Could)*
@@ -112,7 +112,7 @@ El scope se divide en dos niveles alineados con la priorizacion de `docs/user-st
 - **Local-first**: las mutaciones de vehiculos, mantenimientos y recordatorios se guardan primero en SQLDelight y quedan pendientes ante fallos remotos. El arranque autenticado resuelve sesion y familia e intenta una sincronizacion inicial antes de mostrar el contenido principal.
 - **Privacidad**: los datos no se comparten con terceros. Sin anuncios. Sin analiticas de uso.
 - **Rendimiento**: la app debe arrancar en menos de 2 segundos en condiciones normales.
-- **Multiplataforma**: Android (API 26+) y Desktop macOS/Windows son entregables ejecutables; la base KMP comparte dominio, datos y presentacion. iOS no forma parte del alcance.
+- **Multiplataforma**: Android (API 26+) y Desktop macOS son entregables ejecutables validados; la base KMP comparte dominio, datos y presentacion. Windows permanece como target implementado no validado y iOS no forma parte del alcance.
 - **Escalabilidad del backend**: arquitectura Supabase con Row Level Security por `family_id`, preparada para multiples familias independientes desde el dia 1.
 - **Seguridad**: autenticacion con Google ID mediante Credential Manager y Supabase Auth. El flujo actual permite reintentar ante error; un fallback OAuth alternativo queda como mejora. Tokens JWT gestionados por Supabase Auth y secretos fuera del repositorio.
 
