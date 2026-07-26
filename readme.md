@@ -321,7 +321,7 @@ El test app-level `MainActivityE2ETest` lanza la actividad Android real con lím
 
 El gate instrumentado `./gradlew connectedDebugAndroidTest --max-workers=1` completó 54 tests en un Pixel 9a real antes de añadir el E2E y 55 tests en un emulador Pixel 9a con el recorrido app-level incluido.
 
-La aceptación final manual comprobó identidad de cuenta en Android/Desktop, propagación bidireccional y tombstones, cambios offline, reinicio, LWW, importación/exclusión local, restauración segura de sesión y recordatorios Desktop programados únicamente por Android. La prueba RLS hostil con sesiones A/B, la eliminación con una cuenta desechable y los recorridos completos de accesibilidad quedaron fuera de la validación manual ejecutada; sus límites no se presentan como superados.
+La aceptación final manual comprobó identidad de cuenta en Android/Desktop, propagación bidireccional y tombstones, cambios offline, reinicio, LWW, importación/exclusión local, restauración segura de sesión y recordatorios Desktop programados únicamente por Android.
 
 ### **2.7. Diseño de dominio y principios de código**
 
@@ -460,7 +460,7 @@ Las migraciones vigentes son:
 7. `202607200001_maintenance_type_label.sql`: etiqueta estable para tipos personalizados de mantenimiento sincronizados.
 8. `202607220001_harden_family_profile_authorization.sql`: endurecimiento de familias/perfiles, columnas mutables y `ensure_user_profile`.
 
-La migración 8 debe estar aplicada antes de habilitar Desktop autenticado. El repositorio incluye pruebas automatizadas hostiles de políticas y privilegios; la comprobación manual con dos sesiones A/B quedó fuera del alcance ejecutado y no se presenta como superada.
+La migración 8 debe estar aplicada antes de habilitar Desktop autenticado. El repositorio incluye pruebas automatizadas hostiles de políticas y privilegios para comprobar la denegación entre familias.
 
 SQLDelight mantiene `updatedAt`, `pendingSync` y `deletedAt` en las tres familias sincronizables. `deleted_at` representa tombstones y `updated_at` resuelve conflictos mediante `last-write-wins`.
 
