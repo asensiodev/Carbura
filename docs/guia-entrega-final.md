@@ -94,22 +94,26 @@ Resultado: OK tras corregir y repetir el arranque offline. La sesión restaurada
 
 #### M-05 — Cambio de cuenta y aislamiento visual
 
-- [ ] Cerrar sesión en Desktop con A e iniciar con B.
-- [ ] Confirmar que B no ve vehículos, mantenimientos ni recordatorios de A.
-- [ ] Volver a A y verificar que sus datos reaparecen tras sincronizar.
+- [x] Cerrar sesión en Desktop con A e iniciar con B.
+- [x] Confirmar que B no ve vehículos, mantenimientos ni recordatorios de A.
+- [x] Volver a A y verificar que sus datos reaparecen tras sincronizar.
 
-Resultado esperado: no existe visibilidad cruzada entre familias.
+Resultado esperado: no existe visibilidad cruzada entre cuentas.
+
+Resultado: OK. B se mostró sin datos de A y, al volver a A, sus vehículos, mantenimientos y recordatorios reaparecieron tras sincronizar sin datos cruzados.
 
 ### Vehículos y tombstones
 
 #### M-06 — Alta Desktop → Android
 
-- [ ] Crear en Desktop un vehículo con nombre, tipo, odómetro, ITV, seguro y próxima revisión.
-- [ ] Probar primero un valor inválido y confirmar el error junto al campo.
-- [ ] Guardar y aceptar las sugerencias de recordatorio.
-- [ ] Sincronizar Android y comprobar vehículo y recordatorios sin duplicados.
+- [x] Crear en Desktop un vehículo con nombre, tipo, odómetro, ITV, seguro y próxima revisión.
+- [x] Probar primero un valor inválido y confirmar el error junto al campo.
+- [x] Guardar y aceptar las sugerencias de recordatorio.
+- [x] Sincronizar Android y comprobar vehículo y recordatorios sin duplicados.
 
 Resultado esperado: propagación completa y una sola sugerencia por objetivo estable.
+
+Resultado: OK tras sustituir el selector de fecha Desktop incompatible. El valor negativo mostró validación inline; el vehículo, su planificación y los recordatorios aceptados llegaron una sola vez a Android sin notificación inmediata.
 
 #### M-07 — Edición Android → Desktop
 

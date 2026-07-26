@@ -77,3 +77,4 @@
 - [x] 8.6 Restore the exact authenticated family cache during offline Desktop startup and repeat M-04
 - [x] 8.7 Keep the active Desktop destination mounted while authenticated synchronization retries
 - [x] 8.8 Schedule manual reminder notifications for their visible due date without an immediate hidden-offset fallback
+- [x] 8.9 Replace the incompatible Material 3 Desktop date picker and repeat M-06

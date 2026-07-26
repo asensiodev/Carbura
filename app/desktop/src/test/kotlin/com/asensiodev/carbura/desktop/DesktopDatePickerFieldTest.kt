@@ -2,6 +2,7 @@ package com.asensiodev.carbura.desktop
 
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.Locale
@@ -29,6 +30,17 @@ class DesktopDatePickerFieldTest {
                 .toEpochMilli()
         assertEquals(millis, isoDateToUtcMillis("2028-02-29"))
         assertEquals("2028-02-29", utcMillisToIsoDate(millis))
+    }
+
+    @Test
+    fun desktopCalendarUsesMondayFirstAndCoversLeapDay() {
+        val dates = desktopCalendarDates(YearMonth.of(2028, 2))
+
+        assertEquals(42, dates.size)
+        assertEquals(null, dates.first())
+        assertEquals(LocalDate.of(2028, 2, 1), dates[1])
+        assertEquals(LocalDate.of(2028, 2, 29), dates[29])
+        assertEquals("Febrero 2028", formatDesktopMonth(YearMonth.of(2028, 2)))
     }
 
     @Test
