@@ -23,7 +23,6 @@ class UserRouteTest {
                 UserRoute(
                     displayName = "Angela",
                     email = "angela@example.com",
-                    familyName = "Familia de Angela",
                     syncStatus = SyncStatus(),
                     isDeletingAccount = false,
                     onSyncNow = {},

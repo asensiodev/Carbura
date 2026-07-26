@@ -278,6 +278,19 @@ private fun DesktopStartupContent(
     compact: Boolean,
     controller: DesktopAppController,
 ) {
+    val shellAccount = state.accountOrNull()
+    if (shellAccount != null) {
+        DesktopShell(
+            compact = compact,
+            familyId = shellAccount.familyId,
+            startupState = state,
+            syncStatus = syncStatus,
+            excludedLocalData = excludedLocalData,
+            contentRevision = contentRevision,
+            controller = controller,
+        )
+        return
+    }
     when (state) {
         DesktopStartupState.Restoring -> StartupProgress(stringResource(Res.string.startup_restoring))
         DesktopStartupState.Authenticating -> StartupProgress(stringResource(Res.string.startup_authenticating))
@@ -300,37 +313,14 @@ private fun DesktopStartupContent(
                 contentRevision = contentRevision,
                 controller = controller,
             )
-        is DesktopStartupState.Authenticated ->
-            DesktopShell(
-                compact = compact,
-                familyId = state.account.familyId,
-                startupState = state,
-                syncStatus = syncStatus,
-                excludedLocalData = excludedLocalData,
-                contentRevision = contentRevision,
-                controller = controller,
+        is DesktopStartupState.Authenticated -> StartupProgress(stringResource(Res.string.startup_initial_sync))
+        is DesktopStartupState.RecoverableFailure ->
+            StartupFailure(
+                message = state.message,
+                onRetry = controller::retry,
+                onLocalMode = controller::enterLocalMode,
+                onSignIn = controller::signIn,
             )
-        is DesktopStartupState.RecoverableFailure -> {
-            val account = state.account
-            if (account != null) {
-                DesktopShell(
-                    compact = compact,
-                    familyId = account.familyId,
-                    startupState = state,
-                    syncStatus = syncStatus,
-                    excludedLocalData = excludedLocalData,
-                    contentRevision = contentRevision,
-                    controller = controller,
-                )
-            } else {
-                StartupFailure(
-                    message = state.message,
-                    onRetry = controller::retry,
-                    onLocalMode = controller::enterLocalMode,
-                    onSignIn = controller::signIn,
-                )
-            }
-        }
     }
 }
 

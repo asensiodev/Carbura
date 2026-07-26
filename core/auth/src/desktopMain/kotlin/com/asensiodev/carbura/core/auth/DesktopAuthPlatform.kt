@@ -80,8 +80,9 @@ internal class DesktopSupabaseAuthGateway(
                     } catch (exception: CancellationException) {
                         throw exception
                     } catch (exception: RestException) {
-                        if (exception.statusCode !in 400..499) throw exception
-                        client.auth.clearSession()
+                        if (exception.statusCode in 400..499) client.auth.clearSession()
+                    } catch (_: Exception) {
+                        // Keep the vault-restored session available to route already cached local data offline.
                     }
                 }
                 restorationComplete = true

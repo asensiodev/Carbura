@@ -65,6 +65,8 @@ import com.asensiodev.carbura.desktop.resources.account_authenticated_title
 import com.asensiodev.carbura.desktop.resources.account_cancel
 import com.asensiodev.carbura.desktop.resources.account_data_folder_action
 import com.asensiodev.carbura.desktop.resources.account_data_folder_action_name
+import com.asensiodev.carbura.desktop.resources.account_data_scope
+import com.asensiodev.carbura.desktop.resources.account_data_scope_offline
 import com.asensiodev.carbura.desktop.resources.account_database_label
 import com.asensiodev.carbura.desktop.resources.account_delete_button
 import com.asensiodev.carbura.desktop.resources.account_delete_cancel
@@ -76,7 +78,6 @@ import com.asensiodev.carbura.desktop.resources.account_deletion_description
 import com.asensiodev.carbura.desktop.resources.account_deletion_title
 import com.asensiodev.carbura.desktop.resources.account_excluded_description
 import com.asensiodev.carbura.desktop.resources.account_excluded_title
-import com.asensiodev.carbura.desktop.resources.account_family_value
 import com.asensiodev.carbura.desktop.resources.account_header_description
 import com.asensiodev.carbura.desktop.resources.account_header_eyebrow
 import com.asensiodev.carbura.desktop.resources.account_header_title
@@ -98,6 +99,7 @@ import com.asensiodev.carbura.desktop.resources.account_storage_description
 import com.asensiodev.carbura.desktop.resources.account_storage_hide_details
 import com.asensiodev.carbura.desktop.resources.account_storage_show_details
 import com.asensiodev.carbura.desktop.resources.account_storage_title
+import com.asensiodev.carbura.desktop.resources.account_sync_failed
 import com.asensiodev.carbura.desktop.resources.account_sync_now
 import com.asensiodev.carbura.desktop.resources.account_syncing
 import kotlinx.coroutines.launch
@@ -381,7 +383,16 @@ private fun AuthenticatedAccountCard(
         Text(stringResource(Res.string.account_authenticated_title), color = Ink, fontWeight = FontWeight.Bold, fontSize = 19.sp)
         Text(account.displayName, color = Ink)
         account.email?.let { Text(it, color = Muted) }
-        Text(stringResource(Res.string.account_family_value, account.familyName ?: account.familyId.value), color = Muted)
+        Text(
+            stringResource(
+                if (startupState is DesktopStartupState.RecoverableFailure) {
+                    Res.string.account_data_scope_offline
+                } else {
+                    Res.string.account_data_scope
+                },
+            ),
+            color = Muted,
+        )
         Text(
             if (syncStatus.isSyncing) {
                 stringResource(Res.string.account_syncing)
@@ -392,7 +403,10 @@ private fun AuthenticatedAccountCard(
             color = if (syncStatus.isSyncing) Blue else Muted,
         )
         (startupState as? DesktopStartupState.RecoverableFailure)?.let {
-            Text(it.message, color = MaterialTheme.colorScheme.error)
+            Text(
+                if (it.stage == DesktopFailureStage.Sync) stringResource(Res.string.account_sync_failed) else it.message,
+                color = MaterialTheme.colorScheme.error,
+            )
             OutlinedButton(onClick = onRetry, enabled = !isDeletingAccount) { Text(stringResource(Res.string.account_retry)) }
         }
         FlowRow(

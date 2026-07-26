@@ -12,6 +12,10 @@ interface RemoteUserProfileGateway {
     ): RemoteUserProfile
 }
 
+class RemoteUserProfileUnavailableException(
+    cause: Throwable,
+) : Exception(cause)
+
 data class RemoteUserProfile(
     val userId: UserId,
     val familyId: FamilyId,

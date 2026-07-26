@@ -86,7 +86,7 @@ compose.desktop {
             )
             packageName = "Carbura"
             packageVersion = "1.0.0"
-            description = "Vehicle maintenance and reminder companion"
+            description = "Gestión de mantenimiento y recordatorios de vehículos"
             vendor = "Carbura"
 
             macOS {

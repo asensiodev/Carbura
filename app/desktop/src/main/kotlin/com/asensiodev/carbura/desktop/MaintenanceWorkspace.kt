@@ -864,10 +864,8 @@ private fun MaintenanceTypeCode.displayName(
 private fun MaintenanceRecord.localizedDisplayTypeName(): String {
     val typeNames = MaintenanceTypeCode.entries.associateWith { it.localizedDisplayName() }
     return maintenanceTypeCode?.displayName(typeNames, maintenanceTypeLabel.orEmpty())
-        ?: maintenanceTypeId.value
-            .removePrefix("type-")
-            .replace('-', ' ')
-            .replaceFirstChar(Char::uppercase)
+        ?: maintenanceTypeLabel?.takeIf(String::isNotBlank)
+        ?: stringResource(Res.string.maintenance_type_custom)
 }
 
 @Composable

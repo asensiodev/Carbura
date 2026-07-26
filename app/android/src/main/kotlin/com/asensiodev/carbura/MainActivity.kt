@@ -309,7 +309,6 @@ private fun CarburaApp(
                             UserRoute(
                                 displayName = onboardingState.displayName,
                                 email = onboardingState.email,
-                                familyName = onboardingState.familyName,
                                 syncStatus = syncStatus,
                                 isDeletingAccount = onboardingState.isDeletingAccount,
                                 onSyncNow = { syncScope.launch { syncManager.syncNow() } },
@@ -436,7 +435,6 @@ private fun CarburaMainScaffold(
 internal fun UserRoute(
     displayName: String?,
     email: String?,
-    familyName: String?,
     syncStatus: SyncStatus,
     isDeletingAccount: Boolean,
     onSyncNow: () -> Unit,
@@ -444,7 +442,6 @@ internal fun UserRoute(
     onDeleteAccount: () -> Unit,
 ) {
     val resolvedDisplayName = displayName.cleanUserText() ?: stringResource(R.string.user_profile_fallback_name)
-    val resolvedFamilyName = familyName.cleanUserText() ?: stringResource(R.string.user_family_fallback_name)
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var showDeleteAccountConfirmation by remember { mutableStateOf(false) }
 
@@ -554,7 +551,7 @@ internal fun UserRoute(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        syncStatus.lastErrorMessage?.let { error ->
+                        if (syncStatus.lastErrorMessage != null) {
                             Column(
                                 modifier =
                                     Modifier
@@ -570,11 +567,6 @@ internal fun UserRoute(
                                 Text(
                                     text = stringResource(R.string.user_sync_error_description),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(
-                                    text = stringResource(R.string.user_sync_error_detail, error),
-                                    style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -605,7 +597,7 @@ internal fun UserRoute(
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
-                            text = resolvedFamilyName,
+                            text = stringResource(R.string.user_family_fallback_name),
                             style = MaterialTheme.typography.titleLarge,
                         )
                         Text(

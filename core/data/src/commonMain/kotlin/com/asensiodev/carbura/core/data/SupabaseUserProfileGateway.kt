@@ -2,47 +2,54 @@ package com.asensiodev.carbura.core.data
 
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfile
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
+import com.asensiodev.carbura.core.domain.user.RemoteUserProfileUnavailableException
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.exceptions.RestException
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.rpc
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.io.IOException
 
 class SupabaseUserProfileGateway(
     private val client: SupabaseClient,
 ) : RemoteUserProfileGateway {
     override suspend fun getProfileForUser(userId: UserId): RemoteUserProfile? =
-        client
-            .from("user_profiles")
-            .select {
-                filter {
-                    eq("user_id", userId.value)
-                }
-                limit(1)
-            }.decodeList<UserProfileDto>()
-            .firstOrNull()
-            ?.toRemoteUserProfile()
-            ?.withFamilyName()
+        profileRequest {
+            client
+                .from("user_profiles")
+                .select {
+                    filter {
+                        eq("user_id", userId.value)
+                    }
+                    limit(1)
+                }.decodeList<UserProfileDto>()
+                .firstOrNull()
+                ?.toRemoteUserProfile()
+                ?.withFamilyName()
+        }
 
     override suspend fun ensureProfile(
         displayName: String,
         email: String?,
     ): RemoteUserProfile =
-        client.postgrest
-            .rpc(
-                function = "ensure_user_profile",
-                parameters =
-                    EnsureUserProfileDto(
-                        profileDisplayName = displayName,
-                        profileEmail = email,
-                    ),
-            ).decodeSingle<UserProfileDto>()
-            .toRemoteUserProfile()
-            .withFamilyName()
+        profileRequest {
+            client.postgrest
+                .rpc(
+                    function = "ensure_user_profile",
+                    parameters =
+                        EnsureUserProfileDto(
+                            profileDisplayName = displayName,
+                            profileEmail = email,
+                        ),
+                ).decodeSingle<UserProfileDto>()
+                .toRemoteUserProfile()
+                .withFamilyName()
+        }
 
     private suspend fun RemoteUserProfile.withFamilyName(): RemoteUserProfile =
         copy(
@@ -63,6 +70,21 @@ class SupabaseUserProfileGateway(
                 ?.name
         }
 }
+
+private suspend fun <T> profileRequest(block: suspend () -> T): T =
+    try {
+        block()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        if (error.isTemporaryProfileFailure()) throw RemoteUserProfileUnavailableException(error)
+        throw error
+    }
+
+private fun Throwable.isTemporaryProfileFailure(): Boolean =
+    generateSequence(this) { it.cause }.any { error ->
+        error is IOException || error is RestException && error.statusCode !in 400..499
+    }
 
 internal suspend fun resolveFamilyNameOrNull(lookup: suspend () -> String?): String? =
     try {

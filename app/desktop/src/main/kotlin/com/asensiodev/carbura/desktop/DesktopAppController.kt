@@ -13,6 +13,8 @@ import com.asensiodev.carbura.core.domain.sync.SyncResult
 import com.asensiodev.carbura.core.domain.sync.SyncStatus
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfile
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
+import com.asensiodev.carbura.core.domain.user.RemoteUserProfileUnavailableException
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
 import kotlinx.coroutines.CancellationException
@@ -244,8 +246,12 @@ internal class DesktopAppController(
 
     private suspend fun resolveSession(session: AuthSession) {
         _state.value = DesktopStartupState.ResolvingProfile
+        val userId = UserId(session.user.id)
+        val cachedScope =
+            familyScope.current().takeIf { scope ->
+                scope.userId == userId && scope.familyId.value != "local-family"
+            }
         try {
-            val userId = UserId(session.user.id)
             val profiles = profileGateway()
             val profile =
                 profiles.getProfileForUser(userId)
@@ -256,35 +262,57 @@ internal class DesktopAppController(
             check(profile.userId == userId) { "El perfil autenticado no coincide con la sesión." }
             familyScope.activateAuthenticated(userId, profile.familyId)
             val account = profile.toDesktopAccount(session)
-            val adoption = adoptionGateway()
-            val snapshot = adoption.unresolvedSnapshot()
-            if (snapshot == null) {
-                runInitialSync(account)
-                return
-            }
-            when (adoption.decision(userId, profile.familyId, snapshot.digest)) {
-                LocalDataDecision.Import -> {
-                    adoption.import(userId, profile.familyId, snapshot.digest)
-                    _excludedLocalData.value = null
-                    runInitialSync(account)
-                }
-                LocalDataDecision.Exclude -> {
-                    adoption.exclude(userId, profile.familyId, snapshot.digest)
-                    _excludedLocalData.value = snapshot.counts
-                    runInitialSync(account)
-                }
-                null -> _state.value = DesktopStartupState.AwaitingImportDecision(account, snapshot)
-            }
+            continueAuthenticatedStartup(account)
         } catch (error: CancellationException) {
             throw error
+        } catch (_: RemoteUserProfileUnavailableException) {
+            val account = cachedScope?.toDesktopAccount(session)
+            if (account == null) {
+                showProfileFailure()
+                return
+            }
+            try {
+                familyScope.activateAuthenticated(account.userId, account.familyId)
+                continueAuthenticatedStartup(account)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                showProfileFailure()
+            }
         } catch (error: Exception) {
-            familyScope.activateLocal()
-            _state.value =
-                DesktopStartupState.RecoverableFailure(
-                    DesktopFailureStage.Profile,
-                    error.safeMessage("No se pudo resolver el perfil y la familia."),
-                )
+            showProfileFailure()
         }
+    }
+
+    private suspend fun continueAuthenticatedStartup(account: DesktopAccount) {
+        val adoption = adoptionGateway()
+        val snapshot = adoption.unresolvedSnapshot()
+        if (snapshot == null) {
+            runInitialSync(account)
+            return
+        }
+        when (adoption.decision(account.userId, account.familyId, snapshot.digest)) {
+            LocalDataDecision.Import -> {
+                adoption.import(account.userId, account.familyId, snapshot.digest)
+                _excludedLocalData.value = null
+                runInitialSync(account)
+            }
+            LocalDataDecision.Exclude -> {
+                adoption.exclude(account.userId, account.familyId, snapshot.digest)
+                _excludedLocalData.value = snapshot.counts
+                runInitialSync(account)
+            }
+            null -> _state.value = DesktopStartupState.AwaitingImportDecision(account, snapshot)
+        }
+    }
+
+    private fun showProfileFailure() {
+        familyScope.activateLocal()
+        _state.value =
+            DesktopStartupState.RecoverableFailure(
+                DesktopFailureStage.Profile,
+                "No se pudo resolver la cuenta.",
+            )
     }
 
     private fun completeDecision(decision: LocalDataDecision) {
@@ -342,7 +370,7 @@ internal class DesktopAppController(
                     _state.value =
                         DesktopStartupState.RecoverableFailure(
                             DesktopFailureStage.Sync,
-                            result.message.ifBlank { "No se pudo sincronizar. Los cambios locales siguen guardados." },
+                            "No se pudo sincronizar. Los cambios locales siguen guardados.",
                             account,
                         )
                 }
@@ -418,6 +446,18 @@ private fun RemoteUserProfile.toDesktopAccount(session: AuthSession): DesktopAcc
                 ?: "Usuario",
         familyId = familyId,
         familyName = familyName.cleanDesktopIdentityText(),
+    )
+
+private fun ActiveFamilyScope.toDesktopAccount(session: AuthSession): DesktopAccount =
+    DesktopAccount(
+        userId = requireNotNull(userId),
+        email = session.user.email.cleanDesktopIdentityText(),
+        displayName =
+            session.user.displayName.cleanDesktopIdentityText()
+                ?: session.user.email.cleanDesktopIdentityText()
+                ?: "Usuario",
+        familyId = familyId,
+        familyName = null,
     )
 
 internal fun String?.cleanDesktopIdentityText(): String? =

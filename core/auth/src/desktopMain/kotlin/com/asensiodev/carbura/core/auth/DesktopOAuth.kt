@@ -179,7 +179,7 @@ internal class LoopbackCallbackListener(
             if ((0 until size).any { index -> !requestBytes[index].isAllowedHeaderByte() }) return reject(socket)
             val request = String(requestBytes, 0, size, StandardCharsets.US_ASCII)
             val result = parseRequest(request) ?: return reject(socket)
-            respond(socket, 200, "Authentication complete. You may close this window.")
+            respond(socket, 200, "Autenticación completada. Ya puedes cerrar esta ventana.")
             return result
         } catch (exception: IOException) {
             throw DesktopAuthException.InvalidCallback()
@@ -238,7 +238,7 @@ internal class LoopbackCallbackListener(
     }
 
     private fun reject(socket: Socket): Nothing {
-        respond(socket, 400, "Authentication callback rejected.")
+        respond(socket, 400, "La respuesta de autenticación no es válida.")
         throw DesktopAuthException.InvalidCallback()
     }
 

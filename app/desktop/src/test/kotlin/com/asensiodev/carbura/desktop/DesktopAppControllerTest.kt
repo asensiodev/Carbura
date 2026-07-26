@@ -14,6 +14,7 @@ import com.asensiodev.carbura.core.domain.sync.SyncResult
 import com.asensiodev.carbura.core.domain.sync.SyncStatus
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfile
 import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
+import com.asensiodev.carbura.core.domain.user.RemoteUserProfileUnavailableException
 import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.UserId
@@ -64,6 +65,45 @@ class DesktopAppControllerTest {
             assertEquals(FAMILY, authenticated.account.familyId)
             assertEquals(1, fixture.sync.calls)
             assertEquals(FAMILY, fixture.scope.current().familyId)
+        }
+
+    @Test
+    fun offlineProfileResolutionUsesMatchingPersistedFamilyScope() =
+        runTest {
+            val fixture = Fixture(backgroundScope)
+            fixture.auth.session = SESSION
+            fixture.scope.activateAuthenticated(USER, FAMILY)
+            fixture.profile.failure = RemoteUserProfileUnavailableException(IllegalStateException("offline"))
+            fixture.sync.result = SyncResult.Failure("Sin conexión")
+
+            fixture.controller.start()
+            runCurrent()
+
+            val failure = assertIs<DesktopStartupState.RecoverableFailure>(fixture.controller.state.value)
+            assertEquals(DesktopFailureStage.Sync, failure.stage)
+            assertEquals(USER, failure.account?.userId)
+            assertEquals(FAMILY, failure.account?.familyId)
+            assertEquals(USER, fixture.scope.current().userId)
+            assertEquals(FAMILY, fixture.scope.current().familyId)
+            assertEquals(1, fixture.sync.calls)
+        }
+
+    @Test
+    fun offlineProfileResolutionWithoutMatchingScopeFailsClosed() =
+        runTest {
+            val fixture = Fixture(backgroundScope)
+            fixture.auth.session = SESSION
+            fixture.scope.activateAuthenticated(UserId("other-user"), FamilyId("other-family"))
+            fixture.profile.failure = RemoteUserProfileUnavailableException(IllegalStateException("offline"))
+
+            fixture.controller.start()
+            runCurrent()
+
+            val failure = assertIs<DesktopStartupState.RecoverableFailure>(fixture.controller.state.value)
+            assertEquals(DesktopFailureStage.Profile, failure.stage)
+            assertNull(failure.account)
+            assertEquals(FamilyId("local-family"), fixture.scope.current().familyId)
+            assertEquals(0, fixture.sync.calls)
         }
 
     @Test
@@ -277,12 +317,20 @@ class DesktopAppControllerTest {
     }
 
     private class FakeProfileGateway : RemoteUserProfileGateway {
-        override suspend fun getProfileForUser(userId: UserId): RemoteUserProfile = PROFILE
+        var failure: Throwable? = null
+
+        override suspend fun getProfileForUser(userId: UserId): RemoteUserProfile {
+            failure?.let { throw it }
+            return PROFILE
+        }
 
         override suspend fun ensureProfile(
             displayName: String,
             email: String?,
-        ): RemoteUserProfile = PROFILE
+        ): RemoteUserProfile {
+            failure?.let { throw it }
+            return PROFILE
+        }
     }
 
     private class FakeAdoptionGateway : LocalDataAdoptionGateway {

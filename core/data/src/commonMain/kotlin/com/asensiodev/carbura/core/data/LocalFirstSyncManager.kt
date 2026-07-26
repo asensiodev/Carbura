@@ -51,7 +51,7 @@ internal class LocalFirstSyncManager(
                 _status.update { it.copy(isSyncing = false) }
                 throw error
             } catch (error: Throwable) {
-                val message = "Sync failed"
+                val message = "No se pudo sincronizar"
                 if (reportFailure) nextFailureId += 1L
                 _status.update {
                     it.copy(

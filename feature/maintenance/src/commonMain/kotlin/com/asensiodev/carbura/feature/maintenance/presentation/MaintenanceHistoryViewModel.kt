@@ -428,10 +428,7 @@ class MaintenanceHistoryViewModel(
 
 internal fun MaintenanceRecord.displayType(): String =
     maintenanceTypeLabel?.takeIf(String::isNotBlank)
-        ?: maintenanceTypeId.value
-            .removePrefix("type-")
-            .replace('-', ' ')
-            .replaceFirstChar(Char::uppercase)
+        ?: "Otro"
 
 private fun Int?.toEditableCost(): String {
     val cents = this ?: return ""

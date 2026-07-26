@@ -75,20 +75,22 @@ Resultado: OK tras corregir y repetir la instalación. Se verificaron tamaño y 
 
 #### M-03 — Misma cuenta en Android y Desktop
 
-- [ ] Iniciar sesión con la cuenta A en Android.
-- [ ] Iniciar sesión con la cuenta A en Desktop mediante navegador y PKCE.
-- [ ] Comprobar que ambos clientes muestran la misma identidad/familia y los mismos datos tras sincronizar.
+- [x] Iniciar sesión con la cuenta A en Android.
+- [x] Iniciar sesión con la cuenta A en Desktop mediante navegador y PKCE.
+- [x] Comprobar que ambos clientes muestran la misma identidad/familia y los mismos datos tras sincronizar.
 
 Resultado esperado: una sola familia personal, sin duplicados ni datos de otra cuenta.
 
 #### M-04 — Restauración segura y cierre de sesión independiente
 
-- [ ] Cerrar Desktop y volver a abrirlo; comprobar que Keychain restaura la sesión.
-- [ ] Desactivar la red y volver a abrir; comprobar que los datos locales siguen disponibles.
-- [ ] Cerrar sesión en Desktop y confirmar que Android sigue autenticado.
-- [ ] Comprobar que Desktop vuelve a onboarding y no muestra datos autenticados residuales.
+- [x] Cerrar Desktop y volver a abrirlo; comprobar que Keychain restaura la sesión.
+- [x] Desactivar la red y volver a abrir; comprobar que los datos locales siguen disponibles.
+- [x] Cerrar sesión en Desktop y confirmar que Android sigue autenticado.
+- [x] Comprobar que Desktop vuelve a onboarding y no muestra datos autenticados residuales.
 
 Resultado esperado: restauración segura, funcionamiento local-first y cierre de sesión limitado al cliente.
+
+Resultado: OK tras corregir y repetir el arranque offline. La sesión restaurada abre el ámbito exacto de la cuenta, conserva la sección activa durante el reintento, presenta errores localizados y el cierre de Desktop no afecta a Android.
 
 #### M-05 — Cambio de cuenta y aislamiento visual
 

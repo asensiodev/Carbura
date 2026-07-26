@@ -9,12 +9,12 @@
     <string name="user_title">Usuario</string>
     <string name="user_profile_title">Perfil</string>
     <string name="user_profile_fallback_name">Usuario</string>
-    <string name="user_family_title">Familia</string>
-    <string name="user_family_fallback_name">Familia personal</string>
+    <string name="user_family_title">Espacio de datos</string>
+    <string name="user_family_fallback_name">Espacio personal</string>
     <string name="user_family_description">Este es el espacio donde se agrupan tus vehículos, mantenimientos y recordatorios.</string>
-    <string name="user_family_deferred_note">Las invitaciones y miembros llegarán en una próxima versión.</string>
+    <string name="user_family_deferred_note">Cada cuenta utiliza un único espacio personal en esta versión.</string>
     <string name="user_sync_title">Sincronización</string>
-    <string name="user_sync_description">Tus datos se guardan en este dispositivo y se comparten con tu familia cuando hay conexión.</string>
+    <string name="user_sync_description">Tus datos se guardan en este dispositivo y se sincronizan con tu cuenta cuando hay conexión.</string>
     <string name="user_sync_now_button">Sincronizar ahora</string>
     <string name="user_syncing_button">Sincronizando...</string>
     <string name="user_sync_never">Aún no se ha sincronizado.</string>
@@ -24,15 +24,14 @@
     <string name="user_syncing_status">En curso</string>
     <string name="user_sync_error_title">No se pudo sincronizar</string>
     <string name="user_sync_error_description">Revisa la conexión y vuelve a intentarlo. Tus cambios siguen guardados en el dispositivo.</string>
-    <string name="user_sync_error_detail">Detalle técnico: %1$s</string>
     <string name="user_session_title">Sesión</string>
     <string name="user_sign_out_button">Cerrar sesión</string>
     <string name="user_account_deletion_title">Eliminar cuenta</string>
-    <string name="user_account_deletion_description">Elimina permanentemente tu cuenta. Si eres el último miembro, también se eliminarán los vehículos, mantenimientos y recordatorios de la familia.</string>
+    <string name="user_account_deletion_description">Elimina permanentemente tu cuenta y los vehículos, mantenimientos y recordatorios sincronizados asociados.</string>
     <string name="user_account_delete_button">Eliminar mi cuenta</string>
     <string name="user_account_deleting_button">Eliminando cuenta...</string>
     <string name="user_account_delete_dialog_title">¿Eliminar tu cuenta?</string>
-    <string name="user_account_delete_dialog_description">Esta acción es permanente y no se puede deshacer. Si compartes una familia, sus datos se conservarán para los demás miembros.</string>
+    <string name="user_account_delete_dialog_description">Esta acción es permanente y no se puede deshacer. Se cerrará la sesión y se eliminarán los datos sincronizados asociados a la cuenta.</string>
     <string name="user_account_delete_confirm_button">Eliminar definitivamente</string>
     <string name="user_account_delete_cancel_button">Cancelar</string>
 </resources>

@@ -63,7 +63,7 @@
 - [ ] 7.3 Verify reminder create/complete/delete propagation and Android mobile notification scheduling
 - [ ] 7.4 Verify offline mutations, restart persistence, retry, and last-write-wins behavior
 - [ ] 7.5 Verify Desktop local-data import, exclusion, cancellation, and account switching without cross-family visibility
-- [ ] 7.6 Verify Desktop session restoration, refresh, secure sign-out, and Android session independence
+- [x] 7.6 Verify Desktop session restoration, refresh, secure sign-out, and Android session independence
 - [ ] 7.7 Verify two-account RLS denial for reads, writes, tombstones, family reassignment, and profile/family administration
 - [ ] 7.8 Archive completed OpenSpec changes and publish the final verified revision
 
@@ -74,3 +74,5 @@
 - [x] 8.3 Align Account and Storage panels and refine the expanded navigation width
 - [x] 8.4 Replace promotional Desktop headings with direct functional labels
 - [x] 8.5 Rebuild, reinstall, and repeat the DMG installation acceptance after the fixes
+- [x] 8.6 Restore the exact authenticated family cache during offline Desktop startup and repeat M-04
+- [x] 8.7 Keep the active Desktop destination mounted while authenticated synchronization retries
