@@ -1,5 +1,7 @@
-## Requirements
+## Purpose
 
+Define Carbura's shared MVP garage entities, validation rules, and core domain behavior.
+## Requirements
 ### Requirement: Shared MVP Entities
 The system SHALL define shared KMP models for the MVP garage domain: family, user profile, vehicle, maintenance type, maintenance record and reminder.
 
@@ -56,20 +58,31 @@ The system SHALL expose a use case for retrieving maintenance history for a vehi
 - **THEN** the returned maintenance records are ordered by performed date descending
 
 ### Requirement: Automatic Reminder Creation
-The system SHALL create a basic reminder for ITV or insurance maintenance records when a due date is provided.
+The domain SHALL provide a use case that creates a basic reminder for ITV or insurance maintenance records when a due date is provided; UI integration is not required by this specification.
 
 #### Scenario: ITV due date creates reminder
-- **WHEN** an ITV maintenance record includes a next due date
-- **THEN** the reminder use case creates a reminder with 30 days notice by default
+- **WHEN** the automatic reminder use case receives an ITV maintenance record with a next due date
+- **THEN** it creates a reminder with 30 days notice by default
 
 #### Scenario: Insurance due date creates reminder
-- **WHEN** an insurance maintenance record includes a next due date
-- **THEN** the reminder use case creates a reminder with 30 days notice by default
+- **WHEN** the automatic reminder use case receives an insurance maintenance record with a next due date
+- **THEN** it creates a reminder with 30 days notice by default
 
 #### Scenario: Maintenance without due date skips reminder
-- **WHEN** a maintenance record has no next due date
+- **WHEN** the automatic reminder use case receives a maintenance record with no next due date
 - **THEN** no automatic reminder is created
 
 #### Scenario: Non-reminder maintenance skips reminder
-- **WHEN** a maintenance record type is not ITV or insurance
-- **THEN** no automatic reminder is created automatically
+- **WHEN** the automatic reminder use case receives a maintenance record type that is not ITV or insurance
+- **THEN** no automatic reminder is created
+
+### Requirement: Vehicle Planning Fields
+The shared vehicle model and local and remote vehicle records SHALL support nullable next ITV date, insurance renewal date, and next service odometer fields.
+
+#### Scenario: Existing vehicle has no planning fields
+- **WHEN** an existing vehicle created before the planning-field migration is loaded
+- **THEN** its new planning fields are represented as empty without losing existing vehicle data
+
+#### Scenario: Vehicle planning fields round trip
+- **WHEN** a vehicle with planning fields is saved and loaded
+- **THEN** all provided due targets retain their typed values

@@ -1,0 +1,11 @@
+CREATE TABLE desiredNotificationOutbox (
+    reminderId TEXT NOT NULL PRIMARY KEY,
+    action TEXT NOT NULL,
+    payload TEXT,
+    revision INTEGER NOT NULL
+);
+
+CREATE TABLE notificationRevisions (
+    reminderId TEXT NOT NULL PRIMARY KEY,
+    revision INTEGER NOT NULL
+);

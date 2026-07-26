@@ -1,5 +1,5 @@
 CREATE TABLE vehicles (
-    id TEXT NOT NULL PRIMARY KEY,
+    id TEXT NOT NULL,
     familyId TEXT NOT NULL,
     name TEXT NOT NULL,
     type TEXT NOT NULL,
@@ -7,9 +7,13 @@ CREATE TABLE vehicles (
     model TEXT,
     licensePlate TEXT,
     currentOdometerKm INTEGER NOT NULL,
+    nextItvDate TEXT,
+    insuranceRenewalDate TEXT,
+    nextServiceOdometerKm INTEGER,
     updatedAt INTEGER NOT NULL DEFAULT 0,
     pendingSync INTEGER NOT NULL DEFAULT 0,
-    deletedAt INTEGER
+    deletedAt INTEGER,
+    PRIMARY KEY (familyId, id)
 );
 
 selectVehiclesByFamily:
@@ -22,11 +26,15 @@ ORDER BY name ASC;
 selectPendingSyncVehicles:
 SELECT *
 FROM vehicles
-WHERE pendingSync = 1;
+WHERE familyId = ? AND pendingSync = 1;
 
 selectSyncVehiclesByFamily:
 SELECT *
 FROM vehicles
+WHERE familyId = ?;
+
+deleteVehiclesByFamilyImmediately:
+DELETE FROM vehicles
 WHERE familyId = ?;
 
 upsertVehicle:
@@ -39,36 +47,36 @@ INSERT OR REPLACE INTO vehicles(
     model,
     licensePlate,
     currentOdometerKm,
+    nextItvDate,
+    insuranceRenewalDate,
+    nextServiceOdometerKm,
     updatedAt,
     pendingSync,
     deletedAt
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 markVehicleSynced:
 UPDATE vehicles
 SET pendingSync = 0
-WHERE id = ?;
+WHERE familyId = ? AND id = ? AND updatedAt = ? AND pendingSync = 1;
 
-adoptLocalVehiclesFamily:
-UPDATE vehicles
-SET familyId = ?,
-    updatedAt = ?,
-    pendingSync = 1
-WHERE familyId = 'local-family';
+moveVehicleToFamily:
+UPDATE vehicles SET id = ?, familyId = ? WHERE familyId = ? AND id = ?;
 
 deleteVehicle:
 UPDATE vehicles
 SET deletedAt = ?,
     updatedAt = ?,
     pendingSync = 1
-WHERE id = ?;
+WHERE familyId = ? AND id = ?;
 
 CREATE TABLE maintenanceRecords (
-    id TEXT NOT NULL PRIMARY KEY,
+    id TEXT NOT NULL,
     familyId TEXT NOT NULL,
     vehicleId TEXT NOT NULL,
     maintenanceTypeId TEXT NOT NULL,
     maintenanceTypeCode TEXT,
+    maintenanceTypeLabel TEXT,
     performedOn TEXT NOT NULL,
     odometerKm INTEGER,
     costCents INTEGER,
@@ -78,24 +86,37 @@ CREATE TABLE maintenanceRecords (
     nextDueDate TEXT,
     updatedAt INTEGER NOT NULL DEFAULT 0,
     pendingSync INTEGER NOT NULL DEFAULT 0,
-    deletedAt INTEGER
+    deletedAt INTEGER,
+    PRIMARY KEY (familyId, id)
 );
 
 selectMaintenanceRecordsByVehicle:
 SELECT *
 FROM maintenanceRecords
-WHERE vehicleId = ?
+WHERE familyId = ? AND vehicleId = ?
 AND deletedAt IS NULL
 ORDER BY performedOn DESC;
+
+selectActiveMaintenanceRecord:
+SELECT *
+FROM maintenanceRecords
+WHERE id = ?
+AND familyId = ?
+AND vehicleId = ?
+AND deletedAt IS NULL;
 
 selectPendingSyncMaintenanceRecords:
 SELECT *
 FROM maintenanceRecords
-WHERE pendingSync = 1;
+WHERE familyId = ? AND pendingSync = 1;
 
 selectSyncMaintenanceRecordsByFamily:
 SELECT *
 FROM maintenanceRecords
+WHERE familyId = ?;
+
+deleteMaintenanceRecordsByFamilyImmediately:
+DELETE FROM maintenanceRecords
 WHERE familyId = ?;
 
 upsertMaintenanceRecord:
@@ -105,6 +126,7 @@ INSERT OR REPLACE INTO maintenanceRecords(
     vehicleId,
     maintenanceTypeId,
     maintenanceTypeCode,
+    maintenanceTypeLabel,
     performedOn,
     odometerKm,
     costCents,
@@ -115,14 +137,32 @@ INSERT OR REPLACE INTO maintenanceRecords(
     updatedAt,
     pendingSync,
     deletedAt
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateMaintenanceRecord:
+UPDATE maintenanceRecords
+SET maintenanceTypeId = ?,
+    maintenanceTypeCode = ?,
+    maintenanceTypeLabel = ?,
+    performedOn = ?,
+    odometerKm = ?,
+    costCents = ?,
+    workshop = ?,
+    notes = ?,
+    nextDueDate = ?,
+    updatedAt = ?,
+    pendingSync = 1
+WHERE id = ?
+AND familyId = ?
+AND vehicleId = ?
+AND deletedAt IS NULL;
 
 deleteMaintenanceRecordsByVehicle:
 UPDATE maintenanceRecords
 SET deletedAt = ?,
     updatedAt = ?,
     pendingSync = 1
-WHERE vehicleId = ?
+WHERE familyId = ? AND vehicleId = ?
 AND deletedAt IS NULL;
 
 deleteMaintenanceRecord:
@@ -130,22 +170,18 @@ UPDATE maintenanceRecords
 SET deletedAt = ?,
     updatedAt = ?,
     pendingSync = 1
-WHERE id = ?;
+WHERE familyId = ? AND id = ?;
 
 markMaintenanceRecordSynced:
 UPDATE maintenanceRecords
 SET pendingSync = 0
-WHERE id = ?;
+WHERE familyId = ? AND id = ? AND updatedAt = ? AND pendingSync = 1;
 
-adoptLocalMaintenanceRecordsFamily:
-UPDATE maintenanceRecords
-SET familyId = ?,
-    updatedAt = ?,
-    pendingSync = 1
-WHERE familyId = 'local-family';
+moveMaintenanceRecordToFamily:
+UPDATE maintenanceRecords SET id = ?, familyId = ?, vehicleId = ? WHERE familyId = ? AND id = ?;
 
 CREATE TABLE reminders (
-    id TEXT NOT NULL PRIMARY KEY,
+    id TEXT NOT NULL,
     familyId TEXT NOT NULL,
     vehicleId TEXT NOT NULL,
     maintenanceTypeId TEXT,
@@ -156,8 +192,51 @@ CREATE TABLE reminders (
     isCompleted INTEGER NOT NULL DEFAULT 0,
     updatedAt INTEGER NOT NULL DEFAULT 0,
     pendingSync INTEGER NOT NULL DEFAULT 0,
-    deletedAt INTEGER
+    deletedAt INTEGER,
+    PRIMARY KEY (familyId, id)
 );
+
+CREATE TABLE desiredNotificationOutbox (
+    familyId TEXT NOT NULL,
+    reminderId TEXT NOT NULL,
+    action TEXT NOT NULL,
+    payload TEXT,
+    revision INTEGER NOT NULL,
+    PRIMARY KEY (familyId, reminderId)
+);
+
+CREATE TABLE notificationRevisions (
+    familyId TEXT NOT NULL,
+    reminderId TEXT NOT NULL,
+    revision INTEGER NOT NULL,
+    PRIMARY KEY (familyId, reminderId)
+);
+
+selectNotificationRevision:
+SELECT revision
+FROM notificationRevisions
+WHERE familyId = ? AND reminderId = ?;
+
+replaceNotificationRevision:
+INSERT OR REPLACE INTO notificationRevisions(familyId, reminderId, revision) VALUES (?, ?, ?);
+
+replaceDesiredNotification:
+INSERT OR REPLACE INTO desiredNotificationOutbox(familyId, reminderId, action, payload, revision) VALUES (?, ?, ?, ?, ?);
+
+selectDesiredNotificationById:
+SELECT *
+FROM desiredNotificationOutbox
+WHERE familyId = ? AND reminderId = ?;
+
+selectDesiredNotifications:
+SELECT *
+FROM desiredNotificationOutbox WHERE familyId = ?
+ORDER BY reminderId ASC;
+
+acknowledgeDesiredNotification:
+DELETE FROM desiredNotificationOutbox
+WHERE familyId = ? AND reminderId = ?
+AND revision = ?;
 
 selectPendingRemindersByFamily:
 SELECT *
@@ -172,17 +251,43 @@ ORDER BY COALESCE(dueDate, '9999-12-31') ASC,
 selectPendingSyncReminders:
 SELECT *
 FROM reminders
-WHERE pendingSync = 1;
+WHERE familyId = ? AND pendingSync = 1;
 
 selectSyncRemindersByFamily:
 SELECT *
 FROM reminders
 WHERE familyId = ?;
 
+selectReminderById:
+SELECT *
+FROM reminders
+WHERE familyId = ? AND id = ?;
+
+selectActiveReminderById:
+SELECT *
+FROM reminders
+WHERE familyId = ? AND id = ?
+AND isCompleted = 0
+AND deletedAt IS NULL;
+
+selectAllReminders:
+SELECT *
+FROM reminders WHERE familyId = ?
+ORDER BY id;
+
+selectReminderIdsByFamilyForAccountCleanup:
+SELECT id
+FROM reminders
+WHERE familyId = ?;
+
+deleteRemindersByFamilyImmediately:
+DELETE FROM reminders
+WHERE familyId = ?;
+
 selectSyncRemindersByVehicle:
 SELECT *
 FROM reminders
-WHERE vehicleId = ?;
+WHERE familyId = ? AND vehicleId = ?;
 
 upsertReminder:
 INSERT OR REPLACE INTO reminders(
@@ -205,31 +310,78 @@ UPDATE reminders
 SET isCompleted = 1,
     updatedAt = ?,
     pendingSync = 1
-WHERE id = ?;
+WHERE familyId = ? AND id = ?;
 
 deleteReminder:
 UPDATE reminders
 SET deletedAt = ?,
     updatedAt = ?,
     pendingSync = 1
-WHERE id = ?;
+WHERE familyId = ? AND id = ?;
 
 deleteRemindersByVehicle:
 UPDATE reminders
 SET deletedAt = ?,
     updatedAt = ?,
     pendingSync = 1
-WHERE vehicleId = ?
+WHERE familyId = ? AND vehicleId = ?
 AND deletedAt IS NULL;
 
 markReminderSynced:
 UPDATE reminders
 SET pendingSync = 0
-WHERE id = ?;
+WHERE familyId = ? AND id = ? AND updatedAt = ? AND pendingSync = 1;
 
-adoptLocalRemindersFamily:
-UPDATE reminders
-SET familyId = ?,
-    updatedAt = ?,
-    pendingSync = 1
-WHERE familyId = 'local-family';
+moveReminderToFamily:
+UPDATE reminders SET id = ?, familyId = ?, vehicleId = ? WHERE familyId = ? AND id = ?;
+
+moveNotificationOutbox:
+UPDATE desiredNotificationOutbox SET familyId = ?, reminderId = ?, payload = ? WHERE familyId = ? AND reminderId = ?;
+
+moveNotificationRevision:
+UPDATE notificationRevisions SET familyId = ?, reminderId = ? WHERE familyId = ? AND reminderId = ?;
+
+CREATE TABLE activeFamilyScope (
+    singleton INTEGER NOT NULL PRIMARY KEY CHECK (singleton = 1),
+    userId TEXT,
+    familyId TEXT NOT NULL,
+    generation INTEGER NOT NULL
+);
+
+selectActiveFamilyScope:
+SELECT * FROM activeFamilyScope WHERE singleton = 1;
+
+replaceActiveFamilyScope:
+INSERT OR REPLACE INTO activeFamilyScope(singleton, userId, familyId, generation) VALUES (1, ?, ?, ?);
+
+CREATE TABLE localDataDecisions (
+    userId TEXT NOT NULL,
+    familyId TEXT NOT NULL,
+    snapshotDigest TEXT NOT NULL,
+    decision TEXT NOT NULL,
+    PRIMARY KEY (userId, familyId, snapshotDigest)
+);
+
+selectLocalDataDecision:
+SELECT decision FROM localDataDecisions WHERE userId = ? AND familyId = ? AND snapshotDigest = ?;
+
+insertLocalDataDecision:
+INSERT OR REPLACE INTO localDataDecisions(userId, familyId, snapshotDigest, decision) VALUES (?, ?, ?, ?);
+
+selectUnresolvedLocalVehicles:
+SELECT * FROM vehicles WHERE familyId = 'local-family' AND (deletedAt IS NULL OR pendingSync = 1) ORDER BY id;
+
+selectUnresolvedLocalMaintenanceRecords:
+SELECT * FROM maintenanceRecords WHERE familyId = 'local-family' AND (deletedAt IS NULL OR pendingSync = 1) ORDER BY id;
+
+selectUnresolvedLocalReminders:
+SELECT * FROM reminders WHERE familyId = 'local-family' AND (deletedAt IS NULL OR pendingSync = 1) ORDER BY id;
+
+selectVehicleByFamilyAndId:
+SELECT * FROM vehicles WHERE familyId = ? AND id = ?;
+
+selectMaintenanceRecordByFamilyAndId:
+SELECT * FROM maintenanceRecords WHERE familyId = ? AND id = ?;
+
+selectReminderByFamilyAndId:
+SELECT * FROM reminders WHERE familyId = ? AND id = ?;

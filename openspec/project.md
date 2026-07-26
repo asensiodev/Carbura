@@ -1,6 +1,6 @@
-# Carbura Project Context
+# Contexto del proyecto Carbura
 
-Carbura es una app multiplataforma (Android + Desktop) para gestionar el mantenimiento de los vehiculos de una familia: vehiculos, mantenimientos, recordatorios, historial, costes, sincronizacion offline-first y garaje compartido.
+Carbura es una aplicacion local-first para gestionar vehiculos familiares, mantenimientos, recordatorios, historial y costes. Android y Desktop para macOS/Windows son productos ejecutables sobre una base Kotlin Multiplatform; iOS queda fuera del alcance actual.
 
 El PRD completo vive en `openspec/prd.md` y debe usarse como contexto de producto antes de crear o aplicar cambios OpenSpec.
 
@@ -8,26 +8,25 @@ El PRD completo vive en `openspec/prd.md` y debe usarse como contexto de product
 
 - Slogan: "Tu garaje, siempre a punto."
 - Usuarios principales: propietario del vehiculo y familiares que comparten un garaje.
-- MVP Entrega 2: Android-first con vehiculos, mantenimientos, recordatorios locales, notificaciones locales, historial, costes, sync v0 familiar, Google Auth y familia personal inicial.
-- Fuera de Entrega 2: Desktop funcional, invitaciones familiares completas, exportacion PDF/CSV, iOS, combustible, OBD2, push remoto, OCR, recomendaciones IA, multi-familia y roles avanzados.
+- Entrega funcional: Android y Desktop con vehiculos, mantenimientos, recordatorios, historial, sync v0 familiar, Google Auth, familia personal, modo local y eliminacion de cuenta.
+- Limite nativo: Android programa notificaciones locales; Desktop persiste y sincroniza recordatorios sin alertas nativas. Invitaciones, exportacion, iOS, combustible, OBD2, push remoto, OCR, recomendaciones IA, multi-familia y roles avanzados quedan fuera.
 
 ## Stack
 
 - UI Android: Compose for Android.
-- UI Desktop: Compose for Desktop si entra en alcance; reutiliza design system y componentes compartidos cuando sea practico.
-- iOS futuro: preparado por arquitectura KMP; UI futura evaluable entre SwiftUI y Compose Multiplatform, sin implementacion en el MVP.
+- UI Desktop: Compose Desktop para macOS y Windows.
 - Logica compartida: Kotlin Multiplatform en `commonMain` para dominio, use cases, contratos, modelos, validaciones, UiState y logica testeable.
 - Modularizacion: modulos Gradle desde el inicio con convention plugins en `build-logic`.
-- Design system: modulo `core:designsystem` con tema, tokens y componentes Compose reutilizables.
+- Design system: modulo `core:designsystem` con tema y tokens Android; su evolucion multiplataforma forma parte de la vision futura.
 - Base de datos local: SQLDelight.
 - HTTP client: Ktor Client.
-- Integraciones nativas: contratos en `commonMain` y adapters por plataforma (`androidMain`, `desktopMain`, `iosMain` futuro) para auth, permisos, notificaciones, storage seguro y APIs de sistema.
-- Auth cliente Android: adapter con Credential Manager + Google ID como opcion principal y fallback controlado a Google Sign-In/OAuth si el dispositivo no lo soporta.
-- Auth cliente Desktop: adapter OAuth mediante navegador o flujo equivalente, solo si Desktop entra en el alcance de la entrega.
+- Integraciones nativas: adaptadores Android y Desktop sobre contratos compartidos cuando procede.
+- Auth cliente Android: Credential Manager + Google ID.
+- Auth cliente Desktop: navegador, Authorization Code, PKCE S256, callback loopback y Keychain/Credential Manager.
 - DI: Koin.
 - Serializacion: kotlinx.serialization.
-- Backend: Supabase Auth, PostgreSQL y Storage.
-- Sync: timestamp-based, last-write-wins.
+- Backend: Supabase Auth, PostgreSQL, PostgREST y RLS. Storage queda previsto para adjuntos futuros.
+- Sync: full pull de vehiculos, mantenimientos y recordatorios, push de pendientes, tombstones y `last-write-wins` mientras la app esta activa.
 
 ## Arquitectura
 
@@ -49,6 +48,7 @@ SyncManager (commonMain)
 
 ## Metodologia
 
+- La documentacion de producto y academica se redacta en espanol. Los artefactos tecnicos de OpenSpec (`proposal.md`, `design.md`, `tasks.md` y deltas de specs) se redactan en ingles, preservando identificadores y terminos tecnicos.
 - SDD con OpenSpec: proposal -> apply -> archive.
 - TDD dentro de cada tarea: Red -> Green -> Refactor.
 - DDD ligero para modelar entidades, use cases y repositorios sin sobredisenar el MVP.
@@ -63,3 +63,5 @@ SyncManager (commonMain)
 - No commitear secrets, tokens, claves Supabase ni OAuth client secrets.
 - Usar `local.properties` o variables locales para credenciales.
 - Mantener Row Level Security por `family_id` en Supabase.
+- No almacenar sesiones Desktop fuera de Keychain o Windows Credential Manager.
+- No programar notificaciones nativas en Desktop.

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reminder_notification_channel_name">Recordatorios</string>
+    <string name="reminder_notification_default_title">Recordatorio pendiente</string>
+    <string name="reminder_notification_default_body">Tienes un recordatorio de Carbura pendiente.</string>
+    <string name="reminder_notification_unknown_date">una fecha pendiente de confirmar</string>
+    <string name="itv_reminder_notification_title">Próxima ITV</string>
+    <string name="itv_reminder_notification_body">Tu ITV vence el %1$s. Planifica la inspección.</string>
+    <string name="insurance_reminder_notification_title">Renovación del seguro</string>
+    <string name="insurance_reminder_notification_early_body">Tu póliza vence el %1$s. Revísala ahora: el plazo habitual de preaviso es de al menos un mes, pero consulta las condiciones de tu póliza.</string>
+    <string name="insurance_reminder_notification_notice_body">Tu póliza vence el %1$s. Queda aproximadamente una semana para el umbral habitual de preaviso de un mes; consulta las condiciones de tu póliza.</string>
+    <string name="insurance_reminder_notification_final_body">Tu póliza vence el %1$s. Revisa ahora la renovación y las condiciones de preaviso de tu póliza.</string>
+</resources>

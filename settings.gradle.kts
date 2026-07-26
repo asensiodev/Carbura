@@ -21,6 +21,7 @@ rootProject.name = "Carbura"
 
 include(":app:android")
 include(":app:shared")
+include(":app:desktop")
 
 include(":core:model")
 include(":core:domain")
@@ -34,3 +35,5 @@ include(":feature:onboarding")
 include(":feature:garage")
 include(":feature:maintenance")
 include(":feature:reminders")
+
+include(":quality:architecture")

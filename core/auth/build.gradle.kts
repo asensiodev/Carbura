@@ -16,6 +16,8 @@ kotlin {
     }
 
     sourceSets.desktopMain.dependencies {
+        implementation(libs.jna)
+        implementation(libs.jna.platform)
         implementation(libs.ktor.client.java)
     }
 

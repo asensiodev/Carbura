@@ -1,0 +1,470 @@
+package com.asensiodev.carbura.desktop
+
+import com.asensiodev.carbura.core.domain.auth.AccountLocalDataCleaner
+import com.asensiodev.carbura.core.domain.auth.AuthGateway
+import com.asensiodev.carbura.core.domain.auth.AuthSession
+import com.asensiodev.carbura.core.domain.family.ActiveFamilyScopeGateway
+import com.asensiodev.carbura.core.domain.sync.LocalDataAdoptionGateway
+import com.asensiodev.carbura.core.domain.sync.LocalDataCounts
+import com.asensiodev.carbura.core.domain.sync.LocalDataDecision
+import com.asensiodev.carbura.core.domain.sync.LocalDataSnapshot
+import com.asensiodev.carbura.core.domain.sync.SyncManager
+import com.asensiodev.carbura.core.domain.sync.SyncResult
+import com.asensiodev.carbura.core.domain.sync.SyncStatus
+import com.asensiodev.carbura.core.domain.user.RemoteUserProfile
+import com.asensiodev.carbura.core.domain.user.RemoteUserProfileGateway
+import com.asensiodev.carbura.core.domain.user.RemoteUserProfileUnavailableException
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
+import com.asensiodev.carbura.core.model.FamilyId
+import com.asensiodev.carbura.core.model.UserId
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
+
+internal data class DesktopAccount(
+    val userId: UserId,
+    val email: String?,
+    val displayName: String,
+    val familyId: FamilyId,
+    val familyName: String?,
+)
+
+internal enum class DesktopFailureStage {
+    Restoration,
+    Authentication,
+    Profile,
+    Adoption,
+    Sync,
+    SignOut,
+}
+
+internal sealed interface DesktopStartupState {
+    data object Restoring : DesktopStartupState
+
+    data class LocalMode(
+        val authError: String? = null,
+    ) : DesktopStartupState
+
+    data object Authenticating : DesktopStartupState
+
+    data object ResolvingProfile : DesktopStartupState
+
+    data class AwaitingImportDecision(
+        val account: DesktopAccount,
+        val snapshot: LocalDataSnapshot,
+    ) : DesktopStartupState
+
+    data class InitialSync(
+        val account: DesktopAccount,
+    ) : DesktopStartupState
+
+    data class Authenticated(
+        val account: DesktopAccount,
+    ) : DesktopStartupState
+
+    data class RecoverableFailure(
+        val stage: DesktopFailureStage,
+        val message: String,
+        val account: DesktopAccount? = null,
+    ) : DesktopStartupState
+}
+
+internal class DesktopAppController(
+    private val configurationAvailable: Boolean,
+    private val authGateway: () -> AuthGateway,
+    private val profileGateway: () -> RemoteUserProfileGateway,
+    private val adoptionGateway: () -> LocalDataAdoptionGateway,
+    private val syncManager: () -> SyncManager,
+    private val accountLocalDataCleaner: () -> AccountLocalDataCleaner,
+    private val familyScope: ActiveFamilyScopeGateway,
+    private val coroutineScope: CoroutineScope,
+    private val currentTimeMillis: () -> Long = System::currentTimeMillis,
+    private val foregroundThrottleMillis: Long = 60_000L,
+) {
+    private val _state = MutableStateFlow<DesktopStartupState>(DesktopStartupState.Restoring)
+    private val _syncStatus = MutableStateFlow(SyncStatus())
+    private val _contentRevision = MutableStateFlow(0L)
+    private val _excludedLocalData = MutableStateFlow<LocalDataCounts?>(null)
+    private val _isDeletingAccount = MutableStateFlow(false)
+    private val accountDeletionInFlight = AtomicBoolean(false)
+    private var operation: Job? = null
+    private var syncStatusCollection: Job? = null
+    private var lastForegroundSyncAt: Long? = null
+
+    val state: StateFlow<DesktopStartupState> = _state.asStateFlow()
+    val syncStatus: StateFlow<SyncStatus> = _syncStatus.asStateFlow()
+    val contentRevision: StateFlow<Long> = _contentRevision.asStateFlow()
+    val excludedLocalData: StateFlow<LocalDataCounts?> = _excludedLocalData.asStateFlow()
+    val isDeletingAccount: StateFlow<Boolean> = _isDeletingAccount.asStateFlow()
+
+    fun start() {
+        launchOperation {
+            if (!configurationAvailable) {
+                showLocalMode()
+                return@launchOperation
+            }
+            _state.value = DesktopStartupState.Restoring
+            try {
+                val session = authGateway().currentSession()
+                if (session == null) showLocalMode() else resolveSession(session)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                familyScope.activateLocal()
+                _state.value =
+                    DesktopStartupState.RecoverableFailure(
+                        DesktopFailureStage.Restoration,
+                        error.safeMessage("No se pudo restaurar la sesión."),
+                    )
+            }
+        }
+    }
+
+    fun signIn() {
+        if (accountDeletionInFlight.get()) return
+        if (!configurationAvailable) {
+            showLocalMode("La conexión con Supabase no está configurada para esta compilación.")
+            return
+        }
+        launchOperation {
+            _state.value = DesktopStartupState.Authenticating
+            try {
+                val gateway = authGateway()
+                resolveSession(gateway.currentSession() ?: gateway.signInWithGoogle())
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                familyScope.activateLocal()
+                _state.value =
+                    DesktopStartupState.RecoverableFailure(
+                        DesktopFailureStage.Authentication,
+                        error.safeMessage("No se pudo iniciar sesión con Google."),
+                    )
+            }
+        }
+    }
+
+    fun importAndMerge() = completeDecision(LocalDataDecision.Import)
+
+    fun useAccountData() = completeDecision(LocalDataDecision.Exclude)
+
+    fun cancelImportDecision() {
+        if (accountDeletionInFlight.get()) return
+        adoptionGateway().cancel()
+        leaveAuthenticatedMode()
+    }
+
+    fun retry() {
+        if (accountDeletionInFlight.get()) return
+        when (val current = _state.value) {
+            is DesktopStartupState.RecoverableFailure -> {
+                val account = current.account
+                if (account == null) start() else launchOperation { runInitialSync(account) }
+            }
+            else -> Unit
+        }
+    }
+
+    fun enterLocalMode() {
+        if (accountDeletionInFlight.get()) return
+        operation?.cancel()
+        operation = null
+        leaveAuthenticatedMode()
+    }
+
+    fun syncNow() {
+        val account = activeAccount() ?: return
+        launchOperation { performSync(account, reportFailure = true, initial = false) }
+    }
+
+    fun onForeground() {
+        if (accountDeletionInFlight.get()) return
+        val now = currentTimeMillis()
+        val previous = lastForegroundSyncAt
+        if (activeAccount() == null || previous != null && now - previous < foregroundThrottleMillis) return
+        lastForegroundSyncAt = now
+        syncSilently()
+    }
+
+    fun onPeriodicTick() {
+        if (!accountDeletionInFlight.get()) syncSilently()
+    }
+
+    fun signOut() {
+        launchOperation {
+            try {
+                authGateway().signOut()
+                showLocalMode()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                familyScope.activateLocal()
+                _state.value =
+                    DesktopStartupState.RecoverableFailure(
+                        DesktopFailureStage.SignOut,
+                        error.safeMessage("La sesión local se cerró, pero no se pudo confirmar la revocación remota."),
+                    )
+            }
+        }
+    }
+
+    fun deleteAccount() {
+        val account = activeAccount() ?: return
+        if (!accountDeletionInFlight.compareAndSet(false, true)) return
+        _isDeletingAccount.value = true
+        operation?.cancel()
+        operation =
+            coroutineScope.launch {
+                try {
+                    withContext(NonCancellable) {
+                        try {
+                            authGateway().deleteAccount()
+                        } catch (_: Exception) {
+                            // The irreversible request may have committed despite an unconfirmed response.
+                        }
+                        try {
+                            accountLocalDataCleaner().clear(account.familyId)
+                        } catch (_: Exception) {
+                            // Never restore authenticated UI after destructive dispatch.
+                        } finally {
+                            showLocalMode()
+                        }
+                    }
+                } finally {
+                    _isDeletingAccount.value = false
+                    accountDeletionInFlight.set(false)
+                }
+            }
+    }
+
+    private suspend fun resolveSession(session: AuthSession) {
+        _state.value = DesktopStartupState.ResolvingProfile
+        val userId = UserId(session.user.id)
+        val cachedScope =
+            familyScope.current().takeIf { scope ->
+                scope.userId == userId && scope.familyId.value != "local-family"
+            }
+        try {
+            val profiles = profileGateway()
+            val profile =
+                profiles.getProfileForUser(userId)
+                    ?: profiles.ensureProfile(
+                        displayName = session.user.displayName ?: session.user.email?.substringBefore('@') ?: "Usuario",
+                        email = session.user.email,
+                    )
+            check(profile.userId == userId) { "El perfil autenticado no coincide con la sesión." }
+            familyScope.activateAuthenticated(userId, profile.familyId)
+            val account = profile.toDesktopAccount(session)
+            continueAuthenticatedStartup(account)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: RemoteUserProfileUnavailableException) {
+            val account = cachedScope?.toDesktopAccount(session)
+            if (account == null) {
+                showProfileFailure()
+                return
+            }
+            try {
+                familyScope.activateAuthenticated(account.userId, account.familyId)
+                continueAuthenticatedStartup(account)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                showProfileFailure()
+            }
+        } catch (error: Exception) {
+            showProfileFailure()
+        }
+    }
+
+    private suspend fun continueAuthenticatedStartup(account: DesktopAccount) {
+        val adoption = adoptionGateway()
+        val snapshot = adoption.unresolvedSnapshot()
+        if (snapshot == null) {
+            runInitialSync(account)
+            return
+        }
+        when (adoption.decision(account.userId, account.familyId, snapshot.digest)) {
+            LocalDataDecision.Import -> {
+                adoption.import(account.userId, account.familyId, snapshot.digest)
+                _excludedLocalData.value = null
+                runInitialSync(account)
+            }
+            LocalDataDecision.Exclude -> {
+                adoption.exclude(account.userId, account.familyId, snapshot.digest)
+                _excludedLocalData.value = snapshot.counts
+                runInitialSync(account)
+            }
+            null -> _state.value = DesktopStartupState.AwaitingImportDecision(account, snapshot)
+        }
+    }
+
+    private fun showProfileFailure() {
+        familyScope.activateLocal()
+        _state.value =
+            DesktopStartupState.RecoverableFailure(
+                DesktopFailureStage.Profile,
+                "No se pudo resolver la cuenta.",
+            )
+    }
+
+    private fun completeDecision(decision: LocalDataDecision) {
+        val awaiting = _state.value as? DesktopStartupState.AwaitingImportDecision ?: return
+        launchOperation {
+            try {
+                val adoption = adoptionGateway()
+                when (decision) {
+                    LocalDataDecision.Import -> {
+                        adoption.import(awaiting.account.userId, awaiting.account.familyId, awaiting.snapshot.digest)
+                        _excludedLocalData.value = null
+                    }
+                    LocalDataDecision.Exclude -> {
+                        adoption.exclude(awaiting.account.userId, awaiting.account.familyId, awaiting.snapshot.digest)
+                        _excludedLocalData.value = awaiting.snapshot.counts
+                    }
+                }
+                familyScope.activateAuthenticated(awaiting.account.userId, awaiting.account.familyId)
+                runInitialSync(awaiting.account)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                familyScope.activateLocal()
+                _state.value =
+                    DesktopStartupState.RecoverableFailure(
+                        DesktopFailureStage.Adoption,
+                        error.safeMessage("No se pudo aplicar la decisión sobre los datos locales."),
+                    )
+            }
+        }
+    }
+
+    private suspend fun runInitialSync(account: DesktopAccount) {
+        _state.value = DesktopStartupState.InitialSync(account)
+        performSync(account, reportFailure = true, initial = true)
+    }
+
+    private suspend fun performSync(
+        account: DesktopAccount,
+        reportFailure: Boolean,
+        initial: Boolean,
+    ) {
+        if (accountDeletionInFlight.get()) return
+        familyScope.activateAuthenticated(account.userId, account.familyId)
+        val manager = observedSyncManager()
+        val result = if (reportFailure) manager.syncNow() else manager.syncNowSilently()
+        if (accountDeletionInFlight.get()) return
+        when (result) {
+            is SyncResult.Success -> {
+                _contentRevision.value += 1L
+                _state.value = DesktopStartupState.Authenticated(account)
+            }
+            is SyncResult.Failure -> {
+                if (initial || reportFailure) {
+                    _state.value =
+                        DesktopStartupState.RecoverableFailure(
+                            DesktopFailureStage.Sync,
+                            "No se pudo sincronizar. Los cambios locales siguen guardados.",
+                            account,
+                        )
+                }
+            }
+        }
+    }
+
+    private fun syncSilently() {
+        if (accountDeletionInFlight.get()) return
+        val account = activeAccount() ?: return
+        coroutineScope.launch {
+            try {
+                performSync(account, reportFailure = false, initial = false)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // SyncManager retains the recoverable diagnostic and pending local changes.
+            }
+        }
+    }
+
+    private fun observedSyncManager(): SyncManager {
+        val manager = syncManager()
+        if (syncStatusCollection == null) {
+            syncStatusCollection = coroutineScope.launch { manager.status.collect { _syncStatus.value = it } }
+        }
+        return manager
+    }
+
+    private fun activeAccount(): DesktopAccount? =
+        when (val current = _state.value) {
+            is DesktopStartupState.Authenticated -> current.account
+            is DesktopStartupState.InitialSync -> current.account
+            is DesktopStartupState.RecoverableFailure -> current.account
+            else -> null
+        }
+
+    private fun showLocalMode(authError: String? = null) {
+        familyScope.activateLocal()
+        _excludedLocalData.value = null
+        _state.value = DesktopStartupState.LocalMode(authError)
+    }
+
+    private fun leaveAuthenticatedMode() {
+        launchOperation {
+            try {
+                if (configurationAvailable) authGateway().signOut()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // Desktop auth clears local credentials even if server revocation fails.
+            } finally {
+                showLocalMode()
+            }
+        }
+    }
+
+    private fun launchOperation(block: suspend () -> Unit) {
+        if (accountDeletionInFlight.get()) return
+        if (operation?.isActive == true) return
+        operation = coroutineScope.launch { block() }
+    }
+}
+
+private fun RemoteUserProfile.toDesktopAccount(session: AuthSession): DesktopAccount =
+    DesktopAccount(
+        userId = userId,
+        email = email.cleanDesktopIdentityText() ?: session.user.email.cleanDesktopIdentityText(),
+        displayName =
+            displayName.cleanDesktopIdentityText()
+                ?: session.user.displayName.cleanDesktopIdentityText()
+                ?: session.user.email.cleanDesktopIdentityText()
+                ?: "Usuario",
+        familyId = familyId,
+        familyName = familyName.cleanDesktopIdentityText(),
+    )
+
+private fun ActiveFamilyScope.toDesktopAccount(session: AuthSession): DesktopAccount =
+    DesktopAccount(
+        userId = requireNotNull(userId),
+        email = session.user.email.cleanDesktopIdentityText(),
+        displayName =
+            session.user.displayName.cleanDesktopIdentityText()
+                ?: session.user.email.cleanDesktopIdentityText()
+                ?: "Usuario",
+        familyId = familyId,
+        familyName = null,
+    )
+
+internal fun String?.cleanDesktopIdentityText(): String? =
+    this
+        ?.trim()
+        ?.replace("\"", "")
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+
+private fun Exception.safeMessage(fallback: String): String = fallback

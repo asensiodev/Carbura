@@ -1,25 +1,40 @@
 package com.asensiodev.carbura.feature.reminders.presentation
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -27,11 +42,18 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -40,48 +62,102 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.asensiodev.carbura.core.designsystem.Spacings
+import com.asensiodev.carbura.core.designsystem.SwipeToDeleteContainer
 import com.asensiodev.carbura.core.model.FamilyId
 import com.asensiodev.carbura.core.model.Reminder
 import com.asensiodev.carbura.core.model.Vehicle
+import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.stringresources.CarburaString
 import com.asensiodev.carbura.featurereminders.R
+import org.koin.core.context.GlobalContext
+import org.koin.core.parameter.parametersOf
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import org.koin.core.context.GlobalContext
-import org.koin.core.parameter.parametersOf
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.time.format.FormatStyle
+import java.util.Locale
 
 @Composable
 fun RemindersRoute(
     familyId: String,
+    sessionVersion: Int = 0,
+    onNavigateToGarage: () -> Unit = {},
+    refreshSignal: Long = 0L,
     modifier: Modifier = Modifier,
-    viewModel: RemindersViewModel = rememberRemindersViewModel(familyId),
+    viewModel: RemindersViewModel = rememberRemindersViewModel(familyId, sessionVersion),
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var effectMessage by remember { mutableStateOf<CarburaString?>(null) }
     var effectMessageArg by remember { mutableStateOf<String?>(null) }
     var reminderCreatedSignal by remember { mutableStateOf(0) }
     var reminderSuccessSignal by remember { mutableStateOf(0) }
+    val context = LocalContext.current
+    val activity = context.findActivity()
+    val permissionPreferences = remember(context) { context.getSharedPreferences(PERMISSION_PREFERENCES, Context.MODE_PRIVATE) }
+    var notificationPermissionState by remember {
+        mutableStateOf(resolveNotificationPermissionState(context, activity, permissionPreferences.getBoolean(PERMISSION_REQUESTED, false)))
+    }
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            notificationPermissionState =
+                resolveNotificationPermissionState(context, activity, permissionPreferences.getBoolean(PERMISSION_REQUESTED, false))
+        }
+    val lifecycleOwner = activity as? LifecycleOwner
+
+    DisposableEffect(lifecycleOwner, activity) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    notificationPermissionState =
+                        resolveNotificationPermissionState(context, activity, permissionPreferences.getBoolean(PERMISSION_REQUESTED, false))
+                }
+            }
+        lifecycleOwner?.lifecycle?.addObserver(observer)
+        onDispose { lifecycleOwner?.lifecycle?.removeObserver(observer) }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.onEvent(RemindersEvent.Started)
+    }
+
+    LaunchedEffect(viewModel, refreshSignal) {
+        if (refreshSignal > 0L) viewModel.onEvent(RemindersEvent.Refresh)
     }
 
     LaunchedEffect(viewModel) {
@@ -110,18 +186,21 @@ fun RemindersRoute(
                     effectMessage = effect.message
                     effectMessageArg = null
                 }
+
+                RemindersEffect.NavigateToGarage -> onNavigateToGarage()
             }
         }
     }
 
-    val resolvedEffectMessage = effectMessage?.let { message ->
-        val arg = effectMessageArg
-        if (arg == null) {
-            stringResource(message.remindersStringRes())
-        } else {
-            stringResource(message.remindersStringRes(), arg)
+    val resolvedEffectMessage =
+        effectMessage?.let { message ->
+            val arg = effectMessageArg
+            if (arg == null) {
+                stringResource(message.remindersStringRes())
+            } else {
+                stringResource(message.remindersStringRes(), arg)
+            }
         }
-    }
 
     RemindersScreen(
         state = uiState,
@@ -130,53 +209,63 @@ fun RemindersRoute(
         reminderSuccessSignal = reminderSuccessSignal,
         onTitleChange = { viewModel.onEvent(RemindersEvent.TitleChanged(it)) },
         onVehicleSelected = { viewModel.onEvent(RemindersEvent.VehicleSelected(it.id)) },
+        onVehicleFilterToggled = { viewModel.onEvent(RemindersEvent.VehicleFilterToggled(it.id)) },
+        onVehicleFiltersCleared = { viewModel.onEvent(RemindersEvent.VehicleFiltersCleared) },
         onDueDateChange = { viewModel.onEvent(RemindersEvent.DueDateChanged(it)) },
         onDueOdometerChange = { viewModel.onEvent(RemindersEvent.DueOdometerChanged(it)) },
         onSubmitReminder = { viewModel.onEvent(RemindersEvent.SubmitReminder) },
+        onDismissCreate = { viewModel.onEvent(RemindersEvent.DismissReminderForm) },
         onCompleteReminder = { viewModel.onEvent(RemindersEvent.CompleteReminder(it.id)) },
         onDeleteReminder = { viewModel.onEvent(RemindersEvent.DeleteReminder(it.id)) },
+        onRetry = { viewModel.onEvent(RemindersEvent.Retry) },
+        onNavigateToGarage = { viewModel.onEvent(RemindersEvent.GarageRequested) },
+        notificationPermissionState = notificationPermissionState,
+        onRequestNotificationPermission = {
+            permissionPreferences.edit().putBoolean(PERMISSION_REQUESTED, true).apply()
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        },
+        onOpenNotificationSettings = { context.openNotificationSettings() },
         modifier = modifier,
     )
 }
 
 @Composable
-private fun rememberRemindersViewModel(familyId: String): RemindersViewModel = remember(familyId) {
-    GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
-}
+private fun rememberRemindersViewModel(
+    familyId: String,
+    sessionVersion: Int,
+): RemindersViewModel =
+    viewModel(key = "reminders-$familyId-$sessionVersion") {
+        GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RemindersScreen(
+internal fun RemindersScreen(
     state: RemindersUiState,
     effectMessage: String?,
     reminderCreatedSignal: Int,
     reminderSuccessSignal: Int,
     onTitleChange: (String) -> Unit,
     onVehicleSelected: (Vehicle) -> Unit,
+    onVehicleFilterToggled: (Vehicle) -> Unit,
+    onVehicleFiltersCleared: () -> Unit,
     onDueDateChange: (String) -> Unit,
     onDueOdometerChange: (String) -> Unit,
     onSubmitReminder: () -> Unit,
+    onDismissCreate: () -> Unit = {},
     onCompleteReminder: (Reminder) -> Unit,
     onDeleteReminder: (Reminder) -> Unit,
+    onRetry: () -> Unit,
+    onNavigateToGarage: () -> Unit,
+    notificationPermissionState: NotificationPermissionState,
+    onRequestNotificationPermission: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showReminderSheet by remember { mutableStateOf(false) }
+    var showReminderSheet by rememberSaveable { mutableStateOf(false) }
     var reminderPendingDeletion by remember { mutableStateOf<Reminder?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
-    var hasNotificationPermission by remember {
-        mutableStateOf(
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-        )
-    }
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        hasNotificationPermission = granted
-    }
-
     LaunchedEffect(reminderCreatedSignal) {
         if (reminderCreatedSignal > 0) {
             showReminderSheet = false
@@ -189,73 +278,160 @@ private fun RemindersScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val showAddReminderAction = !state.isLoading && !state.hasLoadError && !state.hasNoVehicles && !state.isEmpty
+        val useCompactAddAction = maxWidth < 600.dp
+        val titleStartPadding =
+            if (maxWidth <= 720.dp) {
+                Spacings.spacing8
+            } else {
+                (maxWidth - 720.dp) / 2 + Spacings.spacing8
+            }
+        val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
             containerColor = MaterialTheme.colorScheme.background,
-        ) { _ ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding(),
-                contentPadding = PaddingValues(Spacings.spacing24),
-                verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
+            topBar = {
+                MediumTopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(R.string.reminders_title),
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(start = titleStartPadding).testTag("reminders_title"),
+                        )
+                    },
+                    actions = {
+                        if (showAddReminderAction && !useCompactAddAction) {
+                            TextButton(onClick = { showReminderSheet = true }) {
+                                Text(stringResource(R.string.add_reminder_button))
+                            }
+                        }
+                    },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background,
+                            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        ),
+                    scrollBehavior = scrollBehavior,
+                )
+            },
+            floatingActionButton = {
+                if (showAddReminderAction && useCompactAddAction) {
+                    ExtendedFloatingActionButton(
+                        onClick = { showReminderSheet = true },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                            )
+                        },
+                        text = { Text(stringResource(R.string.add_reminder_button)) },
+                        modifier = Modifier.testTag("add_reminder_fab"),
+                    )
+                }
+            },
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                contentAlignment = Alignment.TopCenter,
             ) {
-                item {
-                    RemindersHeader(
-                        showAddReminderAction = !state.isEmpty,
-                        onAddReminder = { showReminderSheet = true },
-                    )
-                }
-                if (!hasNotificationPermission) {
-                    item {
-                        NotificationPermissionCard(
-                            onEnableNotifications = {
-                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            },
-                        )
+                LazyColumn(
+                    modifier =
+                        Modifier
+                            .fillMaxHeight()
+                            .widthIn(max = 720.dp)
+                            .fillMaxWidth()
+                            .testTag("reminders_content"),
+                    contentPadding =
+                        PaddingValues(
+                            start = Spacings.spacing24,
+                            top = Spacings.spacing8,
+                            end = Spacings.spacing24,
+                            bottom = if (showAddReminderAction && useCompactAddAction) 104.dp else Spacings.spacing24,
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(Spacings.spacing16),
+                ) {
+                    if (notificationPermissionState != NotificationPermissionState.Granted) {
+                        item {
+                            NotificationPermissionCard(
+                                isPermanentlyDenied = notificationPermissionState == NotificationPermissionState.PermanentlyDenied,
+                                onAction =
+                                    if (notificationPermissionState == NotificationPermissionState.PermanentlyDenied) {
+                                        onOpenNotificationSettings
+                                    } else {
+                                        onRequestNotificationPermission
+                                    },
+                            )
+                        }
                     }
-                }
-                item {
-                    Text(
-                        text = stringResource(R.string.pending_reminders_title),
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                }
-                if (state.isLoading) {
-                    item {
-                        LoadingStateCard(message = stringResource(R.string.reminders_loading_message))
+                    if (state.hasPersistenceError) {
+                        item { PersistenceErrorCard() }
                     }
-                } else if (state.isEmpty) {
-                    item {
-                        EmptyRemindersCard(
-                            onAddReminder = { showReminderSheet = true },
-                        )
+                    if (state.hasNoVehicles) {
+                        item { NoVehiclesCard(onNavigateToGarage = onNavigateToGarage) }
                     }
-                } else {
-                    items(state.reminders) { reminder ->
-                        ReminderCard(
-                            reminder = reminder,
-                            vehicleName = state.vehicles.firstOrNull { it.id == reminder.vehicleId }?.name ?: reminder.vehicleId.value,
-                            onCompleteReminder = onCompleteReminder,
-                            onDeleteReminder = { reminderPendingDeletion = reminder },
-                        )
+                    if (!state.isLoading && !state.hasLoadError) {
+                        if (state.reminders.isNotEmpty() && state.vehicles.isNotEmpty()) {
+                            item {
+                                ReminderVehicleFilters(
+                                    vehicles = state.vehicles,
+                                    selectedVehicleIds = state.selectedFilterVehicleIds,
+                                    onVehicleFilterToggled = onVehicleFilterToggled,
+                                    onVehicleFiltersCleared = onVehicleFiltersCleared,
+                                )
+                            }
+                        }
+                    }
+                    if (state.isLoading) {
+                        item {
+                            LoadingStateCard(message = stringResource(R.string.reminders_loading_message))
+                        }
+                    } else if (state.hasLoadError) {
+                        item { LoadErrorCard(onRetry = onRetry) }
+                    } else if (state.isEmpty && state.hasNoVehicles) {
+                        Unit
+                    } else if (state.isEmpty) {
+                        item {
+                            EmptyRemindersCard(
+                                onAddReminder = { showReminderSheet = true },
+                            )
+                        }
+                    } else if (state.hasNoMatchingReminders) {
+                        item { NoMatchingRemindersCard() }
+                    } else {
+                        items(state.visibleReminders, key = { it.id.value }) { reminder ->
+                            ReminderCard(
+                                reminder = reminder,
+                                vehicleName =
+                                    state.vehicles.firstOrNull { it.id == reminder.vehicleId }?.name
+                                        ?: stringResource(R.string.unavailable_vehicle_name),
+                                activeAction = state.activeAction,
+                                onCompleteReminder = onCompleteReminder,
+                                onDeleteReminder = { reminderPendingDeletion = reminder },
+                            )
+                        }
                     }
                 }
             }
         }
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .safeDrawingPadding()
-                .padding(horizontal = Spacings.spacing16),
+            modifier =
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .safeDrawingPadding()
+                    .padding(horizontal = Spacings.spacing16),
         )
     }
 
     if (showReminderSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showReminderSheet = false },
+            onDismissRequest = {
+                if (state.activeAction != ReminderAction.Create) {
+                    onDismissCreate()
+                    showReminderSheet = false
+                }
+            },
             sheetState = sheetState,
         ) {
             ReminderForm(
@@ -265,18 +441,23 @@ private fun RemindersScreen(
                 onDueDateChange = onDueDateChange,
                 onDueOdometerChange = onDueOdometerChange,
                 onSubmitReminder = onSubmitReminder,
-                modifier = Modifier.padding(
-                    start = Spacings.spacing24,
-                    end = Spacings.spacing24,
-                    bottom = Spacings.spacing24,
-                ),
+                modifier =
+                    Modifier
+                        .padding(
+                            start = Spacings.spacing24,
+                            end = Spacings.spacing24,
+                            bottom = Spacings.spacing24,
+                        ).navigationBarsPadding()
+                        .imePadding(),
             )
         }
     }
 
     reminderPendingDeletion?.let { reminder ->
         AlertDialog(
-            onDismissRequest = { reminderPendingDeletion = null },
+            onDismissRequest = {
+                if (state.activeAction == null) reminderPendingDeletion = null
+            },
             title = { Text(stringResource(R.string.delete_reminder_dialog_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
@@ -289,6 +470,7 @@ private fun RemindersScreen(
             },
             confirmButton = {
                 TextButton(
+                    enabled = state.activeAction == null,
                     onClick = {
                         reminderPendingDeletion = null
                         onDeleteReminder(reminder)
@@ -298,7 +480,7 @@ private fun RemindersScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { reminderPendingDeletion = null }) {
+                TextButton(onClick = { reminderPendingDeletion = null }, enabled = state.activeAction == null) {
                     Text(stringResource(R.string.delete_reminder_cancel_button))
                 }
             },
@@ -307,8 +489,57 @@ private fun RemindersScreen(
 }
 
 @Composable
+private fun ReminderVehicleFilters(
+    vehicles: List<Vehicle>,
+    selectedVehicleIds: Set<VehicleId>,
+    onVehicleFilterToggled: (Vehicle) -> Unit,
+    onVehicleFiltersCleared: () -> Unit,
+) {
+    val chipColors =
+        FilterChipDefaults.filterChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+        )
+    LazyRow(
+        modifier = Modifier.fillMaxWidth().testTag("reminder_vehicle_filters"),
+        horizontalArrangement = Arrangement.spacedBy(Spacings.spacing8),
+    ) {
+        item {
+            FilterChip(
+                selected = selectedVehicleIds.isEmpty(),
+                onClick = onVehicleFiltersCleared,
+                label = { Text(stringResource(R.string.all_vehicles_filter)) },
+                shape = RoundedCornerShape(percent = 50),
+                colors = chipColors,
+                modifier = Modifier.testTag("reminder_filter_all"),
+            )
+        }
+        items(vehicles, key = { it.id.value }) { vehicle ->
+            FilterChip(
+                selected = vehicle.id in selectedVehicleIds,
+                onClick = { onVehicleFilterToggled(vehicle) },
+                label = { Text(vehicle.name, maxLines = 1) },
+                shape = RoundedCornerShape(percent = 50),
+                colors = chipColors,
+                modifier = Modifier.testTag("reminder_filter_vehicle_${vehicle.id.value}"),
+            )
+        }
+    }
+}
+
+@Composable
 private fun LoadingStateCard(message: String) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics {
+                    stateDescription = message
+                    liveRegion = LiveRegionMode.Polite
+                },
+    ) {
         Row(
             modifier = Modifier.padding(Spacings.spacing16),
             horizontalArrangement = Arrangement.spacedBy(Spacings.spacing12),
@@ -325,31 +556,76 @@ private fun LoadingStateCard(message: String) {
 }
 
 @Composable
-private fun RemindersHeader(
-    showAddReminderAction: Boolean,
-    onAddReminder: () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+private fun LoadErrorCard(onRetry: () -> Unit) {
+    val errorMessage = stringResource(R.string.reminders_load_error_title)
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(Spacings.spacing24),
+            verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
         ) {
             Text(
-                text = stringResource(R.string.reminders_title),
-                style = MaterialTheme.typography.headlineLarge,
+                text = errorMessage,
+                style = MaterialTheme.typography.titleLarge,
+                modifier =
+                    Modifier.semantics {
+                        heading()
+                        error(errorMessage)
+                        liveRegion = LiveRegionMode.Assertive
+                    },
             )
-            if (showAddReminderAction) {
-                Button(onClick = onAddReminder) {
-                    Text(stringResource(R.string.add_reminder_button))
-                }
+            Text(stringResource(R.string.reminders_load_error_description))
+            Button(onClick = onRetry) {
+                Text(stringResource(R.string.retry_button))
             }
         }
+    }
+}
+
+@Composable
+private fun PersistenceErrorCard() {
+    val errorMessage = stringResource(R.string.reminder_mutation_error)
+    ElevatedCard(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics {
+                    error(errorMessage)
+                    liveRegion = LiveRegionMode.Assertive
+                },
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+    ) {
         Text(
-            text = stringResource(R.string.reminders_subtitle),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = errorMessage,
+            modifier = Modifier.padding(Spacings.spacing16),
+            color = MaterialTheme.colorScheme.onErrorContainer,
         )
+    }
+}
+
+@Composable
+private fun NoVehiclesCard(onNavigateToGarage: () -> Unit) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacings.spacing24),
+            verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
+        ) {
+            Text(
+                text = stringResource(R.string.no_vehicles_title),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.semantics { heading() },
+            )
+            Text(
+                text = stringResource(R.string.no_vehicles_description),
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Button(onClick = onNavigateToGarage) {
+                Text(stringResource(R.string.go_to_garage_button))
+            }
+        }
     }
 }
 
@@ -363,9 +639,16 @@ private fun ReminderForm(
     onSubmitReminder: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val validationErrorRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(state.errorMessage) {
+        if (state.errorMessage != null) validationErrorRequester.bringIntoView()
+    }
     Card(modifier = modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.padding(Spacings.spacing16),
+            modifier =
+                Modifier
+                    .padding(Spacings.spacing16)
+                    .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Spacings.spacing12),
         ) {
             Text(
@@ -375,8 +658,24 @@ private fun ReminderForm(
             OutlinedTextField(
                 value = state.title,
                 onValueChange = onTitleChange,
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (state.errorMessage == CarburaString.ValidationBlankReminderTitle) {
+                                Modifier.bringIntoViewRequester(validationErrorRequester)
+                            } else {
+                                Modifier
+                            },
+                        ),
                 label = { Text(stringResource(R.string.reminder_title_label)) },
+                isError = state.errorMessage == CarburaString.ValidationBlankReminderTitle,
+                supportingText =
+                    if (state.errorMessage == CarburaString.ValidationBlankReminderTitle) {
+                        { ReminderValidationText(state.errorMessage) }
+                    } else {
+                        null
+                    },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 singleLine = true,
             )
@@ -388,27 +687,95 @@ private fun ReminderForm(
             ReminderDatePickerField(
                 value = state.dueDate,
                 onValueChange = onDueDateChange,
+                error = state.errorMessage == CarburaString.ValidationInvalidReminderDate,
+                modifier =
+                    if (state.errorMessage == CarburaString.ValidationInvalidReminderDate) {
+                        Modifier.bringIntoViewRequester(validationErrorRequester)
+                    } else {
+                        Modifier
+                    },
             )
             OutlinedTextField(
                 value = state.dueOdometerKm,
                 onValueChange = onDueOdometerChange,
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (
+                                state.errorMessage == CarburaString.ValidationNegativeReminderDueOdometer ||
+                                state.errorMessage == CarburaString.ValidationInvalidReminderDueOdometer
+                            ) {
+                                Modifier.bringIntoViewRequester(validationErrorRequester)
+                            } else {
+                                Modifier
+                            },
+                        ),
                 label = { Text(stringResource(R.string.reminder_due_odometer_label)) },
+                isError =
+                    state.errorMessage == CarburaString.ValidationNegativeReminderDueOdometer ||
+                        state.errorMessage == CarburaString.ValidationInvalidReminderDueOdometer,
+                supportingText =
+                    if (
+                        state.errorMessage == CarburaString.ValidationNegativeReminderDueOdometer ||
+                        state.errorMessage == CarburaString.ValidationInvalidReminderDueOdometer
+                    ) {
+                        { ReminderValidationText(state.errorMessage) }
+                    } else {
+                        null
+                    },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
             )
-            if (state.errorMessage != null) {
+            if (
+                state.errorMessage != null &&
+                state.errorMessage !in
+                setOf(
+                    CarburaString.ValidationBlankReminderTitle,
+                    CarburaString.ValidationInvalidReminderDate,
+                    CarburaString.ValidationNegativeReminderDueOdometer,
+                    CarburaString.ValidationInvalidReminderDueOdometer,
+                )
+            ) {
+                val validationMessage = stringResource(state.errorMessage.remindersStringRes())
                 Text(
-                    text = stringResource(state.errorMessage.remindersStringRes()),
+                    text = validationMessage,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
+                    modifier =
+                        Modifier.semantics {
+                            error(validationMessage)
+                            liveRegion = LiveRegionMode.Assertive
+                        },
+                )
+            }
+            if (state.hasPersistenceError) {
+                val saveErrorMessage = stringResource(R.string.reminder_save_error)
+                Text(
+                    text = saveErrorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier =
+                        Modifier.semantics {
+                            error(saveErrorMessage)
+                            liveRegion = LiveRegionMode.Assertive
+                        },
                 )
             }
             Button(
                 onClick = onSubmitReminder,
                 modifier = Modifier.fillMaxWidth(),
+                enabled = state.activeAction == null,
             ) {
-                Text(stringResource(R.string.save_reminder_button))
+                Text(
+                    stringResource(
+                        if (state.activeAction == ReminderAction.Create) {
+                            R.string.saving_reminder_button
+                        } else {
+                            R.string.save_reminder_button
+                        },
+                    ),
+                )
             }
         }
     }
@@ -419,11 +786,12 @@ private fun ReminderForm(
 private fun ReminderDatePickerField(
     value: String,
     onValueChange: (String) -> Unit,
+    error: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = value.toUtcMillisOrNull())
 
-    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
         Text(
             text = stringResource(R.string.reminder_due_date_label),
             style = MaterialTheme.typography.labelLarge,
@@ -432,11 +800,22 @@ private fun ReminderDatePickerField(
             onClick = { showDatePicker = true },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(value.ifBlank { stringResource(R.string.select_reminder_due_date_button) })
+            Text(value.localizedDateOrSelf().ifBlank { stringResource(R.string.select_reminder_due_date_button) })
         }
+        if (value.isNotBlank()) {
+            TextButton(onClick = { onValueChange("") }) {
+                Text(stringResource(R.string.clear_reminder_due_date_button))
+            }
+        }
+        if (error) ReminderValidationText(CarburaString.ValidationInvalidReminderDate)
     }
 
     if (showDatePicker) {
+        val datePickerState =
+            rememberDatePickerState(
+                initialSelectedDateMillis = value.toUtcMillisOrNull(),
+                yearRange = 1..9999,
+            )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
@@ -460,27 +839,46 @@ private fun ReminderDatePickerField(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VehicleSelector(
     vehicles: List<Vehicle>,
     selectedVehicleId: String?,
     onVehicleSelected: (Vehicle) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacings.spacing8)) {
-        Text(
-            text = stringResource(R.string.select_vehicle_title),
-            style = MaterialTheme.typography.titleSmall,
+    var expanded by remember { mutableStateOf(false) }
+    val selectedVehicle = vehicles.firstOrNull { it.id.value == selectedVehicleId }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        OutlinedTextField(
+            value = selectedVehicle?.name.orEmpty(),
+            onValueChange = {},
+            modifier =
+                Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth()
+                    .testTag("reminder_vehicle_dropdown"),
+            readOnly = true,
+            label = { Text(stringResource(R.string.select_vehicle_title)) },
+            placeholder = { Text(stringResource(R.string.select_vehicle_placeholder)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
         )
-        vehicles.forEach { vehicle ->
-            val isSelected = vehicle.id.value == selectedVehicleId
-            if (isSelected) {
-                Button(onClick = { onVehicleSelected(vehicle) }) {
-                    Text(vehicle.name)
-                }
-            } else {
-                OutlinedButton(onClick = { onVehicleSelected(vehicle) }) {
-                    Text(vehicle.name)
-                }
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            vehicles.forEach { vehicle ->
+                DropdownMenuItem(
+                    text = { Text(vehicle.name) },
+                    onClick = {
+                        onVehicleSelected(vehicle)
+                        expanded = false
+                    },
+                    modifier = Modifier.testTag("reminder_vehicle_option_${vehicle.id.value}"),
+                )
             }
         }
     }
@@ -488,13 +886,15 @@ private fun VehicleSelector(
 
 @Composable
 private fun NotificationPermissionCard(
-    onEnableNotifications: () -> Unit,
+    isPermanentlyDenied: Boolean,
+    onAction: () -> Unit,
 ) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-        ),
+        colors =
+            CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+            ),
     ) {
         Column(
             modifier = Modifier.padding(Spacings.spacing16),
@@ -506,26 +906,40 @@ private fun NotificationPermissionCard(
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Text(
-                text = stringResource(R.string.notification_permission_description),
+                text =
+                    stringResource(
+                        if (isPermanentlyDenied) {
+                            R.string.notification_permission_settings_description
+                        } else {
+                            R.string.notification_permission_description
+                        },
+                    ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
-            Button(onClick = onEnableNotifications) {
-                Text(stringResource(R.string.notification_permission_action))
+            Button(onClick = onAction) {
+                Text(
+                    stringResource(
+                        if (isPermanentlyDenied) {
+                            R.string.notification_permission_settings_action
+                        } else {
+                            R.string.notification_permission_action
+                        },
+                    ),
+                )
             }
         }
     }
 }
 
 @Composable
-private fun EmptyRemindersCard(
-    onAddReminder: () -> Unit,
-) {
+private fun EmptyRemindersCard(onAddReminder: () -> Unit) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        ),
+        colors =
+            CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            ),
     ) {
         Column(
             modifier = Modifier.padding(Spacings.spacing24),
@@ -554,52 +968,172 @@ private fun EmptyRemindersCard(
 }
 
 @Composable
+private fun NoMatchingRemindersCard() {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().testTag("no_matching_reminders"),
+        colors =
+            CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            ),
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacings.spacing24),
+            verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
+        ) {
+            Text(
+                text = stringResource(R.string.no_matching_reminders_title),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Text(
+                text = stringResource(R.string.no_matching_reminders_description),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
+    }
+}
+
+@Composable
 private fun ReminderCard(
     reminder: Reminder,
     vehicleName: String,
+    activeAction: ReminderAction?,
     onCompleteReminder: (Reminder) -> Unit,
     onDeleteReminder: (Reminder) -> Unit,
 ) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(Spacings.spacing16),
-            verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+    val completeDescription = stringResource(R.string.complete_reminder_content_description, reminder.title)
+    val deleteDescription = stringResource(R.string.delete_reminder_content_description, reminder.title)
+    val busyDescription = stringResource(R.string.reminder_action_in_progress)
+    SwipeToDeleteContainer(
+        actionLabel = stringResource(R.string.delete_reminder_confirm_button),
+        accessibilityLabel = deleteDescription,
+        enabled = activeAction == null,
+        onDeleteRequest = { onDeleteReminder(reminder) },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .testTag("reminder_card_${reminder.id.value}")
+                .semantics {
+                    if (activeAction?.reminderId == reminder.id) {
+                        stateDescription = busyDescription
+                    }
+                },
+    ) {
+        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(Spacings.spacing16),
+                verticalArrangement = Arrangement.spacedBy(Spacings.spacing8),
             ) {
                 Text(reminder.title, style = MaterialTheme.typography.titleMedium)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(vehicleName, style = MaterialTheme.typography.bodyMedium)
-                    IconButton(onClick = { onDeleteReminder(reminder) }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.delete_reminder_content_description),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                    }
+                Text(vehicleName, style = MaterialTheme.typography.bodyMedium)
+                reminder.dueDate?.let {
+                    Text(it.iso8601.localizedDateOrSelf(), style = MaterialTheme.typography.bodyMedium)
                 }
-            }
-            reminder.dueDate?.let {
-                Text(it.iso8601, style = MaterialTheme.typography.bodyMedium)
-            }
-            reminder.dueOdometerKm?.let {
-                Text("$it km", style = MaterialTheme.typography.bodyMedium)
-            }
-            OutlinedButton(onClick = { onCompleteReminder(reminder) }) {
-                Text(stringResource(R.string.complete_reminder_button))
+                reminder.dueOdometerKm?.let {
+                    Text("$it km", style = MaterialTheme.typography.bodyMedium)
+                }
+                OutlinedButton(
+                    onClick = { onCompleteReminder(reminder) },
+                    enabled = activeAction == null,
+                    modifier = Modifier.semantics { contentDescription = completeDescription },
+                ) {
+                    Text(stringResource(R.string.complete_reminder_button))
+                }
             }
         }
     }
 }
 
-private fun String.toUtcMillisOrNull(): Long? = runCatching {
-    LocalDate.parse(this).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
-}.getOrNull()
+private val ReminderAction.reminderId
+    get() =
+        when (this) {
+            ReminderAction.Create -> null
+            is ReminderAction.Complete -> reminderId
+            is ReminderAction.Delete -> reminderId
+        }
 
-private fun Long.toIsoDate(): String = Instant
-    .ofEpochMilli(this)
-    .atZone(ZoneOffset.UTC)
-    .toLocalDate()
-    .toString()
+internal enum class NotificationPermissionState {
+    Granted,
+    Requestable,
+    PermanentlyDenied,
+}
+
+private fun resolveNotificationPermissionState(
+    context: Context,
+    activity: Activity?,
+    permissionWasRequested: Boolean,
+): NotificationPermissionState {
+    if (
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    ) {
+        return NotificationPermissionState.Granted
+    }
+    return if (
+        permissionWasRequested &&
+        activity?.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) != true
+    ) {
+        NotificationPermissionState.PermanentlyDenied
+    } else {
+        NotificationPermissionState.Requestable
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? =
+    when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }
+
+private fun Context.openNotificationSettings() {
+    startActivity(
+        Intent(
+            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", packageName, null),
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+    )
+}
+
+private const val PERMISSION_PREFERENCES = "reminder_notification_permission"
+private const val PERMISSION_REQUESTED = "requested"
+
+private fun String.toUtcMillisOrNull(): Long? =
+    try {
+        LocalDate
+            .parse(this)
+            .atStartOfDay()
+            .toInstant(ZoneOffset.UTC)
+            .toEpochMilli()
+    } catch (_: DateTimeParseException) {
+        null
+    }
+
+@Composable
+private fun ReminderValidationText(message: CarburaString?) {
+    if (message == null) return
+    val text = stringResource(message.remindersStringRes())
+    Text(
+        text = text,
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.semantics { error(text) },
+    )
+}
+
+private fun String.localizedDateOrSelf(): String =
+    ifBlank { "" }.let { value ->
+        try {
+            LocalDate.parse(value).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault()))
+        } catch (_: DateTimeParseException) {
+            value
+        }
+    }
+
+private fun Long.toIsoDate(): String =
+    Instant
+        .ofEpochMilli(this)
+        .atZone(ZoneOffset.UTC)
+        .toLocalDate()
+        .toString()

@@ -8,6 +8,7 @@ kotlin {
         implementation(projects.core.model)
         implementation(projects.core.stringResources)
         api(libs.androidx.lifecycle.viewmodel)
+        implementation(libs.compose.multiplatform.runtime)
         implementation(libs.koin.core)
         implementation(libs.kotlinx.coroutines.core)
     }
@@ -20,9 +21,30 @@ kotlin {
 
     sourceSets.androidMain.dependencies {
         implementation(projects.core.designsystem)
+        implementation(libs.androidx.activity.compose)
         implementation(project.dependencies.platform(libs.androidx.compose.bom))
         implementation(libs.androidx.compose.material.icons.core)
         implementation(libs.androidx.compose.material3)
         implementation(libs.androidx.compose.ui)
+        implementation(libs.androidx.lifecycle.runtime.compose)
+        implementation(libs.androidx.lifecycle.viewmodel.compose)
     }
+
+    sourceSets.androidInstrumentedTest.dependencies {
+        implementation(project.dependencies.platform(libs.androidx.compose.bom))
+        implementation(libs.androidx.compose.ui.test.junit4)
+        implementation(libs.androidx.test.espresso.core)
+        implementation(libs.androidx.test.ext.junit)
+        implementation(libs.androidx.test.runner)
+    }
+}
+
+android {
+    defaultConfig {
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+}
+
+dependencies {
+    add("debugImplementation", libs.androidx.compose.ui.test.manifest)
 }

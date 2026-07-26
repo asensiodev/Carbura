@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="form_select_date">Seleccionar fecha</string>
+    <string name="form_clear_date">Borrar</string>
+    <string name="form_accept">Aceptar</string>
+    <string name="form_cancel">Cancelar</string>
+    <string name="shell_app_name">Carbura</string>
+    <string name="shell_brand">CARBURA</string>
+    <string name="shell_destination_garage">Garaje</string>
+    <string name="shell_destination_reminders">Recordatorios</string>
+    <string name="shell_destination_maintenance">Mantenimiento</string>
+    <string name="shell_destination_account">Cuenta</string>
+    <string name="shell_garage_eyebrow">GARAJE</string>
+    <string name="shell_garage_headline">Gestión de vehículos</string>
+    <string name="shell_garage_description">Consulta y actualiza los datos, kilómetros y planificación de tus vehículos.</string>
+    <string name="shell_reminders_eyebrow">RECORDATORIOS</string>
+    <string name="shell_reminders_headline">Gestión de recordatorios</string>
+    <string name="shell_reminders_description">Organiza recordatorios por fecha o kilometraje y consulta lo que viene después.</string>
+    <string name="shell_maintenance_eyebrow">MANTENIMIENTO</string>
+    <string name="shell_maintenance_headline">Historial de mantenimiento</string>
+    <string name="shell_maintenance_description">Consulta y registra el historial de mantenimiento de cada vehículo.</string>
+    <string name="shell_account_eyebrow">CUENTA</string>
+    <string name="shell_account_headline">Cuenta y almacenamiento</string>
+    <string name="shell_account_description">Gestiona el modo local, la sincronización y el almacenamiento en este equipo.</string>
+    <string name="startup_restoring">Comprobando la sesión segura…</string>
+    <string name="startup_authenticating">Esperando la autenticación de Google…</string>
+    <string name="startup_profile">Resolviendo tu cuenta…</string>
+    <string name="startup_initial_sync">Sincronizando los datos de tu cuenta…</string>
+    <string name="startup_import_title">Datos locales encontrados</string>
+    <string name="startup_import_description">Elige qué hacer antes de sincronizar. Carbura no subirá ni eliminará estos datos sin tu confirmación.</string>
+    <string name="startup_import_summary">%1$d vehículos, %2$d mantenimientos y %3$d recordatorios locales</string>
+    <string name="startup_import_action">Importar y combinar</string>
+    <string name="startup_use_account_action">Usar datos de la cuenta</string>
+    <string name="startup_cancel">Cancelar</string>
+    <string name="startup_retry">Reintentar</string>
+    <string name="startup_sign_in">Continuar con Google</string>
+    <string name="startup_local_action">Usar modo local</string>
+</resources>

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+changed_files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.kts?$' || true)
+
+if [[ -z "${changed_files}" ]]; then
+    echo "No staged Kotlin files. Skipping Kotlin quality checks."
+    exit 0
+fi
+
+echo "Staged Kotlin files:"
+echo "${changed_files}"
+echo ""
+
+echo "Running qualityCheck..."
+./gradlew qualityCheck
+
+echo "Pre-commit checks passed."

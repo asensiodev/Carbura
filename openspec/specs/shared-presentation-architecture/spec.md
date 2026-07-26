@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Define shared presentation, dependency injection, and typed navigation architecture.
+
+## Requirements
 
 ### Requirement: Shared Feature ViewModels
 The system SHALL define feature state holders as shared KMP ViewModels when their logic is platform-independent.

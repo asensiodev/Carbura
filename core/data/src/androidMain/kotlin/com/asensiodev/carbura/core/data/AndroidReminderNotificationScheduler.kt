@@ -6,10 +6,16 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
+import android.net.Uri
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderAlert
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderAlertKind
+import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationPlan
 import com.asensiodev.carbura.core.domain.reminder.notification.ReminderNotificationScheduler
-import com.asensiodev.carbura.core.model.Reminder
+import com.asensiodev.carbura.core.domain.reminder.notification.reminderAlertIdentity
+import com.asensiodev.carbura.core.model.ActiveFamilyScope
 import com.asensiodev.carbura.core.model.ReminderId
+import com.asensiodev.carbura.coredata.R
+import java.security.MessageDigest
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -19,45 +25,82 @@ internal class AndroidReminderNotificationScheduler(
 ) : ReminderNotificationScheduler {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
 
-    override suspend fun schedule(reminder: Reminder) {
-        val dueDate = reminder.dueDate ?: run {
-            cancel(reminder.id)
-            return
-        }
+    override suspend fun schedule(
+        scope: ActiveFamilyScope,
+        plan: ReminderNotificationPlan,
+    ) {
+        cancel(scope, plan.reminder.id)
+        val futureAlerts = futureAlertInstances(plan, currentTimeMillis())
+        if (futureAlerts.isEmpty()) return
+
         createNotificationChannel()
-        val triggerAtMillis = notificationTriggerMillis(dueDate.iso8601, reminder.notifyDaysBefore)
-        alarmManager.set(
-            AlarmManager.RTC_WAKEUP,
-            triggerAtMillis,
-            reminderPendingIntent(reminder.id, reminder.title),
-        )
-    }
-
-    override suspend fun cancel(reminderId: ReminderId) {
-        alarmManager.cancel(reminderPendingIntent(reminderId, title = null))
-    }
-
-    private fun notificationTriggerMillis(dueDate: String, notifyDaysBefore: Int): Long {
-        val targetDate = LocalDate.parse(dueDate).minusDays(notifyDaysBefore.toLong())
-        val targetMillis = targetDate
-            .atTime(LocalTime.of(NOTIFICATION_HOUR, 0))
-            .atZone(ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
-        val now = currentTimeMillis()
-        return if (targetMillis > now) targetMillis else now + PAST_DUE_NOTIFICATION_DELAY_MILLIS
-    }
-
-    private fun reminderPendingIntent(reminderId: ReminderId, title: String?): PendingIntent {
-        val intent = Intent(context, AndroidReminderNotificationReceiver::class.java).apply {
-            putExtra(AndroidReminderNotificationReceiver.EXTRA_REMINDER_ID, reminderId.value)
-            if (title != null) {
-                putExtra(AndroidReminderNotificationReceiver.EXTRA_REMINDER_TITLE, title)
-            }
+        futureAlerts.forEach { instance ->
+            alarmManager.set(
+                AlarmManager.RTC_WAKEUP,
+                instance.triggerAtMillis,
+                reminderPendingIntent(
+                    reminderId = plan.reminder.id,
+                    scope = scope,
+                    title = plan.reminder.title,
+                    dueDate = plan.reminder.dueDate?.iso8601,
+                    alertKind = instance.alert.kind,
+                    revision = plan.revision?.value,
+                ),
+            )
         }
-        return PendingIntent.getBroadcast(
+    }
+
+    override suspend fun cancel(
+        scope: ActiveFamilyScope,
+        reminderId: ReminderId,
+    ) {
+        alarmManager.cancel(legacyReminderPendingIntent(reminderId))
+        ReminderAlertKind.entries.forEach { alertKind ->
+            alarmManager.cancel(
+                reminderPendingIntent(
+                    reminderId = reminderId,
+                    scope = scope,
+                    title = null,
+                    dueDate = null,
+                    alertKind = alertKind,
+                    revision = null,
+                ),
+            )
+        }
+    }
+
+    private fun legacyReminderPendingIntent(reminderId: ReminderId): PendingIntent =
+        PendingIntent.getBroadcast(
             context,
             reminderId.value.hashCode(),
+            Intent(context, AndroidReminderNotificationReceiver::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+    private fun reminderPendingIntent(
+        reminderId: ReminderId,
+        scope: ActiveFamilyScope,
+        title: String?,
+        dueDate: String?,
+        alertKind: ReminderAlertKind,
+        revision: Long?,
+    ): PendingIntent {
+        val identity = "${scope.familyId.value}:${scope.generation}:${reminderAlertIdentity(reminderId, alertKind)}"
+        val intent =
+            Intent(context, AndroidReminderNotificationReceiver::class.java).apply {
+                data = Uri.parse("carbura://reminder-alert/${Uri.encode(identity)}")
+                putExtra(AndroidReminderNotificationReceiver.EXTRA_REMINDER_ID, reminderId.value)
+                putExtra(AndroidReminderNotificationReceiver.EXTRA_FAMILY_ID, scope.familyId.value)
+                scope.userId?.value?.let { putExtra(AndroidReminderNotificationReceiver.EXTRA_USER_ID, it) }
+                putExtra(AndroidReminderNotificationReceiver.EXTRA_SCOPE_GENERATION, scope.generation)
+                putExtra(AndroidReminderNotificationReceiver.EXTRA_ALERT_KIND, alertKind.name)
+                if (revision != null) putExtra(AndroidReminderNotificationReceiver.EXTRA_REVISION, revision)
+                if (title != null) putExtra(AndroidReminderNotificationReceiver.EXTRA_REMINDER_TITLE, title)
+                if (dueDate != null) putExtra(AndroidReminderNotificationReceiver.EXTRA_DUE_DATE, dueDate)
+            }
+        return PendingIntent.getBroadcast(
+            context,
+            stableAlertIntIdentity(identity),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -65,16 +108,59 @@ internal class AndroidReminderNotificationScheduler(
 
     private fun createNotificationChannel() {
         val notificationManager = context.getSystemService(NotificationManager::class.java)
-        val channel = NotificationChannel(
-            REMINDER_NOTIFICATION_CHANNEL_ID,
-            REMINDER_NOTIFICATION_CHANNEL_NAME,
-            NotificationManager.IMPORTANCE_DEFAULT,
-        )
+        val channel =
+            NotificationChannel(
+                REMINDER_NOTIFICATION_CHANNEL_ID,
+                context.getString(R.string.reminder_notification_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            )
         notificationManager.createNotificationChannel(channel)
     }
 }
 
+internal data class FutureAlertInstance(
+    val alert: ReminderAlert,
+    val triggerAtMillis: Long,
+)
+
+internal fun futureAlertInstances(
+    plan: ReminderNotificationPlan,
+    nowMillis: Long,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): List<FutureAlertInstance> {
+    val dueDate = plan.reminder.dueDate ?: return emptyList()
+    val localDueDate = LocalDate.parse(dueDate.iso8601)
+    return plan.alerts.mapNotNull { alert ->
+        val dueAtMillis =
+            localDueDate
+                .atTime(LocalTime.of(NOTIFICATION_HOUR, 0))
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli()
+        val triggerAtMillis =
+            localDueDate
+                .minusDays(alert.daysBefore.toLong())
+                .atTime(LocalTime.of(NOTIFICATION_HOUR, 0))
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli()
+        when {
+            triggerAtMillis > nowMillis -> FutureAlertInstance(alert, triggerAtMillis)
+            alert.kind == ReminderAlertKind.Manual && dueAtMillis > nowMillis -> FutureAlertInstance(alert, dueAtMillis)
+            alert.kind == ReminderAlertKind.Manual -> FutureAlertInstance(alert, nowMillis + PAST_DUE_NOTIFICATION_DELAY_MILLIS)
+            else -> null
+        }
+    }
+}
+
 internal const val REMINDER_NOTIFICATION_CHANNEL_ID = "carbura_reminders"
-private const val REMINDER_NOTIFICATION_CHANNEL_NAME = "Recordatorios"
 private const val NOTIFICATION_HOUR = 9
-private const val PAST_DUE_NOTIFICATION_DELAY_MILLIS = 5_000L
+internal const val PAST_DUE_NOTIFICATION_DELAY_MILLIS = 5_000L
+
+internal fun stableAlertIntIdentity(identity: String): Int {
+    val digest = MessageDigest.getInstance("SHA-256").digest(identity.encodeToByteArray())
+    return ((digest[0].toInt() and 0xff) shl 24) or
+        ((digest[1].toInt() and 0xff) shl 16) or
+        ((digest[2].toInt() and 0xff) shl 8) or
+        (digest[3].toInt() and 0xff)
+}

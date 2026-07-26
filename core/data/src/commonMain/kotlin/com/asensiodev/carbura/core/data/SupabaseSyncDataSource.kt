@@ -24,29 +24,29 @@ internal class SupabaseSyncDataSource(
     }
 
     override suspend fun getVehicles(familyId: FamilyId): List<SyncVehicle> =
-        client.from("vehicles")
+        client
+            .from("vehicles")
             .select {
                 filter { eq("family_id", familyId.value) }
                 order("updated_at", Order.ASCENDING)
-            }
-            .decodeList<RemoteVehicleDto>()
+            }.decodeList<RemoteVehicleDto>()
             .map { it.toSyncVehicle() }
 
     override suspend fun getMaintenanceRecords(familyId: FamilyId): List<SyncMaintenanceRecord> =
-        client.from("maintenance_records")
+        client
+            .from("maintenance_records")
             .select {
                 filter { eq("family_id", familyId.value) }
                 order("updated_at", Order.ASCENDING)
-            }
-            .decodeList<RemoteMaintenanceRecordDto>()
+            }.decodeList<RemoteMaintenanceRecordDto>()
             .map { it.toSyncMaintenanceRecord() }
 
     override suspend fun getReminders(familyId: FamilyId): List<SyncReminder> =
-        client.from("reminders")
+        client
+            .from("reminders")
             .select {
                 filter { eq("family_id", familyId.value) }
                 order("updated_at", Order.ASCENDING)
-            }
-            .decodeList<RemoteReminderDto>()
+            }.decodeList<RemoteReminderDto>()
             .map { it.toSyncReminder() }
 }

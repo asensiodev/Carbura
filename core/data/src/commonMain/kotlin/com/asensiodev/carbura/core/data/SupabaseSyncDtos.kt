@@ -13,6 +13,9 @@ internal data class RemoteVehicleDto(
     val model: String? = null,
     @SerialName("license_plate") val licensePlate: String? = null,
     @SerialName("current_odometer_km") val currentOdometerKm: Int,
+    @SerialName("next_itv_date") val nextItvDate: String? = null,
+    @SerialName("insurance_renewal_date") val insuranceRenewalDate: String? = null,
+    @SerialName("next_service_odometer_km") val nextServiceOdometerKm: Int? = null,
     @SerialName("updated_at") val updatedAt: String,
     @SerialName("deleted_at") val deletedAt: String? = null,
 )
@@ -25,6 +28,7 @@ internal data class RemoteMaintenanceRecordDto(
     @SerialName("maintenance_type_id") val maintenanceTypeId: String? = null,
     @SerialName("maintenance_type_key") val maintenanceTypeKey: String? = null,
     @SerialName("maintenance_type_code") val maintenanceTypeCode: String? = null,
+    @SerialName("maintenance_type_label") val maintenanceTypeLabel: String? = null,
     @SerialName("performed_on") val performedOn: String,
     @SerialName("odometer_km") val odometerKm: Int? = null,
     @SerialName("cost_cents") val costCents: Int? = null,

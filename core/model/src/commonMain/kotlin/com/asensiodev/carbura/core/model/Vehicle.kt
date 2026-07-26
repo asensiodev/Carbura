@@ -9,6 +9,9 @@ data class Vehicle(
     val model: String? = null,
     val licensePlate: String? = null,
     val currentOdometerKm: Int,
+    val nextItvDate: CalendarDate? = null,
+    val insuranceRenewalDate: CalendarDate? = null,
+    val nextServiceOdometerKm: Int? = null,
 )
 
 enum class VehicleType {

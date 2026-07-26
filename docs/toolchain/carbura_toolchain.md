@@ -20,6 +20,8 @@
 - **OpenCode**: agente principal para explorar el repositorio, proponer cambios, editar documentación, generar código y ayudar en la verificación.
 - **OpenSpec**: flujo asistido por IA para convertir requisitos en proposals, tareas, specs versionadas y archives trazables.
 - **ChatGPT/OpenAI vía OpenCode**: soporte conversacional para decisiones de arquitectura, revisión de documentación, planificación y ejecución guiada.
+- **Gemini**: ideación y contraste visual de propuestas de UI antes de su adaptación a Compose.
+- **Perplexity**: investigación inicial y localización de fuentes, siempre contrastadas después con documentación oficial y código real.
 
 ---
 
@@ -51,15 +53,15 @@ El proyecto combina metodologías complementarias en capas, manteniendo el alcan
 
 ### SDD (Specification-Driven Development)
 - Las specs de OpenSpec definen el **comportamiento esperado** antes de escribir código o tests.
-- Cada spec incluye criterios de aceptación que se traducen directamente en tests.
+- Cada spec incluye criterios de aceptación. Se traducen en tests cuando ofrecen una comprobación estable; los aspectos visuales o dependientes de plataforma pueden requerir validación manual.
 - OpenCode usa las specs como contexto para generar código y tests coherentes.
 
 ### TDD (Test-Driven Development)
-- Dentro de cada tarea del `/openspec-apply`, se sigue el ciclo **Red → Green → Refactor**:
+- Dentro de las tareas con comportamiento automatizable se aplica de forma pragmática el ciclo **Red → Green → Refactor**:
   1. **Red**: escribir el test que falla (a partir de los criterios de aceptación de la spec).
   2. **Green**: escribir el código mínimo para que el test pase.
   3. **Refactor**: mejorar el código sin romper los tests.
-- Los tests son la red de seguridad que garantiza que el código cumple la spec.
+- Los tests reducen regresiones y aportan evidencia sobre los comportamientos cubiertos; no sustituyen la revisión humana ni las comprobaciones manuales de UI y plataforma.
 
 ### DDD ligero (Domain-Driven Design)
 
@@ -126,7 +128,7 @@ BDD queda fuera del alcance metodológico del MVP para evitar duplicar documenta
 ┌─────────────────────────────────────────────────────────┐
 │                     OPENSPEC                            │
 │  Specs versionadas · Fuente de verdad del proyecto     │
-│  /openspec-proposal · /openspec-apply · /openspec-archive│
+│ /opsx-explore · /opsx-propose · /opsx-apply · /opsx-archive│
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -151,7 +153,7 @@ BDD queda fuera del alcance metodológico del MVP para evitar duplicar documenta
      prd.md          ← PRD completo del producto
      specs/          ← specs activas (fuente de verdad)
      changes/        ← propuestas en curso
-     archive/        ← historial de cambios completados
+       archive/      ← historial de cambios completados
      agents.md       ← instrucciones para el agente (no editar a mano)
    ```
 2. Escribir el **PRD** en `openspec/prd.md` y mantener `openspec/project.md` como contexto breve del proyecto:
@@ -161,10 +163,9 @@ BDD queda fuera del alcance metodológico del MVP para evitar duplicar documenta
    - Principios de diseño (local-first, simplicidad, privacidad).
    - **Metodología: SDD + TDD** (cada spec debe incluir criterios de aceptación verificables).
 3. Escribir las **specs iniciales** en `openspec/specs/`:
-   - Una spec por caso de uso (UC-01 a UC-09).
-   - Cada spec incluye obligatoriamente una sección **"Criterios de aceptación"** que se usará para generar los tests TDD.
-   - Spec del modelo de datos (`data-model.md`).
-   - Spec del backend Supabase (`backend.md`).
+   - Organizar las specs por capacidad funcional o técnica, no necesariamente una por caso de uso.
+   - Incluir requisitos y escenarios verificables que puedan orientar pruebas automatizadas o comprobaciones manuales.
+   - Mantener separadas capacidades como autenticación, datos, sincronización, recordatorios y flujos de plataforma.
 
 ---
 
@@ -177,7 +178,7 @@ Para cada feature o caso de uso:
 #### Paso 1 — Proposal (planificación SDD)
 Desde Warp, lanzar OpenCode y ejecutar:
 ```text
-/openspec-proposal
+/opsx-propose
 ```
 El agente:
 - Lee el `project.md`, el `prd.md` y las specs relevantes.
@@ -193,14 +194,14 @@ El agente:
 
 #### Paso 3 — Apply: TDD Red (tests primero)
 ```text
-/openspec-apply
+/opsx-apply
 ```
-El agente implementa **primero los tests**:
-- Genera los tests unitarios a partir de los criterios de aceptación de la spec.
-- Los tests deben **fallar** en este punto (Red): verificar en Android Studio.
+Cuando el comportamiento permite una prueba estable, el agente implementa primero el test o reproduce la regresión:
+- Deriva las pruebas relevantes de los criterios de aceptación y del fallo observado.
+- Comprueba el estado Red cuando resulta practicable y aporta información útil.
   ```bash
   ./gradlew test
-  # Expected: tests failing ✗
+  # Resultado esperado durante Red: fallo relacionado con el comportamiento nuevo
   ```
 
 #### Paso 4 — Apply: TDD Green (código mínimo)
@@ -227,15 +228,15 @@ El agente implementa el código mínimo necesario para que los tests pasen:
   ```bash
   ./gradlew assembleDebug
   ```
-- Verificar el flujo visualmente en emulador o dispositivo Android. Desktop queda diferido para Entrega 2.
+- Verificar Android en emulador/dispositivo y Desktop con `./gradlew :app:desktop:run`.
 
 #### Paso 7 — Archive (cierre del cambio SDD)
 ```text
-/openspec-archive
+/opsx-archive
 ```
 El agente:
 - Actualiza la spec fuente de verdad en `openspec/specs/`.
-- Mueve el cambio completado a `openspec/archive/`.
+- Mueve el cambio completado a `openspec/changes/archive/`.
 - Limpia `openspec/changes/`.
 
 #### Paso 8 — Commit local
@@ -246,7 +247,7 @@ git commit -m "feat(vehicles): implement UC-02 add vehicle flow with tests"
 
 Los cambios se agrupan en las Pull Requests oficiales de entrega, no en una PR independiente por cada feature pequeña.
 
-Para la Entrega 1 se usara una rama `dev` como base temporal porque parte de la documentacion inicial ya fue sincronizada en `main`. La PR visible de Entrega 1 sera `feature-entrega1-AAC` -> `dev`. Despues de esa entrega, el flujo vuelve a ser `feature-*` -> `main` y no se trabajara directamente sobre `main`.
+Para la Entrega 1 se usara una rama `dev` como base temporal porque parte de la documentacion inicial ya fue sincronizada en `main`. Las tres PR academicas usan `dev` como destino y no se trabaja directamente sobre `main`.
 
 Ramas y PRs oficiales:
 
@@ -254,7 +255,7 @@ Ramas y PRs oficiales:
 |---|---|---|---|
 | Entrega 1 | `feature-entrega1-AAC` | `dev` | Documentacion tecnica: README, PRD, user stories, arquitectura, modelo de datos, API y tickets. |
 | Entrega 2 | `feature-entrega2-AAC` | `dev` | MVP funcional Android-first: frontend, backend/datos, base de datos, sync v0, notificaciones locales y flujo principal. |
-| Entrega final | `finalproject-AAC` | `main` | Version final con flujo E2E, tests, despliegue/evidencia y documentacion cerrada. |
+| Entrega final | `finalproject-AAC` | `dev` | Version final con flujo E2E, tests, despliegue/evidencia y documentacion cerrada. |
 
 ---
 
@@ -268,16 +269,22 @@ Ramas y PRs oficiales:
    - `202607070001_ensure_user_profile_rpc.sql`
    - `202607080001_sync_v0_schema.sql`
    - `202607080002_sync_v0_text_entity_ids.sql`
+   - `202607120001_vehicle_planning_fields.sql`
+   - `202607190001_delete_user_account.sql`
+   - `202607200001_maintenance_type_label.sql`
+   - `202607220001_harden_family_profile_authorization.sql`
+   La ultima migracion endurece familias/perfiles y debe aplicarse antes de habilitar Desktop autenticado.
 3. Configurar **Row Level Security (RLS)** por `family_id` para cada tabla.
 4. Configurar **Google OAuth** en Supabase Auth.
 5. Añadir las variables de entorno a `local.properties`:
    ```properties
-   SUPABASE_URL=https://xxxx.supabase.co
-   SUPABASE_ANON_KEY=xxxx
-   GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
-   ```
-6. Verificar conectividad desde la app Android.
-7. Ejecutar los tests de sync (`:core:data:desktopTest`) y dominio.
+    SUPABASE_URL=https://<PROJECT_REF>.supabase.co
+    SUPABASE_ANON_KEY=<ANON_OR_PUBLISHABLE_KEY>
+    GOOGLE_CLIENT_ID=<WEB_CLIENT_ID>.apps.googleusercontent.com
+    ```
+6. Configurar OAuth: callback Google `https://<PROJECT_REF>.supabase.co/auth/v1/callback` y redirect Supabase Desktop `http://127.0.0.1:43821/auth/callback`.
+7. Verificar Android con Credential Manager y Desktop con PKCE S256, Keychain/Credential Manager y sin secretos privilegiados.
+8. Ejecutar los tests de sync (`:core:data:desktopTest`) y dominio.
 
 ---
 
@@ -285,11 +292,15 @@ Ramas y PRs oficiales:
 
 **Herramientas:** todas
 
-1. Revisar UX en emulador o dispositivo Android.
-2. Revisar cobertura de tests (`./gradlew koverReport`).
+1. Revisar UX en Android y Desktop, incluido modo local sin Supabase.
+2. Ejecutar `./gradlew qualityCheck test assembleDebug :app:desktop:jar --stacktrace`; no hay una tarea Kover configurada actualmente.
 3. Añadir tests de integración para flujos críticos (auth, sync, reminders).
-4. Pulir animaciones, estados vacíos, estados de error, estados de carga.
-5. Revisar el flujo de sincronización (offline → online → sync).
+4. Ejecutar `MainActivityE2ETest` en Android para verificar, dentro del proceso de la aplicación, sesión restaurada, vehículo, mantenimiento ITV, historial y recordatorio. Autenticación externa, sync remoto y entrega nativa de notificaciones usan límites deterministas.
+5. Pulir animaciones, estados vacíos, estados de error, estados de carga.
+6. Revisar el flujo de sincronización Android/Desktop (offline → online → sync), tombstones y LWW.
+7. Generar el DMG con un JDK que incluya `jpackage`, inspeccionar secretos e instalar el artefacto exacto en macOS. La generación y validación MSI queda como comprobación futura en un host Windows.
+
+Evidencia macOS final: DMG Apple Silicon generado con Amazon Corretto 17, runtime corregido con módulos `java.sql` y `java.net.http`, instalación, login, restauración de Keychain, arranque offline y cierre de sesión superados. La firma es ad-hoc; Developer ID/notarización quedan fuera por falta de credenciales y MSI/Windows queda fuera del alcance validado por falta de un PC Windows.
 
 ---
 
@@ -302,11 +313,11 @@ Ramas y PRs oficiales:
    - Screenshots o GIFs de la app si se preparan para la entrega final.
    - Stack tecnológico y metodología (SDD + TDD).
    - Sección "AI-assisted development": cómo se usó IA en cada fase.
-   - Instrucciones de setup con `local.properties.example`.
+   - Instrucciones directas para probar la APK Android y el DMG macOS.
 2. Documentar el proceso AI + SDD + TDD en la **memoria del TFM**:
-   - Usar el historial de `openspec/archive/` como evidencia de SDD.
+   - Usar el historial de `openspec/changes/archive/` como evidencia de SDD.
    - Mostrar trazabilidad: spec → criterios de aceptación → tests (Red) → código (Green) → refactor.
-   - Incluir métricas de cobertura de tests como indicador de calidad.
+   - Incluir resultados de pruebas y límites de cobertura; actualmente no existe una tarea Kover configurada.
 3. Preparar el guion de la **demo final**.
 
 ### Evidencias
@@ -315,7 +326,10 @@ Ramas y PRs oficiales:
 - `openspec/changes/`: proposals y tareas durante la implementación.
 - `openspec/changes/archive/`: historial de cambios aplicados y cerrados.
 - Commits y PRs: trazabilidad entre documentación, specs, código y entregas.
-- Comandos de verificación: `./gradlew test`, `./gradlew assembleDebug` y revisiones manuales en Android Studio/emulador.
+- Comandos de verificacion local y CI: `./gradlew qualityCheck test assembleDebug :app:desktop:jar --stacktrace`, OpenSpec estricto y `git diff --check`.
+- Evidencia dependiente de plataforma: APK Android y DMG instalado en macOS. MSI, ejecución Windows y Credential Manager no se validan por falta de un PC Windows.
+- Evidencia Android registrada manualmente el 26/07/2026: `./gradlew connectedDebugAndroidTest --max-workers=1` superado con 55 pruebas en un emulador Pixel 9a, incluido el E2E dentro del proceso de la aplicación.
+- Instalación de APK/DMG: sección 1.4 de `readme.md`. El vídeo demo se entrega mediante el canal académico externo y no se enlaza desde el repositorio.
 
 ---
 
@@ -340,6 +354,8 @@ Tipos: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `style`
 
 ## Estructura del repositorio
 
+Vista resumida; `openspec/specs/` contiene directorios adicionales organizados por capacidad:
+
 ```text
 carbura/
 ├── openspec/
@@ -352,12 +368,14 @@ carbura/
 │   │   ├── maintenance-history/
 │   │   ├── reminders-mvp/
 │   │   ├── sync-v0/
-│   │   └── supabase-backend/
-│   ├── changes/                ← propuestas en curso
-│   └── archive/                ← historial de cambios completados
+│   │   ├── supabase-backend/
+│   │   └── ...                 ← otras capacidades vigentes
+│   └── changes/                ← propuestas en curso
+│       └── archive/            ← historial de cambios completados
 ├── build-logic/                ← convention plugins Gradle
 ├── app/
 │   ├── android/                ← UI Android, navegación y adapters Android
+│   ├── desktop/                ← UI Desktop, OAuth, modo local y paquetes nativos
 │   └── shared/                 ← rutas/contratos compartidos de app
 ├── core/
 │   ├── model/                  ← modelos compartidos
@@ -386,11 +404,11 @@ carbura/
 2. Abrir Warp en el directorio del proyecto
 3. (Opcional) Abrir VS Code en el mismo directorio
 4. En Warp: lanzar `opencode`
-5. /openspec-proposal → revisar propuesta + tests TDD → aprobar
-6. /openspec-apply (tests primero: Red) → verificar que fallan
-7. /openspec-apply (código: Green) → verificar que pasan
-8. Refactor → re-ejecutar tests → compilar en Android Studio → testear
-9. /openspec-archive → commit local
+5. /opsx-explore o /opsx-propose → revisar propuesta y estrategia de pruebas → aprobar
+6. Si el comportamiento es automatizable: reproducir el fallo o escribir el test (Red)
+7. /opsx-apply → implementar el cambio mínimo y verificar las pruebas (Green)
+8. Refactor → re-ejecutar tests → compilar Android/Desktop → testear
+9. /opsx-archive → commit local
 10. Agrupar cambios en la PR oficial correspondiente a la entrega
 ```
 

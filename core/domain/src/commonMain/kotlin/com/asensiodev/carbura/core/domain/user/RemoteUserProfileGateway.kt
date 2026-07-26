@@ -5,11 +5,16 @@ import com.asensiodev.carbura.core.model.UserId
 
 interface RemoteUserProfileGateway {
     suspend fun getProfileForUser(userId: UserId): RemoteUserProfile?
+
     suspend fun ensureProfile(
         displayName: String,
         email: String?,
     ): RemoteUserProfile
 }
+
+class RemoteUserProfileUnavailableException(
+    cause: Throwable,
+) : Exception(cause)
 
 data class RemoteUserProfile(
     val userId: UserId,

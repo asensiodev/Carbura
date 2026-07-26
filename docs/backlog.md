@@ -2,31 +2,33 @@
 
 Este documento detalla los tickets de trabajo derivados de las historias de usuario del MVP. Sigue la estructura recomendada en el material de AI4Devs para tickets Agile: titulo, descripcion, criterios de aceptacion, prioridad, estimacion, area responsable, etiquetas, referencias e historial.
 
-Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada bloque de trabajo se creara un cambio en `openspec/changes/` con `proposal.md`, `tasks.md` y spec delta cuando aplique. La implementacion seguira TDD: Red -> Green -> Refactor.
+Los tickets se trabajaron mediante SDD con OpenSpec. Los cambios sustanciales se documentaron con propuesta, tareas y delta de especificacion cuando aplicaba; TDD se uso de forma pragmatica para comportamientos estables y regresiones reproducibles.
 
-## Scope Entrega 2
+## Alcance actual de la entrega final
 
-- Incluido y validado en Android: login Google real, perfil/familia MVP, garaje persistente, historial de mantenimiento, recordatorios MVP, notificaciones locales, sync v0 con Supabase, UI Android edge-to-edge y smoke visual manual.
+- Incluido en Android y Desktop: autenticacion Google/Supabase, espacio personal, garaje persistente, historial, recordatorios, solicitud de eliminacion de cuenta y sync v0 bidireccional.
 - Recordatorios MVP: crear, listar pendientes, marcar completados y borrar por familia/vehiculo, con fecha mediante date picker y/o kilometraje objetivo.
-- Mantenimiento MVP: crear con date picker, listar historial persistente por vehiculo y borrar registros con confirmacion.
-- Garaje MVP: crear coche/moto, listar y borrar vehiculos con limpieza local de mantenimientos y recordatorios asociados.
+- Mantenimiento MVP: crear y editar con date picker, listar el historial persistente por vehiculo y borrar registros con confirmacion.
+- Garaje MVP: crear, editar, listar y borrar vehiculos, actualizar rapidamente el odometro y gestionar objetivos opcionales de ITV, seguro y revision por kilometraje.
 - Sync v0: subida/bajada de vehiculos, mantenimientos y recordatorios; tombstones; `pending_sync`; `last-write-wins`; sync inicial al restaurar sesion; accion manual desde Usuario.
-- Diferido: recordatorios recurrentes/proactivos desde vehiculo, invitaciones familiares completas, Desktop funcional, exportacion PDF/CSV, CI/release final y test E2E completo.
-- Roadmap de sincronizacion: `docs/sync-roadmap.md`.
+- Incorporado despues de Entrega 2: edicion de vehiculos, odometro rapido, sugerencias proactivas de recordatorios desde el vehiculo y CI con calidad, tests y APK debug.
+- Implementado despues de Entrega 2: Desktop local y autenticado, OAuth PKCE, vault nativo, importacion consentida, recordatorios desde mantenimiento, hardening RLS y confirmaciones de sync condicionadas por version.
+- Fuera del MVP entregado: coste acumulado, invitaciones, exportacion PDF/CSV, iOS y validacion de paquetes para Windows/Linux.
+- Fuente de sincronizacion: `openspec/specs/sync-v0/spec.md` y `readme.md` secciones 2.1, 2.4 y 2.6.
 
-## Estado actual Entrega 2
+## Estado actual
 
-- Android MVP local-first + sync v0: ~90-95% completado para demo de Entrega 2.
-- MVP completo final Android + Desktop + CI/E2E/exportacion: ~70% completado.
+- Android MVP local-first + sync v0: completado para la demo de Entrega 2 y ampliado con edicion y recordatorios proactivos.
+- Android y Desktop son clientes funcionales. Android es la unica plataforma con notificaciones nativas; iOS queda fuera de alcance.
 - OpenSpec archivados relevantes: `add-sync-v0`, `add-reminders-mvp-edge-to-edge`, `add-user-family-mvp`, `add-date-pickers-delete-mvp`, `add-local-reminder-notifications`, `harden-sync-offline`.
-- No hay cambios OpenSpec activos al cierre de esta revision.
+- Cambios recientes archivados: `add-vehicle-editing-odometer`, `add-proactive-vehicle-reminders` y `edit-maintenance-records`.
 
 ## Sync v0 implementado
 
-- Fuente de alcance: `docs/sync-roadmap.md`.
+- Fuente de alcance: `openspec/specs/sync-v0/spec.md`.
 - Es funcional end-to-end, no solo preparatorio: sube cambios locales pendientes a Supabase y baja datos remotos de la familia.
 - Alcance v0: vehiculos, mantenimientos y recordatorios; ejecucion manual, tras login/restauracion y durante el uso de app; resolucion simple por `updated_at` con `last-write-wins`.
-- Fuera de v0: realtime, background sync periodico, merge manual de conflictos, colas complejas, adjuntos y notificaciones remotas.
+- Fuera de v0: realtime, sincronizacion periodica o en background con el proceso de la aplicacion cerrado, merge manual de conflictos, colas complejas, adjuntos y notificaciones remotas.
 - La implementacion debe vivir en KMP/shared (`core:domain`/`core:data`) para ser reutilizable por Android y Desktop.
 
 ## Orden de implementacion recomendado
@@ -38,15 +40,15 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 | 3 | T-03 - Crear vehiculo offline-first | Dominio / repositorio | US-02 | Must | 5 SP |
 | 4 | T-04 - Registro e historial de mantenimiento | Dominio / repositorio | US-04, US-05 | Must | 8 SP |
 | 5 | T-05 - Recordatorio automatico | Dominio | US-06 | Must | 5 SP |
-| 6 | T-06 - Preparacion de sincronizacion | Sincronizacion | US-02, US-04 | Must | 8 SP |
+| 6 | T-06 - Preparacion de sincronizacion | Sincronizacion | US-02, US-04, US-07 | Must | 8 SP |
 | 7 | T-07 - Formulario alta de vehiculo | Frontend | US-02 | Must | 5 SP |
 | 8 | T-08 - Formulario mantenimiento e historial | Frontend | US-04, US-05 | Must | 8 SP |
 | 9 | T-09 - Lista de recordatorios | Frontend | US-07 | Should | 5 SP |
 | 10 | T-10 - Notificaciones locales | Plataforma | US-08 | Should | 5 SP |
-| 11 | T-11 - CI/CD, release y evidencia de despliegue | Infraestructura | Transversal | Must | 5 SP |
-| 12 | T-12 - Test E2E del flujo principal | Calidad / tests | US-01, US-02, US-04, US-05, US-06 | Must | 5 SP |
+| 11 | T-11 - CI, empaquetado y evidencia de despliegue | Infraestructura | Transversal | Must | 5 SP |
+| 12 | T-12 - Test E2E del flujo principal | Calidad / tests | US-02, US-04, US-05, US-06 | Must | 5 SP |
 
-> T-11 y T-12 cubren artefactos obligatorios de la entrega final (pipeline CI/CD, gestion de secretos, evidencia de despliegue y al menos un test E2E del flujo principal). T-11 conviene arrancarlo pronto (CI minima con tests desde la Entrega 2) y completarlo al final (release y evidencia).
+> T-11 y T-12 cubren artefactos obligatorios de la entrega final. T-11 se cerró con CI y los paquetes Android/macOS entregados por el canal académico; T-12 se cerró con un E2E Android de aplicación ejecutado en emulador.
 
 ## T-01 - Esquema local/remoto del MVP
 
@@ -77,7 +79,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Criterios de aceptacion:**
 
-- Dado un usuario autenticado, cuando crea un garaje, entonces se persiste una `family` asociable a su perfil.
+- Dado un usuario autenticado sin perfil, cuando accede por primera vez, entonces se persisten automaticamente la `Family` tecnica y el `UserProfile` asociados.
 - Dado un vehiculo, cuando se guarda, entonces queda asociado a una familia.
 - Dado un mantenimiento, cuando se guarda, entonces queda asociado a un vehiculo existente.
 - Dado un usuario autenticado, cuando consulta datos remotos, entonces solo accede a su `family_id`.
@@ -97,7 +99,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Tipo:** feature / auth.
 
-**Descripcion:** implementar el flujo inicial de autenticacion con Google mediante Supabase Auth y creacion/carga del garaje familiar. En Android, Credential Manager con Google ID sera la opcion principal, con fallback controlado a Google Sign-In/OAuth si no esta disponible.
+**Descripcion:** implementar autenticacion Google/Supabase y creacion o carga automatica del espacio personal. Android usa Credential Manager con Google ID y Desktop Authorization Code con PKCE S256, navegador del sistema y vault nativo.
 
 **Proposito:** permitir que el usuario entre en la app y tenga un espacio de datos aislado antes de registrar vehiculos.
 
@@ -115,9 +117,10 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 - Configurar login Google en Supabase Auth.
 - Implementar login Android con Credential Manager y Google ID.
-- Definir fallback a Google Sign-In/OAuth para dispositivos o entornos no compatibles.
+- Permitir reintentar errores Android y restaurar/refrescar de forma segura la sesion Desktop.
+- Mantener tokens Desktop solo en Keychain o Windows Credential Manager.
 - Crear o cargar `UserProfile` tras login.
-- Crear `Family` si el usuario no tiene garaje.
+- Crear la `Family` tecnica si el usuario no tiene espacio personal.
 - Exponer estado de sesion a la UI.
 
 **Fuera de alcance:** login por email/password, multiples familias por usuario, roles avanzados.
@@ -126,15 +129,15 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 - Dado un usuario sin sesion, cuando inicia sesion con Google, entonces accede autenticado.
 - Dado un dispositivo compatible, cuando el usuario inicia sesion, entonces la app usa Credential Manager como flujo principal.
-- Dado que Credential Manager no devuelve credencial valida o no esta disponible, cuando el usuario intenta iniciar sesion, entonces la app ofrece un fallback controlado sin bloquear el onboarding.
-- Dado un usuario autenticado sin garaje, cuando completa onboarding, entonces se crea su garaje familiar.
-- Dado un usuario autenticado con garaje, cuando abre la app, entonces se carga su garaje activo.
+- Dado que Credential Manager no devuelve una credencial valida, cuando el usuario intenta iniciar sesion, entonces la app muestra un error comprensible y permite reintentar.
+- Dado un usuario autenticado sin perfil, cuando entra por primera vez, entonces se crean automaticamente su perfil y espacio personal.
+- Dado un usuario autenticado con espacio personal, cuando abre la app, entonces se carga como espacio activo.
 
 **Tests TDD previstos:**
 
 - Test de creacion de perfil si no existe.
 - Test de seleccion de flujo Credential Manager disponible.
-- Test de fallback cuando no hay credencial disponible.
+- Test de error y reintento cuando no hay credencial disponible.
 - Test de carga de garaje existente.
 - Test de error de autenticacion propagado como estado de UI.
 
@@ -190,7 +193,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Tipo:** feature / dominio / repositorio.
 
-**Descripcion:** implementar el registro de mantenimientos o averias y la consulta de historial ordenado por vehiculo.
+**Descripcion:** implementar el registro, edicion y borrado de mantenimientos o averias y la consulta de historial ordenado por vehiculo.
 
 **Proposito:** aportar el valor principal de Carbura: conservar el historial fiable de cada vehiculo.
 
@@ -210,6 +213,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 - Crear `CreateMaintenanceRecordUseCase`.
 - Validar vehiculo, tipo, fecha, kilometros y coste opcional.
 - Persistir registros localmente.
+- Editar registros activos conservando sus relaciones y recordatorios asociados.
 - Consultar historial por vehiculo en orden descendente.
 
 **Fuera de alcance:** adjuntos, OCR, recomendaciones automaticas.
@@ -235,7 +239,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Tipo:** feature / dominio.
 
-**Descripcion:** crear recordatorios automaticamente al registrar ITV o seguro con fecha de vencimiento.
+**Descripcion:** crear recordatorios deterministas desde la proxima fecha de una ITV o seguro y ofrecer un recordatorio opcional al guardar un mantenimiento con fecha futura.
 
 **Proposito:** transformar el historial en prevencion, reduciendo olvidos de vencimientos importantes.
 
@@ -252,9 +256,9 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 **Alcance:**
 
 - Definir entidad `Reminder`.
-- Crear logica de generacion desde registros ITV/seguro.
+- Crear logica de generacion desde la proxima fecha de registros ITV/seguro.
+- Ofrecer la decision de guardar con o sin recordatorio para mantenimientos registrados con fecha futura.
 - Asociar recordatorio a vehiculo, tipo y registro origen.
-- Usar 30 dias de antelacion por defecto.
 
 **Fuera de alcance:** repeticion avanzada, reglas por kilometraje complejas, notificacion local.
 
@@ -262,14 +266,14 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 - Dado un registro ITV con vencimiento, cuando se guarda, entonces se crea un recordatorio asociado.
 - Dado un registro de seguro con vencimiento, cuando se guarda, entonces se crea un recordatorio asociado.
-- Dado un recordatorio automatico, cuando se crea, entonces usa 30 dias de antelacion por defecto.
+- Dado un mantenimiento con fecha futura, cuando se guarda, entonces el usuario puede conservar solo el registro o crear tambien el recordatorio.
 
 **Tests TDD previstos:**
 
 - Test de recordatorio tras ITV.
 - Test de recordatorio tras seguro.
 - Test de no crear recordatorio si no hay vencimiento.
-- Test de antelacion por defecto.
+- Test de ID estable y ausencia de duplicados.
 
 **Referencias:** US-06, T-04.
 
@@ -283,7 +287,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Proposito:** mantener una experiencia offline-first sin bloquear el MVP con resolucion avanzada de conflictos.
 
-**Historias relacionadas:** US-02, US-04.
+**Historias relacionadas:** US-02, US-04, US-07.
 
 **Prioridad:** Must-Have.
 
@@ -409,6 +413,8 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 ## T-09 - Lista de recordatorios
 
+**Estado actual:** parcial. El listado ordenado y el estado vacio estan disponibles; la diferenciacion visual de vencidos queda como refinamiento.
+
 **Tipo:** feature / frontend.
 
 **Descripcion:** crear pantalla de proximos recordatorios del garaje.
@@ -429,21 +435,18 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 - Listar recordatorios ordenados por proximidad.
 - Mostrar vehiculo, tipo, fecha objetivo y estado.
-- Diferenciar vencidos.
 - Mostrar estado vacio.
 
-**Fuera de alcance:** edicion de reglas, notificaciones, calendario avanzado.
+**Fuera de alcance actual:** diferenciacion visual de vencidos, edicion de reglas, notificaciones y calendario avanzado.
 
 **Criterios de aceptacion:**
 
 - Dado recordatorios futuros, cuando se abre la pantalla, entonces aparecen ordenados por proximidad.
-- Dado recordatorio vencido, cuando aparece, entonces se identifica visualmente.
 - Dado que no hay recordatorios, cuando se abre la pantalla, entonces aparece estado vacio.
 
 **Tests TDD previstos:**
 
 - Test de orden por fecha.
-- Test de estado vencido.
 - Test de estado vacio.
 
 **Referencias:** US-07, T-05.
@@ -464,9 +467,9 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Estimacion:** 5 story points.
 
-**Responsable:** plataforma / Android / Desktop.
+**Responsable:** plataforma / Android.
 
-**Etiquetas:** `notifications`, `android`, `desktop`, `reminders`.
+**Etiquetas:** `notifications`, `android`, `reminders`.
 
 **Alcance:**
 
@@ -481,6 +484,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 - Dado un recordatorio con antelacion, cuando llega la fecha de aviso, entonces se muestra notificacion local.
 - Dado Android sin permiso, cuando se necesita avisar, entonces la app solicita o explica el permiso.
 - Dado dispositivo offline, cuando llega el aviso, entonces no depende del backend.
+- Dado un recordatorio creado en Desktop, cuando Android sincroniza, entonces Android lo incorpora al outbox y programa el aviso.
 
 **Tests TDD previstos:**
 
@@ -492,13 +496,13 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Historial:** creado para Entrega 1.
 
-## T-11 - CI/CD, release y evidencia de despliegue
+## T-11 - CI, empaquetado y evidencia de despliegue
 
 **Tipo:** tarea tecnica / infraestructura.
 
-**Descripcion:** configurar un pipeline basico de CI/CD con GitHub Actions y preparar la evidencia de despliegue de la entrega final. Al ser Carbura una app KMP nativa sin URL publica, la evidencia se basa en artefactos instalables, el backend Supabase desplegado y un video demo del flujo principal.
+**Descripcion:** configurar un pipeline de CI con GitHub Actions y preparar el empaquetado manual de la entrega final. Al ser Carbura una app KMP nativa sin URL publica, la evidencia se basa en artefactos instalables, el backend Supabase desplegado y un video demo del flujo principal.
 
-**Proposito:** cumplir el artefacto obligatorio de la entrega final (pipeline CI/CD, gestion de secretos y sistema verificable "en vivo") y detectar regresiones en cada push.
+**Proposito:** disponer de verificacion continua, mantener la configuracion sensible fuera del repositorio y preparar un sistema instalable que pueda probarse directamente.
 
 **Historias relacionadas:** transversal (soporta todas las Must-Have).
 
@@ -508,15 +512,15 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 **Responsable:** infraestructura.
 
-**Etiquetas:** `ci`, `cd`, `release`, `github-actions`, `secrets`, `delivery`.
+**Etiquetas:** `ci`, `packaging`, `github-actions`, `secrets`, `delivery`.
 
 **Alcance:**
 
 - Workflow de GitHub Actions que compila y ejecuta `./gradlew test` en cada push y PR.
-- Gestion de secretos via GitHub Secrets (sin credenciales en el repositorio).
-- Workflow de release que genera artefactos: APK Android y, solo si entra en alcance final, paquete Desktop.
-- Publicacion de artefactos en GitHub Releases con tag `v1.0-final-AAC`.
-- Evidencia de despliegue: backend Supabase activo, instrucciones de instalacion y video demo de 2-3 minutos del flujo E2E.
+- Quality gate actual con `./gradlew qualityCheck test assembleDebug --stacktrace`.
+- Ejecucion de CI sin secretos de produccion y exclusion de la configuracion local sensible del repositorio.
+- Release académica con APK Android y DMG macOS generados e instalados en sus sistemas objetivo. MSI queda fuera del alcance validado por no disponer de un PC Windows.
+- Evidencia de despliegue: backend Supabase activo, instrucciones de instalacion y video demo de 2-3 minutos del flujo E2E entregado mediante el canal academico externo.
 
 **Fuera de alcance:** publicacion en Google Play, firma de produccion, despliegue continuo a stores, infraestructura propia de servidor.
 
@@ -524,28 +528,38 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 
 - Dado un push a una rama con PR, cuando se ejecuta el pipeline, entonces compila el proyecto y ejecuta la suite de tests.
 - Dado un fallo de tests, cuando se ejecuta el pipeline, entonces la PR queda marcada en rojo.
-- Dada la rama final, cuando se genera la release, entonces incluye APK Android descargable y paquete Desktop solo si ese target entra en alcance final.
+- Dada la version final, cuando se prepara el paquete academico, entonces incluye la APK Android y el DMG comprobados en sus sistemas objetivo.
 - Dado el repositorio publico, cuando se inspecciona, entonces no contiene secretos ni credenciales.
 
 **Tests TDD previstos:**
 
 - Verificacion del pipeline en verde sobre un cambio trivial.
 - Verificacion de fallo del pipeline ante un test roto (prueba controlada).
-- Checklist manual de release: instalacion del APK y, si aplica, arranque del Desktop desde artefactos.
+- Checklist manual: instalacion de la APK en Android y del DMG en macOS; MSI/Credential Manager queda registrado como no validado por falta de PC Windows.
 
 **Referencias:** instrucciones del proyecto final (artefactos de infra y despliegue), `readme.md` seccion 2.4.
 
 **Historial:** creado tras auditoria pre-Entrega 1.
 
+## Cierre tecnico de Desktop y seguridad
+
+- **Desktop Compose:** Garaje, Mantenimiento, Recordatorios y Cuenta son interactivos en modo local y autenticado.
+- **OAuth y vault:** callback exacto `127.0.0.1`, PKCE S256, Keychain/Credential Manager y ausencia de fallback en texto plano.
+- **Consentimiento local:** importar, excluir o cancelar datos `local-family` antes del primer sync.
+- **Sync seguro:** aislamiento por familia, tombstones, LWW y acknowledgement por `updatedAt` para no perder mutaciones concurrentes.
+- **Cuenta:** cierre de sesion local y solicitud de eliminacion permanente single-flight con limpieza local convergente.
+- **Backend:** ocho migraciones, RPC de eliminacion y hardening de familias/perfiles.
+- **Release entregada:** APK debug, DMG y vídeo enviados mediante el canal académico externo; los instalables finales se generaron y verificaron en Android y macOS. La aceptación manual cubrió el flujo multidispositivo principal y la cobertura RLS hostil quedó automatizada; la eliminación con cuenta desechable y los recorridos completos de accesibilidad no se ejecutaron. MSI/Windows y firma Developer ID/notarización quedan fuera del alcance validado por falta de host y credenciales.
+
 ## T-12 - Test E2E del flujo principal
 
 **Tipo:** tarea tecnica / calidad.
 
-**Descripcion:** implementar al menos un test end-to-end automatizado que recorra el flujo principal del MVP: autenticacion (o sesion de test) -> alta de vehiculo -> registro de mantenimiento ITV -> consulta de historial -> verificacion del recordatorio automatico.
+**Descripcion:** implementar un test automatizado dentro del proceso que recorra el flujo principal del MVP: sesion restaurada de test -> alta de vehiculo -> registro de mantenimiento ITV futuro -> aceptacion explicita del recordatorio -> consulta de historial y recordatorios.
 
 **Proposito:** cumplir el requisito de la entrega final ("al menos un test E2E del flujo principal") y proteger el flujo de valor completo contra regresiones.
 
-**Historias relacionadas:** US-01, US-02, US-04, US-05, US-06.
+**Historias relacionadas:** US-02, US-04, US-05, US-06. La sesion restaurada es una frontera determinista y no cubre los criterios de autenticacion de US-01.
 
 **Prioridad:** Must-Have (entrega final).
 
@@ -560,7 +574,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 - Test instrumentado de Compose UI en Android (o test de UI Desktop si resulta mas estable en CI) que recorre el flujo E2E completo.
 - Doble o bypass del login Google para entorno de test (sesion fake o usuario de test).
 - Datos sobre base local SQLDelight en memoria o limpia por ejecucion.
-- Asercion final: el recordatorio generado tras la ITV es visible en la pantalla de recordatorios.
+- Asercion final: el recordatorio aceptado para el mantenimiento ITV futuro es visible en la pantalla de recordatorios.
 - Integracion del test E2E en el pipeline de CI cuando sea viable (o documentado como paso de verificacion local si el emulador en CI resulta inestable).
 
 **Fuera de alcance:** suites E2E exhaustivas por pantalla, tests E2E de sincronizacion multi-dispositivo, tests de notificaciones locales.
@@ -568,7 +582,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 **Criterios de aceptacion:**
 
 - Dado un entorno limpio, cuando se ejecuta el test E2E, entonces completa el flujo alta de vehiculo -> mantenimiento -> historial -> recordatorio sin intervencion manual.
-- Dado el registro de una ITV con vencimiento, cuando finaliza el flujo, entonces el test verifica que el recordatorio aparece en la UI.
+- Dado el registro de una ITV futura y la aceptacion del recordatorio, cuando finaliza el flujo, entonces el test verifica que aparece en la UI.
 - Dado un fallo en cualquier paso del flujo, cuando se ejecuta el test, entonces falla con un mensaje diagnosticable.
 
 **Tests TDD previstos:**
@@ -578,3 +592,5 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 **Referencias:** instrucciones del proyecto final (suite de tests), flujo E2E prioritario en `docs/user-stories.md`, `readme.md` seccion 2.6.
 
 **Historial:** creado tras auditoria pre-Entrega 1.
+
+**Resultado final:** implementado en `MainActivityE2ETest`. El test lanza la actividad real con una sesión restaurada determinista, crea un vehículo desde UI, registra un mantenimiento ITV futuro, confirma el recordatorio y verifica el historial y el recordatorio renderizados. Navegación, ViewModels, casos de uso, repositorios y SQLDelight son los de producción; Google, sync remoto y entrega de notificaciones se sustituyen en el límite externo.

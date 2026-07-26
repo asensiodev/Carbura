@@ -45,7 +45,7 @@ internal fun Project.configureAndroidApplication() {
             minSdk = versionInt("minSdk")
             targetSdk = versionInt("targetSdk")
             versionCode = 1
-            versionName = "0.1.0"
+            versionName = "1.0.0"
         }
 
         compileOptions {

@@ -6,14 +6,26 @@ data class SyncStatus(
     val isSyncing: Boolean = false,
     val lastSyncedAtMillis: Long? = null,
     val lastErrorMessage: String? = null,
+    val failureId: Long? = null,
+    val acknowledgedFailureId: Long? = null,
 )
 
 sealed interface SyncResult {
-    data class Success(val syncedAtMillis: Long) : SyncResult
-    data class Failure(val message: String) : SyncResult
+    data class Success(
+        val syncedAtMillis: Long,
+    ) : SyncResult
+
+    data class Failure(
+        val message: String,
+    ) : SyncResult
 }
 
 interface SyncManager {
     val status: StateFlow<SyncStatus>
+
     suspend fun syncNow(): SyncResult
+
+    suspend fun syncNowSilently(): SyncResult = syncNow()
+
+    fun acknowledgeFailure(failureId: Long)
 }

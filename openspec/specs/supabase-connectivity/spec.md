@@ -1,3 +1,6 @@
+## Purpose
+Define safe Supabase client configuration and authenticated remote profile validation.
+
 ## Requirements
 
 ### Requirement: Safe Supabase Client Configuration

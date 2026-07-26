@@ -15,87 +15,101 @@ import com.asensiodev.carbura.core.model.Vehicle
 import com.asensiodev.carbura.core.model.VehicleId
 import com.asensiodev.carbura.core.model.VehicleType
 
-internal fun Vehicles.toVehicle(): Vehicle = Vehicle(
-    id = VehicleId(id),
-    familyId = FamilyId(familyId),
-    name = name,
-    type = VehicleType.valueOf(type),
-    brand = brand,
-    model = model,
-    licensePlate = licensePlate,
-    currentOdometerKm = currentOdometerKm.toInt(),
-)
+internal fun Vehicles.toVehicle(): Vehicle =
+    Vehicle(
+        id = VehicleId(id),
+        familyId = FamilyId(familyId),
+        name = name,
+        type = VehicleType.valueOf(type),
+        brand = brand,
+        model = model,
+        licensePlate = licensePlate,
+        currentOdometerKm = currentOdometerKm.toInt(),
+        nextItvDate = nextItvDate?.let(::CalendarDate),
+        insuranceRenewalDate = insuranceRenewalDate?.let(::CalendarDate),
+        nextServiceOdometerKm = nextServiceOdometerKm?.toInt(),
+    )
 
-internal fun MaintenanceRecords.toMaintenanceRecord(): MaintenanceRecord = MaintenanceRecord(
-    id = MaintenanceRecordId(id),
-    familyId = FamilyId(familyId),
-    vehicleId = VehicleId(vehicleId),
-    maintenanceTypeId = MaintenanceTypeId(maintenanceTypeId),
-    maintenanceTypeCode = maintenanceTypeCode?.let(MaintenanceTypeCode::valueOf),
-    performedOn = CalendarDate(performedOn),
-    odometerKm = odometerKm?.toInt(),
-    costCents = costCents?.toInt(),
-    currency = currency,
-    workshop = workshop,
-    notes = notes,
-    nextDueDate = nextDueDate?.let(::CalendarDate),
-)
+internal fun MaintenanceRecords.toMaintenanceRecord(): MaintenanceRecord =
+    MaintenanceRecord(
+        id = MaintenanceRecordId(id),
+        familyId = FamilyId(familyId),
+        vehicleId = VehicleId(vehicleId),
+        maintenanceTypeId = MaintenanceTypeId(maintenanceTypeId),
+        maintenanceTypeCode = maintenanceTypeCode?.let(MaintenanceTypeCode::valueOf),
+        maintenanceTypeLabel = maintenanceTypeLabel,
+        performedOn = CalendarDate(performedOn),
+        odometerKm = odometerKm?.toInt(),
+        costCents = costCents?.toInt(),
+        currency = currency,
+        workshop = workshop,
+        notes = notes,
+        nextDueDate = nextDueDate?.let(::CalendarDate),
+    )
 
-internal fun Reminders.toReminder(): Reminder = Reminder(
-    id = ReminderId(id),
-    familyId = FamilyId(familyId),
-    vehicleId = VehicleId(vehicleId),
-    maintenanceTypeId = maintenanceTypeId?.let(::MaintenanceTypeId),
-    title = title,
-    dueDate = dueDate?.let(::CalendarDate),
-    dueOdometerKm = dueOdometerKm?.toInt(),
-    notifyDaysBefore = notifyDaysBefore.toInt(),
-    isCompleted = isCompleted == 1L,
-)
+internal fun Reminders.toReminder(): Reminder =
+    Reminder(
+        id = ReminderId(id),
+        familyId = FamilyId(familyId),
+        vehicleId = VehicleId(vehicleId),
+        maintenanceTypeId = maintenanceTypeId?.let(::MaintenanceTypeId),
+        title = title,
+        dueDate = dueDate?.let(::CalendarDate),
+        dueOdometerKm = dueOdometerKm?.toInt(),
+        notifyDaysBefore = notifyDaysBefore.toInt(),
+        isCompleted = isCompleted == 1L,
+    )
 
-internal fun Vehicles.toSyncVehicle(): SyncVehicle = SyncVehicle(
-    id = id,
-    familyId = familyId,
-    name = name,
-    type = VehicleType.valueOf(type),
-    brand = brand,
-    model = model,
-    licensePlate = licensePlate,
-    currentOdometerKm = currentOdometerKm.toInt(),
-    updatedAt = updatedAt,
-    pendingSync = pendingSync == 1L,
-    deletedAt = deletedAt,
-)
+internal fun Vehicles.toSyncVehicle(): SyncVehicle =
+    SyncVehicle(
+        id = id,
+        familyId = familyId,
+        name = name,
+        type = VehicleType.valueOf(type),
+        brand = brand,
+        model = model,
+        licensePlate = licensePlate,
+        currentOdometerKm = currentOdometerKm.toInt(),
+        nextItvDate = nextItvDate,
+        insuranceRenewalDate = insuranceRenewalDate,
+        nextServiceOdometerKm = nextServiceOdometerKm?.toInt(),
+        updatedAt = updatedAt,
+        pendingSync = pendingSync == 1L,
+        deletedAt = deletedAt,
+    )
 
-internal fun MaintenanceRecords.toSyncMaintenanceRecord(): SyncMaintenanceRecord = SyncMaintenanceRecord(
-    id = id,
-    familyId = familyId,
-    vehicleId = vehicleId,
-    maintenanceTypeId = maintenanceTypeId,
-    maintenanceTypeCode = maintenanceTypeCode,
-    performedOn = performedOn,
-    odometerKm = odometerKm?.toInt(),
-    costCents = costCents?.toInt(),
-    currency = currency,
-    workshop = workshop,
-    notes = notes,
-    nextDueDate = nextDueDate,
-    updatedAt = updatedAt,
-    pendingSync = pendingSync == 1L,
-    deletedAt = deletedAt,
-)
+internal fun MaintenanceRecords.toSyncMaintenanceRecord(): SyncMaintenanceRecord =
+    SyncMaintenanceRecord(
+        id = id,
+        familyId = familyId,
+        vehicleId = vehicleId,
+        maintenanceTypeId = maintenanceTypeId,
+        maintenanceTypeCode = maintenanceTypeCode,
+        maintenanceTypeLabel = maintenanceTypeLabel,
+        performedOn = performedOn,
+        odometerKm = odometerKm?.toInt(),
+        costCents = costCents?.toInt(),
+        currency = currency,
+        workshop = workshop,
+        notes = notes,
+        nextDueDate = nextDueDate,
+        updatedAt = updatedAt,
+        pendingSync = pendingSync == 1L,
+        deletedAt = deletedAt,
+    )
 
-internal fun Reminders.toSyncReminder(): SyncReminder = SyncReminder(
-    id = id,
-    familyId = familyId,
-    vehicleId = vehicleId,
-    maintenanceTypeId = maintenanceTypeId,
-    title = title,
-    dueDate = dueDate,
-    dueOdometerKm = dueOdometerKm?.toInt(),
-    notifyDaysBefore = notifyDaysBefore.toInt(),
-    isCompleted = isCompleted == 1L,
-    updatedAt = updatedAt,
-    pendingSync = pendingSync == 1L,
-    deletedAt = deletedAt,
-)
+internal fun Reminders.toSyncReminder(): SyncReminder =
+    SyncReminder(
+        id = id,
+        familyId = familyId,
+        vehicleId = vehicleId,
+        maintenanceTypeId = maintenanceTypeId,
+        title = title,
+        dueDate = dueDate,
+        dueOdometerKm = dueOdometerKm?.toInt(),
+        notifyDaysBefore = notifyDaysBefore.toInt(),
+        isCompleted = isCompleted == 1L,
+        updatedAt = updatedAt,
+        pendingSync = pendingSync == 1L,
+        deletedAt = deletedAt,
+    )

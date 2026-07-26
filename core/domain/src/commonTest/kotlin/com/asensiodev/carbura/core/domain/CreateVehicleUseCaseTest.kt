@@ -8,42 +8,45 @@ import kotlin.test.assertTrue
 
 class CreateVehicleUseCaseTest {
     @Test
-    fun validVehicleIsSaved() = runTest {
-        val repository = FakeVehicleRepository()
-        val useCase = CreateVehicleUseCase(repository)
-        val vehicle = testVehicle()
+    fun validVehicleIsSaved() =
+        runTest {
+            val repository = FakeVehicleRepository()
+            val useCase = CreateVehicleUseCase(repository)
+            val vehicle = testVehicle()
 
-        val result = useCase(vehicle)
+            val result = useCase(vehicle.familyScoped())
 
-        assertEquals(DomainResult.Success(vehicle), result)
-        assertEquals(listOf(vehicle), repository.savedVehicles)
-    }
-
-    @Test
-    fun blankVehicleNameIsRejected() = runTest {
-        val repository = FakeVehicleRepository()
-        val useCase = CreateVehicleUseCase(repository)
-
-        val result = useCase(testVehicle(name = "  "))
-
-        assertEquals(
-            DomainResult.ValidationError(ValidationFailure.BlankVehicleName),
-            result,
-        )
-        assertTrue(repository.savedVehicles.isEmpty())
-    }
+            assertEquals(DomainResult.Success(vehicle), result)
+            assertEquals(listOf(vehicle), repository.savedVehicles)
+        }
 
     @Test
-    fun negativeOdometerIsRejected() = runTest {
-        val repository = FakeVehicleRepository()
-        val useCase = CreateVehicleUseCase(repository)
+    fun blankVehicleNameIsRejected() =
+        runTest {
+            val repository = FakeVehicleRepository()
+            val useCase = CreateVehicleUseCase(repository)
 
-        val result = useCase(testVehicle(odometerKm = -1))
+            val result = useCase(testVehicle(name = "  ").familyScoped())
 
-        assertEquals(
-            DomainResult.ValidationError(ValidationFailure.NegativeVehicleOdometer),
-            result,
-        )
-        assertTrue(repository.savedVehicles.isEmpty())
-    }
+            assertEquals(
+                DomainResult.ValidationError(ValidationFailure.BlankVehicleName),
+                result,
+            )
+            assertTrue(repository.savedVehicles.isEmpty())
+        }
+
+    @Test
+    fun negativeOdometerIsRejected() =
+        runTest {
+            val repository = FakeVehicleRepository()
+            val useCase = CreateVehicleUseCase(repository)
+
+            val result = useCase(testVehicle(odometerKm = -1).familyScoped())
+
+            assertEquals(
+                DomainResult.ValidationError(ValidationFailure.NegativeVehicleOdometer),
+                result,
+            )
+            assertTrue(repository.savedVehicles.isEmpty())
+        }
 }

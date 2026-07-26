@@ -1,20 +1,18 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  OpenSpec specs, proposals, designs, and tasks must be written in technical English.
+  README, PRD, and academic documentation must be written in Spanish.
+  Conserva los identificadores, nombres de archivo, rutas, claves de esquema y términos técnicos en su forma obligatoria.
+  El alcance de plataformas es una app Android funcional con librerías Kotlin Multiplatform (KMP) compatibles con JVM Desktop.
+  No hay app Desktop ni target iOS.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - Write in technical English.
+  design:
+    - Write in technical English.
+  specs:
+    - Write in technical English while preserving required OpenSpec syntax and identifiers.
+  tasks:
+    - Write in technical English.

@@ -1,0 +1,78 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+  warningsAsErrors: false
+  checkExhaustiveness: false
+
+comments:
+  UndocumentedPublicClass:
+    active: false
+  UndocumentedPublicFunction:
+    active: false
+  UndocumentedPublicProperty:
+    active: false
+
+complexity:
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 20
+    ignoreAnnotated:
+      - Composable
+  LongMethod:
+    active: true
+    threshold: 80
+    ignoreAnnotated:
+      - Composable
+  LongParameterList:
+    active: true
+    functionThreshold: 10
+    constructorThreshold: 10
+    ignoreDefaultParameters: true
+    ignoreDataClasses: true
+    ignoreAnnotated:
+      - Composable
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 20
+    thresholdInClasses: 20
+    thresholdInInterfaces: 20
+    thresholdInObjects: 20
+    thresholdInEnums: 20
+    ignorePrivate: true
+    ignoreAnnotatedFunctions:
+      - Preview
+      - Composable
+
+exceptions:
+  SwallowedException:
+    active: false
+  TooGenericExceptionCaught:
+    active: false
+
+naming:
+  FunctionNaming:
+    active: true
+    ignoreAnnotated:
+      - Composable
+
+style:
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    active: false
+  NewLineAtEndOfFile:
+    active: false
+  ReturnCount:
+    active: true
+    max: 5
+  UnusedPrivateMember:
+    active: true
+    ignoreAnnotated:
+      - Preview
+      - PreviewLightDark
+      - Composable
+  UnusedPrivateProperty:
+    active: false

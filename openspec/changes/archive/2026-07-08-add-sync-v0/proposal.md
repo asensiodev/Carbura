@@ -25,5 +25,5 @@ Carbura already has a functional Android local-first MVP for vehicles, maintenan
 
 ## References
 
-- `docs/sync-roadmap.md`
+- `openspec/specs/sync-v0/spec.md`
 - `docs/backlog.md`
