@@ -2,7 +2,7 @@
 
 **Tu garaje, siempre a punto.**
 
-La preparación de pruebas manuales, vídeo e instalables está descrita en la [`guía de entrega final`](docs/guia-entrega-final.md).
+Las instrucciones de instalación, ejecución alternativa y verificación de artefactos están incluidas en la sección 1.4.
 
 ## Índice
 
@@ -70,7 +70,6 @@ Funcionalidades disponibles en Android y Desktop:
 Trabajo pendiente o evolución dentro del alcance descrito por las historias:
 
 - Calcular y presentar el coste acumulado por vehículo.
-- Regenerar y validar los artefactos finales, grabar el vídeo y publicar las evidencias de release.
 - Incorporar invitaciones familiares y exportación PDF/CSV en evoluciones posteriores.
 - Mantener iOS fuera del alcance actual.
 
@@ -321,7 +320,7 @@ El test app-level `MainActivityE2ETest` lanza la actividad Android real con lím
 
 El gate instrumentado `./gradlew connectedDebugAndroidTest --max-workers=1` completó 54 tests en un Pixel 9a real antes de añadir el E2E y 55 tests en un emulador Pixel 9a con el recorrido app-level incluido.
 
-La aceptación final manual debe comprobar la misma familia en Android/Desktop, propagación bidireccional y tombstones, cambios offline, reinicio, LWW, importación/exclusión local, restauración segura de sesión, RLS hostil con dos cuentas, eliminación de cuenta y recordatorios Desktop programados únicamente por Android. La matriz reproducible está en [`docs/guia-entrega-final.md`](docs/guia-entrega-final.md).
+La aceptación final manual comprobó identidad de cuenta en Android/Desktop, propagación bidireccional y tombstones, cambios offline, reinicio, LWW, importación/exclusión local, restauración segura de sesión y recordatorios Desktop programados únicamente por Android. La prueba RLS hostil con sesiones A/B, la eliminación con una cuenta desechable y los recorridos completos de accesibilidad quedaron fuera de la validación manual ejecutada; sus límites no se presentan como superados.
 
 ### **2.7. Diseño de dominio y principios de código**
 
@@ -663,7 +662,7 @@ El backlog completo está en [`docs/backlog.md`](docs/backlog.md). Los tickets r
 | T-08 | Presentación | US-04, US-05 | Cerrado | Formulario de mantenimiento e historial implementados. |
 | T-09 | Recordatorios | US-07 | Cerrado | Lista y gestión manual implementadas. |
 | T-10 | Plataforma | US-08 | Cerrado Android | Alarmas y notificaciones locales para fechas. |
-| T-11 | CI/CD | Transversal | En cierre | CI y empaquetado configurados; faltan artefactos finales, vídeo y release. |
+| T-11 | CI/CD | Transversal | Cerrado técnico | CI configurada y APK/DMG finales generados y verificados; el vídeo se entrega por el canal académico externo. |
 | T-12 | Calidad | Flujo principal | Cerrado | E2E Android app-level verificado en emulador. |
 | T-13 | Vehículos | US-02, US-09 | Cerrado | Edición y actualización rápida del odómetro. |
 | T-14 | Recordatorios | US-13 | Cerrado | Sugerencias proactivas desde vehículo implementadas. |
@@ -736,4 +735,4 @@ Pull Requests oficiales:
 
 - **PR 1 - Entrega 1 / Documentación técnica:** [`feature-entrega1-AAC` hacia `dev`](https://github.com/asensiodev/Carbura/pull/1), con PRD, historias, arquitectura, modelo, API y tickets iniciales.
 - **PR 2 - Entrega 2 / MVP funcional:** [`feature-entrega2-AAC` hacia `dev`](https://github.com/asensiodev/Carbura/pull/2), con autenticación, datos, UI Android, sync v0, recordatorios y notificaciones locales.
-- **PR 3 - Entrega final:** pendiente de crear desde `finalproject-AAC` hacia `dev` después de completar los artefactos y las evidencias descritas en la [`guía de entrega final`](docs/guia-entrega-final.md).
+- **PR 3 - Entrega final:** pendiente de crear desde `finalproject-AAC` hacia `dev`. El vídeo se entrega por correo y la release no se enlaza desde este README.

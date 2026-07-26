@@ -521,7 +521,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 - Gestion de secretos via GitHub Secrets (sin credenciales en el repositorio).
 - Release académica con APK Android y DMG macOS generados e instalados en sus sistemas objetivo. MSI queda fuera del alcance validado por no disponer de un PC Windows.
 - Publicacion de artefactos en GitHub Releases con tag `v1.0-final-AAC`.
-- Evidencia de despliegue: backend Supabase activo, instrucciones de instalacion y video demo de 2-3 minutos del flujo E2E.
+- Evidencia de despliegue: backend Supabase activo, instrucciones de instalacion y video demo de 2-3 minutos del flujo E2E entregado mediante el canal academico externo.
 
 **Fuera de alcance:** publicacion en Google Play, firma de produccion, despliegue continuo a stores, infraestructura propia de servidor.
 
@@ -550,7 +550,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 - **Sync seguro:** aislamiento por familia, tombstones, LWW y acknowledgement por `updatedAt` para no perder mutaciones concurrentes.
 - **Cuenta:** cierre de sesion local y eliminacion permanente single-flight con limpieza convergente.
 - **Backend:** ocho migraciones, RPC de eliminacion y hardening de familias/perfiles.
-- **Release pendiente:** regeneración e instalación de APK/DMG, vídeo y checklist manual multi-dispositivo. Una candidata DMG anterior ya superó instalación y smoke en macOS. MSI/Windows y firma/notarización quedan fuera del alcance validado por falta de host y credenciales.
+- **Release preparada:** APK debug y DMG finales generados, instalados y verificados; la publicación y el envío externo del vídeo permanecen como acciones del autor. La aceptación manual cubrió el flujo multi-dispositivo principal, pero no la prueba RLS hostil, la eliminación con cuenta desechable ni los recorridos completos de accesibilidad. MSI/Windows y firma/notarización quedan fuera del alcance validado por falta de host y credenciales.
 
 ## T-12 - Test E2E del flujo principal
 

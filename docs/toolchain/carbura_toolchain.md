@@ -328,7 +328,7 @@ Evidencia macOS actual: candidata DMG generada con Amazon Corretto 17, runtime c
 - Comandos de verificacion local y CI: `./gradlew qualityCheck test assembleDebug :app:desktop:jar --stacktrace`, OpenSpec estricto y `git diff --check`.
 - Evidencia dependiente de plataforma: APK Android y DMG instalado en macOS. MSI, ejecución Windows y Credential Manager no se validan por falta de un PC Windows.
 - Evidencia Android: `./gradlew connectedDebugAndroidTest --max-workers=1` superado con 54 tests en Pixel 9a físico y 55 tests en emulador Pixel 9a después de incorporar el E2E app-level.
-- Checklist reproducible de aceptación, vídeo y release: `docs/guia-entrega-final.md`.
+- Instalación, ejecución alternativa y verificación de APK/DMG: sección 1.4 de `readme.md`. El vídeo demo se entrega mediante el canal académico externo y no se enlaza desde el repositorio.
 
 ---
 
