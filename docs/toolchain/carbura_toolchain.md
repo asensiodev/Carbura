@@ -20,6 +20,8 @@
 - **OpenCode**: agente principal para explorar el repositorio, proponer cambios, editar documentación, generar código y ayudar en la verificación.
 - **OpenSpec**: flujo asistido por IA para convertir requisitos en proposals, tareas, specs versionadas y archives trazables.
 - **ChatGPT/OpenAI vía OpenCode**: soporte conversacional para decisiones de arquitectura, revisión de documentación, planificación y ejecución guiada.
+- **Gemini**: ideación y contraste visual de propuestas de UI antes de su adaptación a Compose.
+- **Perplexity**: investigación inicial y localización de fuentes, siempre contrastadas después con documentación oficial y código real.
 
 ---
 
@@ -51,15 +53,15 @@ El proyecto combina metodologías complementarias en capas, manteniendo el alcan
 
 ### SDD (Specification-Driven Development)
 - Las specs de OpenSpec definen el **comportamiento esperado** antes de escribir código o tests.
-- Cada spec incluye criterios de aceptación que se traducen directamente en tests.
+- Cada spec incluye criterios de aceptación. Se traducen en tests cuando ofrecen una comprobación estable; los aspectos visuales o dependientes de plataforma pueden requerir validación manual.
 - OpenCode usa las specs como contexto para generar código y tests coherentes.
 
 ### TDD (Test-Driven Development)
-- Dentro de cada tarea de `/opsx-apply`, se sigue el ciclo **Red → Green → Refactor**:
+- Dentro de las tareas con comportamiento automatizable se aplica de forma pragmática el ciclo **Red → Green → Refactor**:
   1. **Red**: escribir el test que falla (a partir de los criterios de aceptación de la spec).
   2. **Green**: escribir el código mínimo para que el test pase.
   3. **Refactor**: mejorar el código sin romper los tests.
-- Los tests son la red de seguridad que garantiza que el código cumple la spec.
+- Los tests reducen regresiones y aportan evidencia sobre los comportamientos cubiertos; no sustituyen la revisión humana ni las comprobaciones manuales de UI y plataforma.
 
 ### DDD ligero (Domain-Driven Design)
 
@@ -161,10 +163,9 @@ BDD queda fuera del alcance metodológico del MVP para evitar duplicar documenta
    - Principios de diseño (local-first, simplicidad, privacidad).
    - **Metodología: SDD + TDD** (cada spec debe incluir criterios de aceptación verificables).
 3. Escribir las **specs iniciales** en `openspec/specs/`:
-   - Una spec por caso de uso (UC-01 a UC-09).
-   - Cada spec incluye obligatoriamente una sección **"Criterios de aceptación"** que se usará para generar los tests TDD.
-   - Spec del modelo de datos (`data-model.md`).
-   - Spec del backend Supabase (`backend.md`).
+   - Organizar las specs por capacidad funcional o técnica, no necesariamente una por caso de uso.
+   - Incluir requisitos y escenarios verificables que puedan orientar pruebas automatizadas o comprobaciones manuales.
+   - Mantener separadas capacidades como autenticación, datos, sincronización, recordatorios y flujos de plataforma.
 
 ---
 
@@ -195,12 +196,12 @@ El agente:
 ```text
 /opsx-apply
 ```
-El agente implementa **primero los tests**:
-- Genera los tests unitarios a partir de los criterios de aceptación de la spec.
-- Los tests deben **fallar** en este punto (Red): verificar en Android Studio.
+Cuando el comportamiento permite una prueba estable, el agente implementa primero el test o reproduce la regresión:
+- Deriva las pruebas relevantes de los criterios de aceptación y del fallo observado.
+- Comprueba el estado Red cuando resulta practicable y aporta información útil.
   ```bash
   ./gradlew test
-  # Expected: tests failing ✗
+  # Resultado esperado durante Red: fallo relacionado con el comportamiento nuevo
   ```
 
 #### Paso 4 — Apply: TDD Green (código mínimo)
@@ -294,10 +295,10 @@ Ramas y PRs oficiales:
 1. Revisar UX en Android y Desktop, incluido modo local sin Supabase.
 2. Ejecutar `./gradlew qualityCheck test assembleDebug :app:desktop:jar --stacktrace`; no hay una tarea Kover configurada actualmente.
 3. Añadir tests de integración para flujos críticos (auth, sync, reminders).
-4. Ejecutar `MainActivityE2ETest` en Android para verificar sesión restaurada, vehículo, mantenimiento ITV, historial y recordatorio a través de la aplicación real.
+4. Ejecutar `MainActivityE2ETest` en Android para verificar, dentro del proceso de la aplicación, sesión restaurada, vehículo, mantenimiento ITV, historial y recordatorio. Autenticación externa, sync remoto y entrega nativa de notificaciones usan límites deterministas.
 5. Pulir animaciones, estados vacíos, estados de error, estados de carga.
 6. Revisar el flujo de sincronización Android/Desktop (offline → online → sync), tombstones y LWW.
-7. Generar DMG/MSI con un JDK que incluya `jpackage`, inspeccionar secretos e instalar el artefacto exacto en su sistema objetivo.
+7. Generar el DMG con un JDK que incluya `jpackage`, inspeccionar secretos e instalar el artefacto exacto en macOS. La generación y validación MSI queda como comprobación futura en un host Windows.
 
 Evidencia macOS final: DMG Apple Silicon generado con Amazon Corretto 17, runtime corregido con módulos `java.sql` y `java.net.http`, instalación, login, restauración de Keychain, arranque offline y cierre de sesión superados. La firma es ad-hoc; Developer ID/notarización quedan fuera por falta de credenciales y MSI/Windows queda fuera del alcance validado por falta de un PC Windows.
 
@@ -312,11 +313,11 @@ Evidencia macOS final: DMG Apple Silicon generado con Amazon Corretto 17, runtim
    - Screenshots o GIFs de la app si se preparan para la entrega final.
    - Stack tecnológico y metodología (SDD + TDD).
    - Sección "AI-assisted development": cómo se usó IA en cada fase.
-   - Instrucciones de setup con `local.properties.example`.
+   - Instrucciones directas para probar la APK Android y el DMG macOS.
 2. Documentar el proceso AI + SDD + TDD en la **memoria del TFM**:
    - Usar el historial de `openspec/changes/archive/` como evidencia de SDD.
    - Mostrar trazabilidad: spec → criterios de aceptación → tests (Red) → código (Green) → refactor.
-   - Incluir métricas de cobertura de tests como indicador de calidad.
+   - Incluir resultados de pruebas y límites de cobertura; actualmente no existe una tarea Kover configurada.
 3. Preparar el guion de la **demo final**.
 
 ### Evidencias
@@ -327,8 +328,8 @@ Evidencia macOS final: DMG Apple Silicon generado con Amazon Corretto 17, runtim
 - Commits y PRs: trazabilidad entre documentación, specs, código y entregas.
 - Comandos de verificacion local y CI: `./gradlew qualityCheck test assembleDebug :app:desktop:jar --stacktrace`, OpenSpec estricto y `git diff --check`.
 - Evidencia dependiente de plataforma: APK Android y DMG instalado en macOS. MSI, ejecución Windows y Credential Manager no se validan por falta de un PC Windows.
-- Evidencia Android: `./gradlew connectedDebugAndroidTest --max-workers=1` superado con 55 pruebas en un emulador Pixel 9a, incluido el E2E de aplicación.
-- Instalación, ejecución alternativa y verificación de APK/DMG: sección 1.4 de `readme.md`. El vídeo demo se entrega mediante el canal académico externo y no se enlaza desde el repositorio.
+- Evidencia Android registrada manualmente el 26/07/2026: `./gradlew connectedDebugAndroidTest --max-workers=1` superado con 55 pruebas en un emulador Pixel 9a, incluido el E2E dentro del proceso de la aplicación.
+- Instalación de APK/DMG: sección 1.4 de `readme.md`. El vídeo demo se entrega mediante el canal académico externo y no se enlaza desde el repositorio.
 
 ---
 
@@ -353,6 +354,8 @@ Tipos: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `style`
 
 ## Estructura del repositorio
 
+Vista resumida; `openspec/specs/` contiene directorios adicionales organizados por capacidad:
+
 ```text
 carbura/
 ├── openspec/
@@ -365,7 +368,8 @@ carbura/
 │   │   ├── maintenance-history/
 │   │   ├── reminders-mvp/
 │   │   ├── sync-v0/
-│   │   └── supabase-backend/
+│   │   ├── supabase-backend/
+│   │   └── ...                 ← otras capacidades vigentes
 │   └── changes/                ← propuestas en curso
 │       └── archive/            ← historial de cambios completados
 ├── build-logic/                ← convention plugins Gradle
@@ -400,9 +404,9 @@ carbura/
 2. Abrir Warp en el directorio del proyecto
 3. (Opcional) Abrir VS Code en el mismo directorio
 4. En Warp: lanzar `opencode`
-5. /opsx-explore o /opsx-propose → revisar propuesta + tests TDD → aprobar
-6. /opsx-apply (tests primero: Red) → verificar que fallan
-7. /opsx-apply (código: Green) → verificar que pasan
+5. /opsx-explore o /opsx-propose → revisar propuesta y estrategia de pruebas → aprobar
+6. Si el comportamiento es automatizable: reproducir el fallo o escribir el test (Red)
+7. /opsx-apply → implementar el cambio mínimo y verificar las pruebas (Green)
 8. Refactor → re-ejecutar tests → compilar Android/Desktop → testear
 9. /opsx-archive → commit local
 10. Agrupar cambios en la PR oficial correspondiente a la entrega

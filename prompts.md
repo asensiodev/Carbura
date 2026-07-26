@@ -2,7 +2,7 @@
 
 ## 1. Proposito del documento
 
-Este archivo conserva el nombre `prompts.md` requerido por la plantilla de entrega. Sin embargo, no contiene una recopilacion de prompts. Documenta de forma reproducible como se ha integrado la inteligencia artificial en el desarrollo de Carbura: herramientas empleadas, reparto de responsabilidades, seleccion de modelos, procedimientos, controles de calidad y supervision humana.
+Este archivo conserva el nombre `prompts.md` requerido por la plantilla de entrega. Conforme al criterio acordado en tutoria, no recopila transcripciones de prompts: documenta como se ha integrado la inteligencia artificial en el desarrollo de Carbura, incluidas las herramientas, el reparto de responsabilidades, la seleccion de modelos, los procedimientos, los controles de calidad y la supervision humana.
 
 La IA se ha utilizado como apoyo durante el ciclo de vida del producto, no como autoridad final. Las decisiones de producto, arquitectura, alcance y aceptacion de cambios permanecen bajo responsabilidad humana.
 
@@ -253,4 +253,4 @@ El uso de IA y su resultado puede auditarse mediante artefactos verificables del
 - Comandos de calidad y builds reproducibles.
 - Documentacion de producto y arquitectura.
 
-Esta trazabilidad sustituye un listado de prompts aislados por evidencia del proceso completo: necesidad, analisis, decision humana, implementacion, verificacion y resultado final.
+Esta trazabilidad sustituye un listado de prompts aislados por evidencia del proceso completo: necesidad, analisis, decision humana, implementacion, verificacion y resultado final. El procedimiento tecnico completo se mantiene en [`docs/toolchain/carbura_toolchain.md`](docs/toolchain/carbura_toolchain.md).
