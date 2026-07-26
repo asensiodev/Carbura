@@ -131,6 +131,22 @@ Comandos principales:
 ./gradlew :app:desktop:packageMsi   # Configurado, no validado: requiere Windows con jpackage
 ```
 
+Instalación de los artefactos publicados:
+
+1. Descargar `Carbura-Android-1.0.0-debug.apk`, `Carbura-1.0.0.dmg` y `SHA256SUMS.txt` desde la release `v1.0-final-AAC`.
+2. Comprobar su integridad desde el directorio de descarga con `shasum -a 256 -c SHA256SUMS.txt`.
+3. En Android, instalar la APK con `adb install -r Carbura-Android-1.0.0-debug.apk` o abrirla desde el dispositivo y autorizar temporalmente ese origen. Es una APK debug para evaluación académica, no una distribución de producción.
+4. En macOS, abrir `Carbura-1.0.0.dmg`, arrastrar Carbura a Aplicaciones y ejecutarla desde allí. El DMG usa firma ad-hoc y no está notarizado; si Gatekeeper bloquea el primer arranque, usar clic secundario sobre Carbura, **Abrir** y confirmar la excepción, sin desactivar globalmente la seguridad del sistema.
+
+Si un instalable no es compatible con el equipo de evaluación, se puede ejecutar la misma revisión desde el repositorio:
+
+```bash
+./gradlew :app:android:installDebug  # Dispositivo o emulador Android conectado
+./gradlew :app:desktop:run           # Desktop desde código fuente
+```
+
+La ejecución autenticada desde código requiere las propiedades públicas indicadas arriba. Con `SUPABASE_URL` y `SUPABASE_ANON_KEY` vacías, Desktop conserva el modo local sin sincronización. Los instalables ya incorporan la configuración pública usada para construir la candidata; nunca incluyen credenciales privilegiadas.
+
 Verificación local equivalente a CI:
 
 ```bash
@@ -269,7 +285,7 @@ No existe servidor propio. Supabase proporciona Auth, PostgreSQL, PostgREST y RL
 - El job real ejecuta `./gradlew qualityCheck test assembleDebug --stacktrace`.
 - `qualityCheck` agrega ktlint, detekt y `:quality:architecture:test`.
 - Una candidata DMG fue instalada y validada en macOS; el artefacto final debe regenerarse y volver a instalarse después de cerrar la aceptación manual.
-- El DMG macOS `Carbura-1.0.0.dmg` se genero con Amazon Corretto 17, se instalo y supero el smoke de arranque con runtime autocontenido; SHA-256: `0d279dbee5642afc5d34f4a63987ac69bc54a9b67af41f810c7eb5c2fbdbd71d`.
+- El DMG macOS `Carbura-1.0.0.dmg` se generó con Amazon Corretto 17, incluye el icono nativo de Carbura y superó la verificación de imagen y firma interna; SHA-256: `69fb27f77cfd9337c677d9c0aa619daeafb2fb82618a7e573f9f02d60acb9235`.
 - El bundle actual tiene firma ad-hoc válida, pero Gatekeeper puede rechazar su distribución hasta disponer de Developer ID y notarización. Windows/MSI queda fuera del alcance validado de la entrega porque no se dispone de un PC Windows.
 - Las credenciales permanecen fuera del repositorio; CI no necesita secretos de producción para las comprobaciones actuales.
 
