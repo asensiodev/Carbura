@@ -77,6 +77,21 @@ class AndroidReminderNotificationSchedulerTest {
     }
 
     @Test
+    fun elapsedManualNoticePeriodFallsBackToFutureDueDate() {
+        val now = Instant.parse("2027-07-01T10:00:00Z").toEpochMilli()
+
+        val alerts =
+            futureAlertInstances(
+                manualReminderNotificationPlan(reminder("manual", "2027-07-10")),
+                nowMillis = now,
+                zoneId = ZoneId.of("UTC"),
+            )
+
+        assertEquals(1, alerts.size)
+        assertEquals(Instant.parse("2027-07-10T09:00:00Z").toEpochMilli(), alerts.single().triggerAtMillis)
+    }
+
+    @Test
     fun cancelRemovesExactLegacyAlarmIdentity() =
         runBlocking {
             val context: Context = RuntimeEnvironment.getApplication()

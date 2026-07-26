@@ -129,10 +129,16 @@ internal fun futureAlertInstances(
     zoneId: ZoneId = ZoneId.systemDefault(),
 ): List<FutureAlertInstance> {
     val dueDate = plan.reminder.dueDate ?: return emptyList()
+    val localDueDate = LocalDate.parse(dueDate.iso8601)
     return plan.alerts.mapNotNull { alert ->
+        val dueAtMillis =
+            localDueDate
+                .atTime(LocalTime.of(NOTIFICATION_HOUR, 0))
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli()
         val triggerAtMillis =
-            LocalDate
-                .parse(dueDate.iso8601)
+            localDueDate
                 .minusDays(alert.daysBefore.toLong())
                 .atTime(LocalTime.of(NOTIFICATION_HOUR, 0))
                 .atZone(zoneId)
@@ -140,6 +146,7 @@ internal fun futureAlertInstances(
                 .toEpochMilli()
         when {
             triggerAtMillis > nowMillis -> FutureAlertInstance(alert, triggerAtMillis)
+            alert.kind == ReminderAlertKind.Manual && dueAtMillis > nowMillis -> FutureAlertInstance(alert, dueAtMillis)
             alert.kind == ReminderAlertKind.Manual -> FutureAlertInstance(alert, nowMillis + PAST_DUE_NOTIFICATION_DELAY_MILLIS)
             else -> null
         }

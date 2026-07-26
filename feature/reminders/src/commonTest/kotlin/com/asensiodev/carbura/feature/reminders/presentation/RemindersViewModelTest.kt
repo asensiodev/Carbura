@@ -227,6 +227,7 @@ class RemindersViewModelTest {
             }
 
             assertEquals(listOf("Pasar ITV"), repository.savedReminders.map { it.title })
+            assertEquals(0, repository.savedReminders.single().notifyDaysBefore)
             assertTrue(
                 viewModel.uiState.value.title
                     .isBlank(),

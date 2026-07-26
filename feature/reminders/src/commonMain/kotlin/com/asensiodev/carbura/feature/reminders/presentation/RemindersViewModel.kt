@@ -192,6 +192,7 @@ class RemindersViewModel(
                 title = state.title.trim(),
                 dueDate = dueDate,
                 dueOdometerKm = dueOdometer,
+                notifyDaysBefore = 0,
             )
 
         _uiState.update { it.copy(activeAction = ReminderAction.Create, hasPersistenceError = false) }
