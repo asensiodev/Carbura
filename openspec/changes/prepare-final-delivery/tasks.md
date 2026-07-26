@@ -58,9 +58,9 @@
 
 ## 7. Manual Android/Desktop Acceptance
 
-- [ ] 7.1 Verify same-account family identity and bidirectional vehicle create/update/delete propagation
-- [ ] 7.2 Verify bidirectional maintenance create/update/delete propagation and individual cost presentation
-- [ ] 7.3 Verify reminder create/complete/delete propagation and Android mobile notification scheduling
+- [x] 7.1 Verify same-account family identity and bidirectional vehicle create/update/delete propagation
+- [x] 7.2 Verify bidirectional maintenance create/update/delete propagation and individual cost presentation
+- [x] 7.3 Verify reminder create/complete/delete propagation and Android mobile notification scheduling
 - [ ] 7.4 Verify offline mutations, restart persistence, retry, and last-write-wins behavior
 - [ ] 7.5 Verify Desktop local-data import, exclusion, cancellation, and account switching without cross-family visibility
 - [x] 7.6 Verify Desktop session restoration, refresh, secure sign-out, and Android session independence

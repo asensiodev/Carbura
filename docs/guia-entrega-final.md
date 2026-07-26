@@ -117,85 +117,103 @@ Resultado: OK tras sustituir el selector de fecha Desktop incompatible. El valor
 
 #### M-07 — Edición Android → Desktop
 
-- [ ] Editar en Android nombre, tipo, matrícula y planificación.
-- [ ] Rotar el dispositivo con cambios sin guardar y confirmar que el formulario conserva su estado.
-- [ ] Guardar, sincronizar Desktop y comprobar todos los campos.
+- [x] Editar en Android nombre, tipo, matrícula y planificación.
+- [x] Rotar el dispositivo con cambios sin guardar y confirmar que el formulario conserva su estado.
+- [x] Guardar, sincronizar Desktop y comprobar todos los campos.
 
 Resultado esperado: estado preservado durante rotación y actualización bidireccional correcta.
 
+Resultado: OK. Android conservó los cambios sin guardar al rotar y Desktop recibió nombre, tipo, matrícula y planificación actualizados.
+
 #### M-08 — Odómetro y confirmación de descenso
 
-- [ ] Actualizar rápidamente el odómetro con un valor mayor.
-- [ ] Intentar un valor menor y comprobar que aparece confirmación.
-- [ ] Cancelar una vez y aceptar otra vez.
-- [ ] Verificar el resultado en ambos clientes.
+- [x] Actualizar rápidamente el odómetro con un valor mayor.
+- [x] Intentar un valor menor y comprobar que aparece confirmación.
+- [x] Cancelar una vez y aceptar otra vez.
+- [x] Verificar el resultado en ambos clientes.
 
 Resultado esperado: cancelar no modifica; aceptar modifica y sincroniza.
 
+Resultado: OK. La cancelación conservó el valor mayor y la confirmación posterior propagó el descenso aceptado a ambos clientes.
+
 #### M-09 — Borrado Desktop → Android
 
-- [ ] Borrar un vehículo de prueba en Desktop y confirmar la acción.
-- [ ] Sincronizar Android y comprobar que desaparece junto a su contenido asociado según la semántica del producto.
-- [ ] Reiniciar ambos clientes y comprobar que no reaparece.
+- [x] Borrar un vehículo de prueba en Desktop y confirmar la acción.
+- [x] Sincronizar Android y comprobar que desaparece junto a su contenido asociado según la semántica del producto.
+- [x] Reiniciar ambos clientes y comprobar que no reaparece.
 
 Resultado esperado: tombstone convergente, sin resurrección tras reinicio o sync.
+
+Resultado: OK. El vehículo y sus recordatorios asociados desaparecieron en Android y no reaparecieron en ninguno de los clientes tras reinicio y nueva sincronización.
 
 ### Mantenimiento
 
 #### M-10 — Crear, editar y borrar bidireccionalmente
 
-- [ ] Crear un mantenimiento en Android dejando el odómetro opcional vacío.
-- [ ] Incluir coste con dos decimales, taller y notas.
-- [ ] Comprobar el registro en Desktop y la presentación localizada de fecha e importe.
-- [ ] Editarlo en Desktop y verificar el cambio en Android.
-- [ ] Borrarlo en Android y comprobar que desaparece en Desktop tras sync.
+- [x] Crear un mantenimiento en Android dejando el odómetro opcional vacío.
+- [x] Incluir coste con dos decimales, taller y notas.
+- [x] Comprobar el registro en Desktop y la presentación localizada de fecha e importe.
+- [x] Editarlo en Desktop y verificar el cambio en Android.
+- [x] Borrarlo en Android y comprobar que desaparece en Desktop tras sync.
 
 Resultado esperado: los valores opcionales se conservan correctamente y las tres mutaciones convergen.
 
+Resultado: OK. El odómetro opcional permaneció vacío, fecha e importe se mostraron localizados y alta, edición y borrado convergieron entre Android y Desktop.
+
 #### M-11 — Mantenimiento futuro sin recordatorio
 
-- [ ] Crear un mantenimiento con fecha futura.
-- [ ] Elegir “Guardar sin este recordatorio”.
-- [ ] Comprobar que existe el mantenimiento y no se crea recordatorio planificado.
+- [x] Crear un mantenimiento con fecha futura.
+- [x] Elegir “Guardar sin este recordatorio”.
+- [x] Comprobar que existe el mantenimiento y no se crea recordatorio planificado.
 
 Resultado esperado: solo un mantenimiento, ningún recordatorio asociado.
 
+Resultado: OK. El mantenimiento futuro quedó disponible en ambos clientes y no se creó ningún recordatorio asociado.
+
 #### M-12 — Mantenimiento futuro con recordatorio
 
-- [ ] Crear otro mantenimiento futuro.
-- [ ] Elegir “Guardar y crear recordatorio”.
-- [ ] Comprobar el mantenimiento y exactamente un recordatorio en ambos clientes.
-- [ ] Editar la fecha futura y confirmar que el recordatorio se actualiza sin duplicarse.
+- [x] Crear otro mantenimiento futuro.
+- [x] Elegir “Guardar y crear recordatorio”.
+- [x] Comprobar el mantenimiento y exactamente un recordatorio en ambos clientes.
+- [x] Editar la fecha futura y confirmar que el recordatorio se actualiza sin duplicarse.
 
 Resultado esperado: recordatorio determinista único y sincronizado.
+
+Resultado: OK. Ambos clientes mostraron un único recordatorio asociado; al cambiar la fecha desde Desktop se actualizó el existente sin duplicarse ni emitir una notificación inmediata.
 
 ### Recordatorios y notificaciones
 
 #### M-13 — CRUD bidireccional
 
-- [ ] Crear en Desktop un recordatorio por fecha y kilometraje.
-- [ ] Verificarlo en Android.
-- [ ] Completarlo en Android y verificar el estado en Desktop.
-- [ ] Crear otro en Android, borrarlo en Desktop y confirmar que no reaparece.
+- [x] Crear en Desktop un recordatorio por fecha y kilometraje.
+- [x] Verificarlo en Android.
+- [x] Completarlo en Android y verificar el estado en Desktop.
+- [x] Crear otro en Android, borrarlo en Desktop y confirmar que no reaparece.
 
 Resultado esperado: crear, completar y borrar convergen en ambas direcciones.
 
+Resultado: OK. Alta, completado y borrado convergieron entre clientes y el recordatorio eliminado no reapareció tras reiniciar.
+
 #### M-14 — Fecha opcional y validación
 
-- [ ] Crear un borrador Android con fecha, quitarla y dejar solo kilometraje.
-- [ ] Introducir valores negativos, desbordados o texto pegado y confirmar errores específicos.
-- [ ] Corregir y guardar.
+- [x] Crear un borrador Android con fecha, quitarla y dejar solo kilometraje.
+- [x] Introducir valores negativos, desbordados o texto pegado y confirmar errores específicos.
+- [x] Corregir y guardar.
 
 Resultado esperado: la fecha se puede limpiar y los valores inválidos nunca se persisten silenciosamente.
 
+Resultado: OK. La fecha se eliminó del borrador, los valores negativo, desbordado y alfanumérico fueron rechazados y solo se guardó el kilometraje válido corregido.
+
 #### M-15 — Notificación nativa solo en Android
 
-- [ ] Conceder permiso de notificaciones en Android.
-- [ ] Crear un recordatorio de prueba que deba notificarse en la ventana temporal elegida.
-- [ ] Verificar la notificación y que al tocarla abre Recordatorios.
-- [ ] Confirmar que Desktop muestra el recordatorio pero no crea una notificación del sistema.
+- [x] Conceder permiso de notificaciones en Android.
+- [x] Crear un recordatorio de prueba que deba notificarse en la ventana temporal elegida.
+- [x] Verificar la notificación y que al tocarla abre Recordatorios.
+- [x] Confirmar que Desktop muestra el recordatorio pero no crea una notificación del sistema.
 
 Resultado esperado: entrega local Android y ausencia deliberada de alertas nativas Desktop.
+
+Resultado: OK. Android entregó la notificación de un recordatorio vencido en la fecha actual y abrió Recordatorios al tocarla; Desktop sincronizó el registro sin crear una alerta nativa.
 
 ### Offline, reinicio y conflictos
 
