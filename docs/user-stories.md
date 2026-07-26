@@ -312,4 +312,4 @@ Los tickets se derivan de las historias Must-Have y Should-Have. Cada ticket deb
 
 ## Siguiente paso
 
-Las historias Must-Have, sincronizacion Android/Desktop, US-06, recordatorios proactivos y cuenta Desktop estan implementadas. Permanecen el coste acumulado de US-05, la aceptacion manual final, los paquetes instalados y sus evidencias; iOS no forma parte del alcance.
+Las historias Must-Have, la sincronizacion Android/Desktop, US-06, los recordatorios proactivos y la cuenta Desktop estan implementados. El coste acumulado de US-05 queda fuera del MVP; iOS y la validacion de paquetes Windows/Linux tampoco forman parte del alcance comprobado.

@@ -13,7 +13,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 - Sync v0: subida/bajada de vehiculos, mantenimientos y recordatorios; tombstones; `pending_sync`; `last-write-wins`; sync inicial al restaurar sesion; accion manual desde Usuario.
 - Incorporado despues de Entrega 2: edicion de vehiculos, odometro rapido, sugerencias proactivas de recordatorios desde el vehiculo y CI con calidad, tests y APK debug.
 - Implementado despues de Entrega 2: Desktop local y autenticado, OAuth PKCE, vault nativo, importacion consentida, recordatorios desde mantenimiento, hardening RLS y confirmaciones de sync condicionadas por version.
-- Pendiente: coste acumulado, invitaciones, iOS, exportacion PDF/CSV, aceptacion manual final, paquetes instalados y evidencias de release.
+- Fuera del MVP entregado: coste acumulado, invitaciones, exportacion PDF/CSV, iOS y validacion de paquetes para Windows/Linux.
 - Fuente de sincronizacion: `openspec/specs/sync-v0/spec.md` y `readme.md` secciones 2.1, 2.4 y 2.6.
 
 ## Estado actual
@@ -48,7 +48,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 | 11 | T-11 - CI/CD, release y evidencia de despliegue | Infraestructura | Transversal | Must | 5 SP |
 | 12 | T-12 - Test E2E del flujo principal | Calidad / tests | US-01, US-02, US-04, US-05, US-06 | Must | 5 SP |
 
-> T-11 y T-12 cubren artefactos obligatorios de la entrega final. La parte de CI de T-11 ya ejecuta `./gradlew qualityCheck test assembleDebug`; quedan release y evidencias. T-12 se cerró con un E2E Android app-level ejecutado en emulador.
+> T-11 y T-12 cubren artefactos obligatorios de la entrega final. T-11 se cerró con CI y los paquetes Android/macOS entregados por el canal académico; T-12 se cerró con un E2E Android de aplicación ejecutado en emulador.
 
 ## T-01 - Esquema local/remoto del MVP
 
@@ -550,7 +550,7 @@ Los tickets se implementaran mediante SDD con OpenSpec. Antes de ejecutar cada b
 - **Sync seguro:** aislamiento por familia, tombstones, LWW y acknowledgement por `updatedAt` para no perder mutaciones concurrentes.
 - **Cuenta:** cierre de sesion local y eliminacion permanente single-flight con limpieza convergente.
 - **Backend:** ocho migraciones, RPC de eliminacion y hardening de familias/perfiles.
-- **Release preparada:** APK debug y DMG finales generados, instalados y verificados; la publicación y el envío externo del vídeo permanecen como acciones del autor. La aceptación manual cubrió el flujo multi-dispositivo principal, pero no la prueba RLS hostil, la eliminación con cuenta desechable ni los recorridos completos de accesibilidad. MSI/Windows y firma/notarización quedan fuera del alcance validado por falta de host y credenciales.
+- **Release entregada:** APK debug, DMG y vídeo enviados mediante el canal académico externo; los instalables finales se generaron y verificaron en Android y macOS. La aceptación manual cubrió el flujo multidispositivo principal y la cobertura RLS hostil quedó automatizada; la eliminación con cuenta desechable y los recorridos completos de accesibilidad no se ejecutaron. MSI/Windows y firma Developer ID/notarización quedan fuera del alcance validado por falta de host y credenciales.
 
 ## T-12 - Test E2E del flujo principal
 

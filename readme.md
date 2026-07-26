@@ -51,7 +51,7 @@ El valor principal consiste en reducir olvidos y pérdida de información median
 
 ### **1.2. Características y funcionalidades principales:**
 
-Funcionalidades disponibles en Android y Desktop:
+Capacidades compartidas y diferencias entre Android y Desktop:
 
 - Autenticación Android con Google ID mediante Credential Manager y autenticación Desktop mediante navegador, Authorization Code y PKCE S256.
 - Creación o recuperación del perfil y de un espacio personal técnico con la RPC `ensure_user_profile`; esta versión no incluye invitaciones ni gestión de miembros.
@@ -60,12 +60,14 @@ Funcionalidades disponibles en Android y Desktop:
 - Registro, consulta, edición y borrado lógico de mantenimientos, incluidos coste opcional, taller, notas y próxima fecha.
 - Creación manual, finalización y borrado de recordatorios por fecha, kilometraje o ambos.
 - Sugerencias proactivas de recordatorios al crear o editar un vehículo con próxima ITV, renovación del seguro o próxima revisión por kilometraje. El usuario confirma su creación y la reconciliación utiliza identificadores estables para evitar duplicados.
-- Creación opcional de un recordatorio al guardar un mantenimiento futuro, sin duplicados y con la posibilidad de guardar solo el mantenimiento.
+- Al guardar un mantenimiento futuro se puede crear, opcionalmente y sin duplicados, un recordatorio asociado; el usuario también puede guardar solo el mantenimiento.
 - Notificaciones locales Android para recordatorios con fecha. Desktop conserva y sincroniza recordatorios, pero no programa alertas nativas.
 - Persistencia local con SQLDelight, tombstones y sincronización v0 bidireccional entre Android y Desktop.
 - Modo Desktop local sin Supabase e importación explícita, exclusión o cancelación de datos `local-family` antes del primer sync autenticado.
-- Sesiones Desktop almacenadas solo en macOS Keychain o Windows Credential Manager.
-- Cierre de sesión local y eliminación permanente de cuenta con limpieza convergente en Android y Desktop.
+- Sesiones Desktop almacenadas solo en macOS Keychain o Windows Credential Manager; esta última integración está implementada pero no validada en un host Windows.
+- Cierre de sesión local y solicitud de eliminación permanente de cuenta en Android y Desktop, con limpieza local convergente aunque una pérdida de conectividad impida confirmar la respuesta remota.
+
+En el modelo de datos, `Family` y `family_id` identifican el espacio técnico aislado de una cuenta. La versión entregada no ofrece miembros, invitaciones ni colaboración familiar.
 
 Evolución fuera del alcance del MVP entregado:
 
@@ -101,14 +103,23 @@ Android usa Compose para Android y Desktop usa Compose Desktop con áreas de Gar
 
 ### **1.4. Instrucciones de instalación:**
 
-Requisitos:
+La vía principal de evaluación consiste en instalar los artefactos entregados. Para ello no es necesario clonar el repositorio, usar Gradle ni crear `local.properties`; esos pasos corresponden únicamente a la ejecución desde código fuente.
 
-- JDK 17. Para paquetes Desktop nativos se necesita además un JDK completo que incluya `jpackage`.
-- Android Studio y un SDK Android compatible.
-- macOS para generar y validar DMG. Generar y validar MSI y Credential Manager requiere Windows y queda fuera del alcance comprobado de esta entrega por no disponer de ese host.
-- Proyecto Supabase con Google habilitado y las ocho migraciones de `supabase/migrations/` aplicadas en orden.
+#### Instalar los artefactos entregados
 
-Crear `local.properties` a partir de [`local.properties.example`](local.properties.example) y completar:
+El paquete compartido por correo contiene la versión `1.0.0` de la APK Android, el DMG macOS y `SHA256SUMS.txt`.
+
+1. Comprobar la integridad desde el directorio de descarga con `shasum -a 256 -c SHA256SUMS.txt`.
+2. En Android 8.0 o posterior, instalar `Carbura-Android-1.0.0-debug.apk` con `adb install -r Carbura-Android-1.0.0-debug.apk` o abrirla desde el dispositivo y autorizar temporalmente ese origen. Es una APK debug para evaluación académica, no una distribución de producción.
+3. En un Mac Apple Silicon, abrir `Carbura-1.0.0.dmg`, arrastrar Carbura a Aplicaciones y ejecutarla desde allí. El paquete incluye su runtime Java, usa firma ad-hoc y no está notarizado. Si Gatekeeper bloquea el primer arranque, usar clic secundario sobre Carbura, **Abrir** y confirmar la excepción, sin desactivar globalmente la seguridad del sistema.
+
+La autenticación y la sincronización de ambos clientes requieren conexión a Internet y una cuenta Google. Los instalables ya incorporan la configuración pública de la candidata; no incluyen credenciales privilegiadas. La pantalla de consentimiento OAuth está publicada en Production para que las cuentas de evaluación no necesiten estar registradas como testers.
+
+#### Compilar o ejecutar desde el código fuente
+
+Este recorrido requiere JDK 17, Android Studio con Android SDK 36 para el cliente móvil y un JDK completo con `jpackage` para generar paquetes Desktop. El MSI está configurado, pero su generación, instalación y Credential Manager no se validaron por no disponer de un host Windows.
+
+La ejecución autenticada necesita un proyecto Supabase con Google habilitado y las ocho migraciones de `supabase/migrations/` aplicadas en orden. Crear `local.properties` a partir de [`local.properties.example`](local.properties.example) y completar solo la configuración pública:
 
 ```properties
 SUPABASE_URL=https://xxxx.supabase.co
@@ -116,37 +127,23 @@ SUPABASE_ANON_KEY=<ANON_OR_PUBLISHABLE_KEY>
 GOOGLE_CLIENT_ID=<WEB_CLIENT_ID>.apps.googleusercontent.com
 ```
 
-`SUPABASE_URL` y `SUPABASE_ANON_KEY` son configuración pública incorporada a los clientes; la autorización depende de RLS. Nunca deben incluirse `service_role`, contraseña de base de datos, Google Client Secret, tokens o sesiones. Desktop usa esas dos propiedades y mantiene el modo local si están vacías. Android necesita además `GOOGLE_CLIENT_ID`, correspondiente al cliente OAuth de tipo Web application. El cliente Android se registra para `com.asensiodev.carbura` con las huellas SHA-1 y, cuando proceda, SHA-256 obtenidas con `./gradlew :app:android:signingReport`.
+`SUPABASE_URL` y `SUPABASE_ANON_KEY` son valores públicos; la autorización depende de RLS. Android necesita además el ID del cliente OAuth de tipo `Web application`. El Google Client Secret se configura únicamente en el proveedor Google del panel de Supabase y nunca en `local.properties`. Tampoco deben versionarse `service_role`, contraseñas de base de datos, tokens ni sesiones.
 
-Google Cloud debe autorizar el callback de Supabase `https://<PROJECT_REF>.supabase.co/auth/v1/callback`. Supabase debe permitir exactamente el callback Desktop `http://127.0.0.1:43821/auth/callback`. Google vuelve a Supabase y Supabase vuelve al listener loopback de Desktop; no se debe registrar el loopback en Google ni sustituir `127.0.0.1` por `localhost`, `0.0.0.0` o comodines. La candidata entregada usa la pantalla de consentimiento OAuth en Production; debe mantenerse así para que las cuentas de evaluación no necesiten estar registradas como usuarios de prueba.
-
-Comandos principales:
+Google Cloud debe autorizar el callback de Supabase `https://<PROJECT_REF>.supabase.co/auth/v1/callback`, y Supabase debe permitir exactamente el callback Desktop `http://127.0.0.1:43821/auth/callback`. El cliente Android se registra para `com.asensiodev.carbura` con las huellas obtenidas mediante `./gradlew :app:android:signingReport`. No se debe registrar el loopback en Google ni sustituir `127.0.0.1` por `localhost`, `0.0.0.0` o comodines.
 
 ```bash
 ./gradlew :app:android:assembleDebug
-./gradlew :app:android:installDebug
+./gradlew :app:android:installDebug  # Requiere dispositivo o emulador conectado
 ./gradlew :app:desktop:run
 ./gradlew :app:desktop:packageDmg   # macOS con jpackage
-./gradlew :app:desktop:packageMsi   # Configurado, no validado: requiere Windows con jpackage
+./gradlew :app:desktop:packageMsi   # Configurado, no validado; requiere Windows
 ```
 
-Instalación de los artefactos entregados:
+Con `SUPABASE_URL` y `SUPABASE_ANON_KEY` vacías, Desktop mantiene su modo local sin autenticación ni sincronización. Android puede compilar con valores vacíos, pero necesita la configuración pública para iniciar el flujo autenticado.
 
-1. Obtener `Carbura-Android-1.0.0-debug.apk`, `Carbura-1.0.0.dmg` y `SHA256SUMS.txt` desde el paquete de artefactos compartido por correo en la entrega académica.
-2. Comprobar su integridad desde el directorio de descarga con `shasum -a 256 -c SHA256SUMS.txt`.
-3. En Android, instalar la APK con `adb install -r Carbura-Android-1.0.0-debug.apk` o abrirla desde el dispositivo y autorizar temporalmente ese origen. Es una APK debug para evaluación académica, no una distribución de producción.
-4. En macOS, abrir `Carbura-1.0.0.dmg`, arrastrar Carbura a Aplicaciones y ejecutarla desde allí. El DMG usa firma ad-hoc y no está notarizado; si Gatekeeper bloquea el primer arranque, usar clic secundario sobre Carbura, **Abrir** y confirmar la excepción, sin desactivar globalmente la seguridad del sistema.
+#### Verificar el proyecto
 
-Si un instalable no es compatible con el equipo de evaluación, se puede ejecutar la misma revisión desde el repositorio:
-
-```bash
-./gradlew :app:android:installDebug  # Dispositivo o emulador Android conectado
-./gradlew :app:desktop:run           # Desktop desde código fuente
-```
-
-La ejecución autenticada desde código requiere las propiedades públicas indicadas arriba. Con `SUPABASE_URL` y `SUPABASE_ANON_KEY` vacías, Desktop conserva el modo local sin sincronización. Los instalables ya incorporan la configuración pública usada para construir la candidata; nunca incluyen credenciales privilegiadas.
-
-Verificación local equivalente a CI:
+La verificación local ampliada incluye las comprobaciones de CI y añade el JAR Desktop, OpenSpec estricto e integridad del diff:
 
 ```bash
 ./gradlew qualityCheck test assembleDebug :app:desktop:jar --stacktrace
@@ -154,7 +151,13 @@ openspec validate --all --strict
 git diff --check
 ```
 
-La APK debug se genera desde `app:android`. Configurar DMG o MSI no equivale a validar el artefacto instalado: cada paquete debe instalarse y probarse en su sistema objetivo. `local.properties` y cualquier secreto deben permanecer fuera de Git.
+Las pruebas instrumentadas requieren un dispositivo o emulador Android desbloqueado:
+
+```bash
+./gradlew connectedDebugAndroidTest --max-workers=1
+```
+
+Compilar un DMG o MSI no equivale a validar el instalable: cada paquete debe probarse en su sistema operativo objetivo. La validación OpenSpec requiere tener disponible su CLI.
 
 ---
 
@@ -319,7 +322,7 @@ La suite incluye tests comunes, Android/Robolectric y Desktop para dominio, repo
 
 El test app-level `MainActivityE2ETest` lanza la actividad Android real con límites externos deterministas y recorre sesión restaurada, alta de vehículo, mantenimiento ITV futuro, historial y recordatorio renderizado usando navegación, ViewModels, casos de uso, repositorios y SQLDelight de producción.
 
-El gate instrumentado `./gradlew connectedDebugAndroidTest --max-workers=1` completó 54 tests en un Pixel 9a real antes de añadir el E2E y 55 tests en un emulador Pixel 9a con el recorrido app-level incluido.
+El gate instrumentado `./gradlew connectedDebugAndroidTest --max-workers=1` completó 55 pruebas en un emulador Pixel 9a, incluido el recorrido E2E de aplicación.
 
 La aceptación final manual comprobó identidad de cuenta en Android/Desktop, propagación bidireccional y tombstones, cambios offline, reinicio, LWW, importación/exclusión local, restauración segura de sesión y recordatorios Desktop programados únicamente por Android.
 
@@ -462,13 +465,13 @@ Las migraciones vigentes son:
 
 La migración 8 debe estar aplicada antes de habilitar Desktop autenticado. El repositorio incluye pruebas automatizadas hostiles de políticas y privilegios para comprobar la denegación entre familias.
 
-SQLDelight mantiene `updatedAt`, `pendingSync` y `deletedAt` en las tres familias sincronizables. `deleted_at` representa tombstones y `updated_at` resuelve conflictos mediante `last-write-wins`.
+SQLDelight mantiene `updatedAt`, `pendingSync` y `deletedAt` en los tres tipos de entidad sincronizables. `deleted_at` representa tombstones y `updated_at` resuelve conflictos mediante `last-write-wins`.
 
 ---
 
 ## 4. Especificación de la API
 
-Carbura no mantiene un backend REST propio ni un contrato agregado de sincronización. El cliente usa Supabase Auth, una RPC PostgREST y operaciones `select`/`upsert` de Supabase Kotlin. Se documentan tres endpoints representativos, máximo exigido por la plantilla; Supabase genera la especificación OpenAPI completa del esquema desplegado.
+Carbura no mantiene un backend REST propio ni un contrato agregado de sincronización. Los clientes usan Supabase Auth, las RPC PostgREST de perfil y eliminación de cuenta, y operaciones `select`/`upsert` mediante Supabase Kotlin. A continuación se documenta una muestra representativa de tres rutas; Supabase genera la especificación OpenAPI completa del esquema desplegado.
 
 ### **4.1. Autenticación y perfil familiar**
 
@@ -497,14 +500,15 @@ Android intercambia Google ID mediante Credential Manager. Desktop realiza Autho
 
 ### **4.2. Sincronización de garaje**
 
-La sincronización no utiliza un cursor incremental ni un endpoint agregado. `LocalFirstSyncManager` serializa ciclos con un `Mutex` y, para `vehicles`, `maintenance_records` y `reminders`, realiza:
+La sincronización no utiliza un cursor incremental ni un endpoint agregado. En Desktop, la importación, exclusión o cancelación de `local-family` ocurre como una decisión explícita antes del primer ciclo autenticado; no forma parte de `LocalFirstSyncManager`.
+
+Una vez resuelto ese consentimiento, `LocalFirstSyncManager` serializa los ciclos con un `Mutex` y, para `vehicles`, `maintenance_records` y `reminders`, realiza:
 
 1. Resolución de sesión, perfil y familia activa.
-2. Adopción de filas locales heredadas de `local-family`.
-3. Descarga completa por `family_id` de cada familia de entidades.
-4. Comparación con filas locales `pendingSync`; solo se suben por upsert las que no tienen una versión remota más reciente.
-5. Marcado local de las filas subidas como sincronizadas.
-6. Nueva descarga completa y fusión local mediante `last-write-wins` por `updated_at`.
+2. Lectura de versiones remotas y comparación con las filas locales `pendingSync`.
+3. Subida mediante upsert de las versiones locales que no han sido superadas remotamente.
+4. Confirmación local condicionada a que la versión subida siga vigente.
+5. Nueva descarga completa y fusión local mediante `last-write-wins` por `updated_at`.
 
 Los borrados convergen como tombstones mediante `deleted_at`. El ciclo se activa al iniciar la sesión, al volver la app a primer plano con limitación temporal, mediante temporizador mientras la composición autenticada está activa, después de mutaciones y por acción manual. No se ejecuta con la aplicación cerrada.
 
@@ -636,22 +640,22 @@ Historias principales de la entrega:
 - **US-01 - Iniciar sesión y disponer de un garaje personal:** completada en Android con Google ID y en Desktop con OAuth PKCE, Supabase Auth y `ensure_user_profile`.
 - **US-02 - Gestionar vehículos:** completada para alta, consulta, edición, borrado lógico, objetivos de planificación y odómetro rápido.
 - **US-04 - Registrar mantenimiento o avería:** completada para alta, listado y borrado, incluidos kilometraje, coste opcional, taller y notas.
+- **US-06 - Generar un recordatorio desde un mantenimiento:** completada con decisión explícita de guardar con o sin recordatorio futuro.
 - **US-07 - Gestionar recordatorios:** completada para creación manual, listado, finalización y borrado.
 - **US-08 - Recibir una notificación local:** completada en Android para recordatorios con fecha.
 - **US-10 - Sincronizar entre sesiones o dispositivos:** completada con los límites de sync v0, full pull y ejecución solo dentro del proceso de la app.
 - **US-13 - Obtener sugerencias proactivas desde el vehículo:** completada. Crear o editar un vehículo puede sugerir ITV, seguro y revisión por kilometraje; la confirmación reconcilia IDs estables sin duplicados.
-- **US-06 - Generar un recordatorio desde un mantenimiento:** completada con decisión explícita de guardar con o sin recordatorio futuro.
-- **Cuenta y modo local Desktop:** completados para importación/exclusión previa al sync, sesión segura, cierre local y eliminación permanente.
+- **Cuenta y modo local Desktop:** completados para importación/exclusión previa al sync, sesión segura, cierre local y solicitud de eliminación permanente.
 
 ---
 
 ## 6. Tickets de Trabajo
 
-El backlog completo está en [`docs/backlog.md`](docs/backlog.md). Los tickets reflejan tanto el trabajo cerrado como las tareas pendientes de integración y calidad, sin confundir piezas de dominio aisladas con flujos de usuario completos.
+El backlog completo está en [`docs/backlog.md`](docs/backlog.md). Los tickets distinguen el trabajo cerrado de las mejoras que permanecen fuera del MVP, sin confundir piezas de dominio aisladas con flujos de usuario completos.
 
 ### **6.1. Backlog inicial derivado de user stories**
 
-| Ticket | Área | Historia relacionada | Prioridad | Estado / resultado |
+| Ticket | Área | Historia relacionada | Estado | Resultado |
 |---|---|---|---|---|
 | T-01 | Datos | US-01, US-02, US-04, US-06 | Cerrado | SQLDelight, Supabase, RLS y RPC de perfil implementados. |
 | T-02 | Auth / onboarding | US-01 | Cerrado | Google ID Android, OAuth PKCE Desktop y Supabase Auth implementados. |
@@ -667,7 +671,7 @@ El backlog completo está en [`docs/backlog.md`](docs/backlog.md). Los tickets r
 | T-12 | Calidad | Flujo principal | Cerrado | E2E Android app-level verificado en emulador. |
 | T-13 | Vehículos | US-02, US-09 | Cerrado | Edición y actualización rápida del odómetro. |
 | T-14 | Recordatorios | US-13 | Cerrado | Sugerencias proactivas desde vehículo implementadas. |
-| T-15 | Costes | US-14 | Alta | Coste acumulado pendiente. |
+| T-15 | Costes | US-14 | Fuera del MVP | Coste acumulado pendiente. |
 | T-18 | Multiplataforma | Desktop | Cerrado funcional | Desktop local/auth/sync implementado; iOS fuera de alcance. |
 
 ### **6.2. Tickets principales detallados para la entrega**
@@ -730,7 +734,7 @@ El backlog completo está en [`docs/backlog.md`](docs/backlog.md). Los tickets r
 
 Esta sección conserva las tres Pull Requests exigidas por la plantilla y las alinea con las entregas académicas del proyecto.
 
-Para la Entrega 1 se utiliza una rama `dev` como base de comparación porque la documentación inicial ya se había sincronizado con `main`. La Entrega 2 mantiene la PR académica desde `feature-entrega2-AAC` hacia `dev`; la entrega final se integra desde `finalproject-AAC` hacia `dev`.
+La Entrega 1 y la Entrega 2 se integraron mediante PR hacia `dev`. La entrega final se presenta para revisión desde `finalproject-AAC` hacia `dev`; la PR permanece abierta como evidencia académica.
 
 Pull Requests oficiales:
 
