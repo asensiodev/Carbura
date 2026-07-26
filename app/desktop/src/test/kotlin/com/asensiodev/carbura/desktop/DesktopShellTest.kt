@@ -14,6 +14,7 @@ import com.asensiodev.carbura.desktop.resources.shell_destination_reminders
 import com.asensiodev.carbura.feature.garage.presentation.overview.GarageOverviewEffect
 import com.asensiodev.carbura.feature.maintenance.presentation.MaintenanceHistoryEvent
 import com.asensiodev.carbura.feature.reminders.presentation.RemindersEffect
+import java.awt.Dimension
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -43,6 +44,16 @@ class DesktopShellTest {
     @Test
     fun desktopWindowHasAPracticalMinimumSize() {
         assertEquals(DpSize(800.dp, 600.dp), DesktopMinimumWindowSize)
+        assertEquals(184.dp, DesktopExpandedNavigationWidth)
+    }
+
+    @Test
+    fun desktopWindowStartsWithinTheUsableDisplay() {
+        assertEquals(DpSize(1080.dp, 720.dp), initialDesktopWindowSize(DpSize(1512.dp, 982.dp)))
+        assertEquals(DpSize(952.dp, 652.dp), initialDesktopWindowSize(DpSize(1000.dp, 700.dp)))
+        assertEquals(DpSize(700.dp, 500.dp), initialDesktopWindowSize(DpSize(700.dp, 500.dp)))
+        assertEquals(DpSize(700.dp, 500.dp), minimumDesktopWindowSize(DpSize(700.dp, 500.dp)))
+        assertEquals(Dimension(800, 600), awtWindowDimension(DesktopMinimumWindowSize))
     }
 
     @Test

@@ -53,21 +53,23 @@ No grabar JWT, claves, rutas con el nombre personal, correos completos ni conten
 
 #### M-01 — Instalación Android limpia
 
-- [ ] Desinstalar una instalación anterior si se quiere comprobar el primer arranque.
-- [ ] Instalar la APK candidata con `adb install app/android/build/outputs/apk/debug/android-debug.apk`.
-- [ ] Abrir Carbura, verificar que no se cierra y que muestra onboarding o restaura una sesión válida.
-- [ ] Confirmar que el nombre, icono y versión corresponden a la candidata.
+- [x] Desinstalar una instalación anterior si se quiere comprobar el primer arranque.
+- [x] Instalar la APK candidata con `adb install app/android/build/outputs/apk/debug/android-debug.apk`.
+- [x] Abrir Carbura, verificar que no se cierra y que muestra onboarding o restaura una sesión válida.
+- [x] Confirmar que el nombre, icono y versión corresponden a la candidata.
 
 Resultado esperado: arranque limpio sin crash, ANR ni pantalla vacía.
 
 #### M-02 — Instalación exacta del DMG
 
-- [ ] Montar el DMG candidato y copiar Carbura a Aplicaciones.
-- [ ] Abrir la copia instalada, no `:app:desktop:run` ni un `.app` anterior.
-- [ ] Si Gatekeeper bloquea el bundle ad-hoc, registrar la limitación y abrirlo con Control-clic > Abrir cuando macOS lo permita.
-- [ ] Verificar arranque, navegación y persistencia tras cerrar y volver a abrir.
+- [x] Montar el DMG candidato y copiar Carbura a Aplicaciones.
+- [x] Abrir la copia instalada, no `:app:desktop:run` ni un `.app` anterior.
+- [x] Si Gatekeeper bloquea el bundle ad-hoc, registrar la limitación y abrirlo con Control-clic > Abrir cuando macOS lo permita.
+- [x] Verificar arranque, navegación y persistencia tras cerrar y volver a abrir.
 
 Resultado esperado: el paquete contiene su runtime y arranca sin depender de un JDK instalado.
+
+Resultado: OK tras corregir y repetir la instalación. Se verificaron tamaño y posición Retina, navegación, títulos funcionales, identidad sin comillas de serialización, paneles de Cuenta alineados, persistencia, firma ad-hoc íntegra y limitación esperada de Gatekeeper.
 
 ### Autenticación, familia y sesión
 

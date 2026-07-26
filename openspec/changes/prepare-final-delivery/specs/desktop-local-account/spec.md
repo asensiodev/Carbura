@@ -13,3 +13,7 @@ The authenticated Desktop Account workspace SHALL expose synchronization, retry,
 #### Scenario: Authenticated user opens Account
 - **WHEN** the Desktop session and family are active
 - **THEN** Account shows identity, family, synchronization state, storage location, sign-out, and delete-account actions
+
+#### Scenario: Legacy profile contains JSON quote artifacts
+- **WHEN** Desktop loads an identity persisted by an older metadata parser
+- **THEN** Account presents readable identity and family values without serialization quotation marks

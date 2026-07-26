@@ -32,6 +32,13 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class DesktopAppControllerTest {
     @Test
+    fun legacyJsonQuotesAreRemovedFromDesktopIdentityText() {
+        assertEquals("Usuario", "\"Usuario\"".cleanDesktopIdentityText())
+        assertEquals("Familia de Usuario", "Familia de \"Usuario\"".cleanDesktopIdentityText())
+        assertNull("  \"\"  ".cleanDesktopIdentityText())
+    }
+
+    @Test
     fun missingPublicConfigurationStartsInLocalModeWithoutResolvingAuth() =
         runTest {
             val fixture = Fixture(backgroundScope, configurationAvailable = false)

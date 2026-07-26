@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="account_header_eyebrow">CUENTA Y DATOS</string>
-    <string name="account_header_title">Tu cuenta y tus datos, bajo control.</string>
+    <string name="account_header_eyebrow">CUENTA</string>
+    <string name="account_header_title">Cuenta y almacenamiento</string>
     <string name="account_header_description">Usa Carbura Desktop en modo local o conecta tu cuenta para sincronizar vehículos, mantenimientos y recordatorios con Android.</string>
     <string name="account_project_title">Carbura Desktop</string>
     <string name="account_project_description">Consulta el proyecto, la documentación y el historial de versiones.</string>

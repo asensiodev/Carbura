@@ -40,13 +40,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.asensiodev.carbura.core.auth.SupabaseSettings
@@ -90,8 +91,10 @@ import org.koin.core.context.stopKoin
 import org.koin.core.module.Module
 import org.koin.dsl.module
 import java.awt.Dimension
+import java.awt.GraphicsEnvironment
 import java.awt.event.WindowEvent
 import java.awt.event.WindowFocusListener
+import kotlin.math.roundToInt
 
 internal val Canvas = Color(0xFFF2F7FD)
 internal val Ink = Color(0xFF142238)
@@ -102,6 +105,37 @@ internal val Muted = Color(0xFF607086)
 internal val Line = Color(0xFFD8E3F0)
 internal val Success = Color(0xFF2F7666)
 internal val DesktopMinimumWindowSize = DpSize(800.dp, 600.dp)
+internal val DesktopPreferredWindowSize = DpSize(1080.dp, 720.dp)
+internal val DesktopExpandedNavigationWidth = 184.dp
+private val DesktopWindowMargin = 48.dp
+
+internal fun initialDesktopWindowSize(availableSize: DpSize): DpSize =
+    DpSize(
+        fitWindowDimension(DesktopPreferredWindowSize.width, DesktopMinimumWindowSize.width, availableSize.width),
+        fitWindowDimension(DesktopPreferredWindowSize.height, DesktopMinimumWindowSize.height, availableSize.height),
+    )
+
+internal fun minimumDesktopWindowSize(availableSize: DpSize): DpSize =
+    DpSize(
+        minOf(DesktopMinimumWindowSize.width, availableSize.width),
+        minOf(DesktopMinimumWindowSize.height, availableSize.height),
+    )
+
+internal fun awtWindowDimension(size: DpSize): Dimension = Dimension(size.width.value.roundToInt(), size.height.value.roundToInt())
+
+private fun fitWindowDimension(
+    preferred: Dp,
+    minimum: Dp,
+    available: Dp,
+): Dp {
+    val usable = maxOf(0.dp, available - DesktopWindowMargin)
+    return minOf(preferred, usable).coerceAtLeast(minOf(minimum, available))
+}
+
+private fun availableDesktopWindowSize(): DpSize =
+    GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds.let { bounds ->
+        DpSize(bounds.width.dp, bounds.height.dp)
+    }
 
 internal val SupabaseSettings.isDesktopConfigurationAvailable: Boolean
     get() = url.isNotBlank() && anonKey.isNotBlank()
@@ -141,7 +175,13 @@ fun main() {
             coroutineScope = appScope,
         )
     application {
-        val windowState = rememberWindowState(size = DpSize(1180.dp, 760.dp))
+        val availableWindowSize = remember { availableDesktopWindowSize() }
+        val minimumWindowSize = remember(availableWindowSize) { minimumDesktopWindowSize(availableWindowSize) }
+        val windowState =
+            rememberWindowState(
+                position = WindowPosition(Alignment.Center),
+                size = initialDesktopWindowSize(availableWindowSize),
+            )
         val appName = stringResource(Res.string.shell_app_name)
         Window(
             onCloseRequest = {
@@ -152,13 +192,8 @@ fun main() {
             state = windowState,
             title = appName,
         ) {
-            val density = LocalDensity.current
-            DisposableEffect(window, controller, density) {
-                window.minimumSize =
-                    Dimension(
-                        with(density) { DesktopMinimumWindowSize.width.roundToPx() },
-                        with(density) { DesktopMinimumWindowSize.height.roundToPx() },
-                    )
+            DisposableEffect(window, controller) {
+                window.minimumSize = awtWindowDimension(minimumWindowSize)
                 val listener =
                     object : WindowFocusListener {
                         override fun windowGainedFocus(event: WindowEvent?) = controller.onForeground()
@@ -426,9 +461,9 @@ private fun DesktopNavigation(
         modifier =
             Modifier
                 .fillMaxHeight()
-                .width(if (compact) 92.dp else 238.dp)
+                .width(if (compact) 92.dp else DesktopExpandedNavigationWidth)
                 .background(Navy)
-                .padding(horizontal = if (compact) 12.dp else 20.dp, vertical = 24.dp),
+                .padding(horizontal = 12.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(

@@ -4,8 +4,8 @@
     <string name="maintenance_discard_description">Los cambios que no hayas guardado se perderán.</string>
     <string name="maintenance_discard_confirm">Descartar</string>
     <string name="maintenance_discard_cancel">Seguir editando</string>
-    <string name="maintenance_header_kicker">HISTORIAL DE MANTENIMIENTO</string>
-    <string name="maintenance_header_subtitle">Todos los mantenimientos, en una sola cronología.</string>
+    <string name="maintenance_header_kicker">MANTENIMIENTO</string>
+    <string name="maintenance_header_subtitle">Historial de mantenimiento</string>
     <string name="maintenance_header_history_for">Historial de %1$s</string>
     <string name="maintenance_header_select_vehicle">Selecciona un vehículo</string>
     <string name="maintenance_select_vehicle_title">Selecciona un vehículo</string>
@@ -47,7 +47,7 @@
     <string name="maintenance_loading_history">Cargando historial...</string>
     <string name="maintenance_history_load_error_title">No se pudo cargar el historial</string>
     <string name="maintenance_history_load_error_description">Tus registros locales no han cambiado.</string>
-    <string name="maintenance_empty_title">Historial todavía limpio</string>
+    <string name="maintenance_empty_title">No hay mantenimientos registrados</string>
     <string name="maintenance_empty_description">Registra el primer mantenimiento para recordar fechas, kilómetros, taller y coste.</string>
     <string name="maintenance_no_search_results_title">Ningún mantenimiento coincide con esta búsqueda</string>
     <string name="maintenance_no_search_results_description">Prueba con otro tipo, taller, nota o fecha.</string>

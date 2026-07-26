@@ -66,3 +66,11 @@
 - [ ] 7.6 Verify Desktop session restoration, refresh, secure sign-out, and Android session independence
 - [ ] 7.7 Verify two-account RLS denial for reads, writes, tombstones, family reassignment, and profile/family administration
 - [ ] 7.8 Archive completed OpenSpec changes and publish the final verified revision
+
+## 8. Manual Acceptance Defect Resolution
+
+- [x] 8.1 Keep the installed Desktop window within usable Retina display bounds without double-scaling the AWT minimum
+- [x] 8.2 Remove legacy JSON quotation artifacts from Desktop account identity presentation
+- [x] 8.3 Align Account and Storage panels and refine the expanded navigation width
+- [x] 8.4 Replace promotional Desktop headings with direct functional labels
+- [x] 8.5 Rebuild, reinstall, and repeat the DMG installation acceptance after the fixes

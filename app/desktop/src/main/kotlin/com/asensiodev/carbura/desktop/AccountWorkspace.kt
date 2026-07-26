@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -226,9 +227,18 @@ internal fun AccountWorkspace(
                         StorageCard(dataDirectory, databasePath, platformActions, reportFailure, Modifier.fillMaxWidth())
                     }
                 } else {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                        accountCard(Modifier.weight(0.9f))
-                        StorageCard(dataDirectory, databasePath, platformActions, reportFailure, Modifier.weight(1.1f))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(18.dp),
+                    ) {
+                        accountCard(Modifier.weight(1f).fillMaxHeight())
+                        StorageCard(
+                            dataDirectory,
+                            databasePath,
+                            platformActions,
+                            reportFailure,
+                            Modifier.weight(1f).fillMaxHeight(),
+                        )
                     }
                 }
             }

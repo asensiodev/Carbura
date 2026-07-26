@@ -7,6 +7,10 @@ The Desktop application SHALL present implemented workflows as production functi
 - **WHEN** the final Desktop application starts
 - **THEN** navigation and feature content contain no Desktop preview banner or supported-system promotional placeholder
 
+#### Scenario: Installed app opens on a constrained display
+- **WHEN** the packaged application starts on a display smaller than its preferred window size
+- **THEN** its initial and minimum window bounds fit within the usable display area
+
 ### Requirement: Native package evidence
 The final delivery SHALL generate each native Desktop package on a host that supplies the required `jpackage` tool and SHALL not equate a JVM jar with a native distribution.
 

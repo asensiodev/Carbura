@@ -12,8 +12,8 @@
     <string name="garage_odometer_decrease_message">Vas a cambiar los kilómetros de %1$d km a %2$d km. ¿Quieres continuar?</string>
     <string name="garage_confirm_button">Confirmar</string>
     <string name="garage_keep_current_value_button">Mantener valor actual</string>
-    <string name="garage_header_label">TU GARAJE</string>
-    <string name="garage_headline">Tus vehículos, siempre a la vista.</string>
+    <string name="garage_header_label">VEHÍCULOS</string>
+    <string name="garage_headline">Vehículos registrados</string>
     <string name="garage_vehicle_count_one">1 vehículo guardado localmente</string>
     <string name="garage_vehicle_count_other">%1$d vehículos guardados localmente</string>
     <string name="garage_add_vehicle_button">Añadir vehículo</string>
@@ -21,7 +21,7 @@
     <string name="garage_load_error_title">No se ha podido cargar el garaje</string>
     <string name="garage_load_error_description">Comprueba el almacenamiento del dispositivo e inténtalo de nuevo.</string>
     <string name="garage_retry_button">Reintentar</string>
-    <string name="garage_empty_title">Tu garaje empieza aquí</string>
+    <string name="garage_empty_title">No hay vehículos registrados</string>
     <string name="garage_empty_description">Añade tu coche o moto para tener historial, recordatorios y kilómetros bajo control desde un mismo sitio.</string>
     <string name="garage_vehicle_delete_error">No se ha podido borrar el vehículo. Inténtalo de nuevo.</string>
     <string name="garage_search_vehicles_label">Buscar vehículos</string>

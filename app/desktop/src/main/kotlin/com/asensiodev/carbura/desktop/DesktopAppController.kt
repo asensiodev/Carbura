@@ -410,10 +410,21 @@ internal class DesktopAppController(
 private fun RemoteUserProfile.toDesktopAccount(session: AuthSession): DesktopAccount =
     DesktopAccount(
         userId = userId,
-        email = email ?: session.user.email,
-        displayName = displayName.ifBlank { session.user.displayName ?: session.user.email ?: "Usuario" },
+        email = email.cleanDesktopIdentityText() ?: session.user.email.cleanDesktopIdentityText(),
+        displayName =
+            displayName.cleanDesktopIdentityText()
+                ?: session.user.displayName.cleanDesktopIdentityText()
+                ?: session.user.email.cleanDesktopIdentityText()
+                ?: "Usuario",
         familyId = familyId,
-        familyName = familyName,
+        familyName = familyName.cleanDesktopIdentityText(),
     )
+
+internal fun String?.cleanDesktopIdentityText(): String? =
+    this
+        ?.trim()
+        ?.replace("\"", "")
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
 
 private fun Exception.safeMessage(fallback: String): String = fallback
