@@ -105,9 +105,10 @@ fun MaintenanceHistoryRoute(
     vehicleId: String,
     familyId: String,
     onBack: () -> Unit,
+    sessionVersion: Int = 0,
     refreshSignal: Long = 0L,
     modifier: Modifier = Modifier,
-    viewModel: MaintenanceHistoryViewModel = rememberMaintenanceHistoryViewModel(vehicleId, familyId),
+    viewModel: MaintenanceHistoryViewModel = rememberMaintenanceHistoryViewModel(vehicleId, familyId, sessionVersion),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var effectMessage by remember { mutableStateOf<CarburaString?>(null) }
@@ -232,8 +233,9 @@ fun MaintenanceHistoryRoute(
 private fun rememberMaintenanceHistoryViewModel(
     vehicleId: String,
     familyId: String,
+    sessionVersion: Int,
 ): MaintenanceHistoryViewModel =
-    viewModel(key = "maintenance-$familyId-$vehicleId") {
+    viewModel(key = "maintenance-$familyId-$vehicleId-$sessionVersion") {
         GlobalContext.get().get { parametersOf(VehicleId(vehicleId), FamilyId(familyId)) }
     }
 

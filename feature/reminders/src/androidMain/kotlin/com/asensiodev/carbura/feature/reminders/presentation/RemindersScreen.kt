@@ -116,10 +116,11 @@ import java.util.Locale
 @Composable
 fun RemindersRoute(
     familyId: String,
+    sessionVersion: Int = 0,
     onNavigateToGarage: () -> Unit = {},
     refreshSignal: Long = 0L,
     modifier: Modifier = Modifier,
-    viewModel: RemindersViewModel = rememberRemindersViewModel(familyId),
+    viewModel: RemindersViewModel = rememberRemindersViewModel(familyId, sessionVersion),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var effectMessage by remember { mutableStateOf<CarburaString?>(null) }
@@ -229,8 +230,11 @@ fun RemindersRoute(
 }
 
 @Composable
-private fun rememberRemindersViewModel(familyId: String): RemindersViewModel =
-    viewModel(key = "reminders-$familyId") {
+private fun rememberRemindersViewModel(
+    familyId: String,
+    sessionVersion: Int,
+): RemindersViewModel =
+    viewModel(key = "reminders-$familyId-$sessionVersion") {
         GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
     }
 

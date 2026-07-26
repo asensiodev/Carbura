@@ -57,6 +57,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -146,6 +147,7 @@ private fun CarburaApp(
     val syncScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     val lastForegroundSyncAttempt = remember { mutableLongStateOf(0L) }
+    var authenticatedSessionVersion by rememberSaveable { mutableIntStateOf(0) }
 
     LaunchedEffect(onboardingViewModel) {
         onboardingViewModel.onEvent(OnboardingEvent.Started)
@@ -156,6 +158,7 @@ private fun CarburaApp(
                 }
 
                 OnboardingEffect.NavigateToLogin -> {
+                    authenticatedSessionVersion += 1
                     backStack.resetAfterSignOut()
                 }
             }
@@ -274,6 +277,7 @@ private fun CarburaApp(
                         NavEntry(route) {
                             GarageRoute(
                                 familyId = familyId,
+                                sessionVersion = authenticatedSessionVersion,
                                 refreshSignal = refreshSignal.takeIf { refreshDestination == carburaRoute } ?: 0L,
                                 onVehicleSelected = { vehicleId ->
                                     backStack.add(CarburaRoute.VehicleDetail(vehicleId))
@@ -286,6 +290,7 @@ private fun CarburaApp(
                             MaintenanceHistoryRoute(
                                 vehicleId = carburaRoute.vehicleId,
                                 familyId = familyId,
+                                sessionVersion = authenticatedSessionVersion,
                                 refreshSignal = refreshSignal.takeIf { refreshDestination == carburaRoute } ?: 0L,
                                 onBack = {
                                     if (backStack.size > 1) {
@@ -299,6 +304,7 @@ private fun CarburaApp(
                         NavEntry(route) {
                             RemindersRoute(
                                 familyId = familyId,
+                                sessionVersion = authenticatedSessionVersion,
                                 refreshSignal = refreshSignal.takeIf { refreshDestination == carburaRoute } ?: 0L,
                                 onNavigateToGarage = { backStack.navigateToTopLevel(CarburaRoute.Garage) },
                             )

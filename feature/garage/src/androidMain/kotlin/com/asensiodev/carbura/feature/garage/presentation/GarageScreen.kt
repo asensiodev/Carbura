@@ -116,11 +116,12 @@ import java.util.Locale
 @Composable
 fun GarageRoute(
     familyId: String,
+    sessionVersion: Int = 0,
     refreshSignal: Long = 0L,
     modifier: Modifier = Modifier,
     onVehicleSelected: (String) -> Unit = {},
-    overviewViewModel: GarageOverviewViewModel = rememberGarageOverviewViewModel(familyId),
-    vehicleFormViewModel: VehicleFormViewModel = rememberVehicleFormViewModel(familyId),
+    overviewViewModel: GarageOverviewViewModel = rememberGarageOverviewViewModel(familyId, sessionVersion),
+    vehicleFormViewModel: VehicleFormViewModel = rememberVehicleFormViewModel(familyId, sessionVersion),
 ) {
     val overviewState by overviewViewModel.uiState.collectAsStateWithLifecycle()
     val formState by vehicleFormViewModel.uiState.collectAsStateWithLifecycle()
@@ -224,14 +225,20 @@ fun GarageRoute(
 }
 
 @Composable
-private fun rememberGarageOverviewViewModel(familyId: String): GarageOverviewViewModel =
-    viewModel(key = "garage-overview-$familyId") {
+private fun rememberGarageOverviewViewModel(
+    familyId: String,
+    sessionVersion: Int,
+): GarageOverviewViewModel =
+    viewModel(key = "garage-overview-$familyId-$sessionVersion") {
         GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
     }
 
 @Composable
-private fun rememberVehicleFormViewModel(familyId: String): VehicleFormViewModel =
-    viewModel(key = "garage-form-$familyId") {
+private fun rememberVehicleFormViewModel(
+    familyId: String,
+    sessionVersion: Int,
+): VehicleFormViewModel =
+    viewModel(key = "garage-form-$familyId-$sessionVersion") {
         GlobalContext.get().get { parametersOf(FamilyId(familyId)) }
     }
 
