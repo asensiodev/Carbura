@@ -91,6 +91,7 @@ compose.desktop {
 
             macOS {
                 bundleID = "com.asensiodev.carbura.desktop"
+                iconFile.set(project.file("icons/Carbura.icns"))
             }
         }
     }
