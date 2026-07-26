@@ -219,30 +219,36 @@ Resultado: OK. Android entregó la notificación de un recordatorio vencido en l
 
 #### M-16 — Mutación offline Desktop
 
-- [ ] Desconectar la red en macOS.
-- [ ] Crear o editar un vehículo y un mantenimiento.
-- [ ] Cerrar y abrir Desktop; comprobar que siguen visibles.
-- [ ] Reconectar, sincronizar y comprobarlos en Android.
+- [x] Desconectar la red en macOS.
+- [x] Crear o editar un vehículo y un mantenimiento.
+- [x] Cerrar y abrir Desktop; comprobar que siguen visibles.
+- [x] Reconectar, sincronizar y comprobarlos en Android.
 
 Resultado esperado: persistencia local tras reinicio y envío posterior sin pérdida.
 
+Resultado: OK. El vehículo y mantenimiento creados en Desktop permanecieron tras reiniciar sin red y llegaron una sola vez a Android al recuperar la conexión.
+
 #### M-17 — Mutación offline Android
 
-- [ ] Activar modo avión.
-- [ ] Crear un recordatorio y editar un vehículo.
-- [ ] Forzar cierre y abrir; comprobar que los cambios siguen visibles.
-- [ ] Reconectar, sincronizar y comprobarlos en Desktop.
+- [x] Activar modo avión.
+- [x] Crear un recordatorio y editar un vehículo.
+- [x] Forzar cierre y abrir; comprobar que los cambios siguen visibles.
+- [x] Reconectar, sincronizar y comprobarlos en Desktop.
 
 Resultado esperado: cambios pendientes persistentes y convergencia al recuperar red.
 
+Resultado: OK. Android conservó el recordatorio y la edición del vehículo tras cierre forzado sin red; ambos cambios llegaron una sola vez a Desktop al reconectar.
+
 #### M-18 — Last-write-wins
 
-- [ ] Partir del mismo vehículo sincronizado en ambos clientes.
-- [ ] Poner ambos offline y editar el mismo campo con valores distintos.
-- [ ] Reconectar primero el cambio más antiguo y después el más reciente.
-- [ ] Sincronizar de nuevo ambos clientes.
+- [x] Partir del mismo vehículo sincronizado en ambos clientes.
+- [x] Poner ambos offline y editar el mismo campo con valores distintos.
+- [x] Reconectar primero el cambio más antiguo y después el más reciente.
+- [x] Sincronizar de nuevo ambos clientes.
 
 Resultado esperado: ambos terminan mostrando la versión con `updated_at` más reciente y no quedan alternando valores.
+
+Resultado: OK. Ambos clientes convergieron de forma estable en `M18 Reciente`, la mutación con `updated_at` posterior, y sincronizaciones adicionales no alternaron el valor.
 
 ### Modo local Desktop
 
@@ -250,27 +256,33 @@ Usar datos desechables y restaurar la configuración pública antes de continuar
 
 #### M-19 — Importar datos locales
 
-- [ ] Crear datos en modo local Desktop.
-- [ ] Iniciar sesión y elegir importar.
-- [ ] Verificar que se asignan a la familia autenticada y aparecen en Android.
+- [x] Crear datos en modo local Desktop.
+- [x] Iniciar sesión y elegir importar.
+- [x] Verificar que se asignan a la familia autenticada y aparecen en Android.
 
 Resultado esperado: adopción explícita sin duplicados.
 
+Resultado: OK. El resumen local reflejó el vehículo y mantenimiento preparados; la importación los asignó a A y llegaron una sola vez a Android sin duplicarse tras nuevas sincronizaciones.
+
 #### M-20 — Excluir datos locales
 
-- [ ] Preparar de nuevo datos locales desechables.
-- [ ] Iniciar sesión y elegir excluir.
-- [ ] Confirmar que no se suben ni aparecen en Android.
+- [x] Preparar de nuevo datos locales desechables.
+- [x] Iniciar sesión y elegir excluir.
+- [x] Confirmar que no se suben ni aparecen en Android.
 
 Resultado esperado: exclusión efectiva y sin contaminación de la familia.
 
+Resultado: OK. Desktop mantuvo los registros locales separados y lo comunicó en Cuenta; A y Android permanecieron sin el vehículo excluido tras sincronizaciones repetidas.
+
 #### M-21 — Cancelar la decisión
 
-- [ ] Preparar datos locales y comenzar el login/importación.
-- [ ] Cancelar la decisión.
-- [ ] Confirmar que no comienza sync autenticado y que los datos locales permanecen intactos.
+- [x] Preparar datos locales y comenzar el login/importación.
+- [x] Cancelar la decisión.
+- [x] Confirmar que no comienza sync autenticado y que los datos locales permanecen intactos.
 
 Resultado esperado: cancelación sin mutaciones parciales.
+
+Resultado: OK. Cancelar devolvió Desktop al modo local, conservó intactos los datos separados y no inició sincronización ni subida a la cuenta A.
 
 ### Seguridad y cuenta
 
@@ -283,6 +295,8 @@ Resultado esperado: cancelación sin mutaciones parciales.
 
 Resultado esperado: lecturas vacías o denegadas y escrituras rechazadas por RLS. Nunca usar `service_role`, porque omitiría la frontera que se pretende probar.
 
+Estado de entrega: no ejecutada por decisión de cierre. Las políticas y sus pruebas automatizadas permanecen en el repositorio, pero no se aporta evidencia manual hostil con sesiones A/B.
+
 #### M-23 — Eliminación permanente con cuenta desechable
 
 - [ ] Ejecutar este caso al final con una cuenta/familia creada solo para la prueba.
@@ -291,6 +305,8 @@ Resultado esperado: lecturas vacías o denegadas y escrituras rechazadas por RLS
 - [ ] Comprobar cierre local, limpieza de datos y rechazo de la sesión anterior.
 
 Resultado esperado: eliminación irreversible solo tras confirmación y limpieza convergente.
+
+Estado de entrega: no ejecutada por decisión de cierre para evitar una operación destructiva adicional. Se conserva cobertura automatizada de cancelación, confirmación única y limpieza convergente.
 
 ### UI y accesibilidad mínima
 
@@ -303,6 +319,8 @@ Resultado esperado: eliminación irreversible solo tras confirmación y limpieza
 
 Resultado esperado: acciones alcanzables, estado conservado y cierres seguros.
 
+Estado de entrega: no ejecutada como recorrido completo. M-07 verificó rotación con borrador y M-14 verificó errores de entrada, pero no se reclama cobertura manual integral de los tres formularios.
+
 #### M-25 — Desktop estrecho y texto ampliado
 
 - [ ] Reducir la ventana hasta su mínimo y recorrer Garaje, Mantenimiento, Recordatorios y Cuenta.
@@ -312,13 +330,16 @@ Resultado esperado: acciones alcanzables, estado conservado y cierres seguros.
 
 Resultado esperado: sin clipping, acciones inaccesibles, diálogos apilados ni edición durante guardado.
 
+Estado de entrega: no ejecutada como recorrido completo. M-02 verificó tamaño mínimo y M-06 validó el calendario instalado, pero no se aporta prueba manual de texto ampliado del sistema.
+
 ## 4. Criterio de salida de la aceptación
 
-La candidata se considera aceptada cuando:
+La candidata se considera aceptada para la entrega académica con el siguiente alcance:
 
-- [ ] Todos los casos aplicables están en OK.
-- [ ] Cada fallo tiene corrección y repetición documentada.
-- [ ] No hay defectos críticos o altos abiertos.
+- [x] M-01 a M-21 están en OK.
+- [x] Cada fallo observado tiene corrección y repetición documentada.
+- [x] No hay defectos críticos o altos observados abiertos.
+- [x] M-22 a M-25 quedan declaradas como validación manual no ejecutada, sin presentarlas como superadas.
 - [ ] El commit aceptado está anotado y no cambia antes de generar artefactos.
 - [ ] El test E2E automatizado y los gates completos están en verde.
 
@@ -338,8 +359,8 @@ La candidata se considera aceptada cuando:
 
 | Tiempo | Imagen | Narración principal |
 |---|---|---|
-| 00:00–00:15 | Título y ambos clientes | Problema: centralizar vehículos, mantenimientos y recordatorios familiares. |
-| 00:15–00:35 | Android y Desktop con la misma cuenta | Kotlin Multiplatform, SQLDelight local-first, Supabase Auth/RLS y sync familiar. |
+| 00:00–00:15 | Título y ambos clientes | Problema: centralizar vehículos, mantenimientos y recordatorios en una sola aplicación. |
+| 00:15–00:35 | Android y Desktop con la misma cuenta | Kotlin Multiplatform, SQLDelight local-first, Supabase Auth/RLS y aislamiento por cuenta. |
 | 00:35–01:00 | Crear vehículo en Desktop y verlo en Android | CRUD bidireccional y sugerencias de ITV, seguro y revisión sin duplicados. |
 | 01:00–01:30 | Crear mantenimiento futuro | Coste, taller, historial y decisión explícita de crear o no recordatorio. |
 | 01:30–01:50 | Recordatorio en ambos clientes y notificación Android | Desktop sincroniza; Android programa la alerta local. |
@@ -349,7 +370,7 @@ La candidata se considera aceptada cuando:
 
 ### Texto de cierre sugerido
 
-> Carbura entrega un flujo completo Android y Desktop para gestionar un garaje familiar de forma local-first. El código, las especificaciones, los tests y los instalables reproducibles están disponibles en el repositorio y en la release final.
+> Carbura entrega un flujo completo Android y Desktop para gestionar vehículos, mantenimientos y recordatorios de forma local-first. El código, las especificaciones, los tests y los instalables reproducibles están disponibles en el repositorio y en la release final.
 
 ### Revisión del vídeo
 
@@ -482,7 +503,7 @@ git switch -c finalproject-AAC
 git push -u origin finalproject-AAC
 ```
 
-La PR final hacia `main` debe incluir:
+La PR final desde `finalproject-AAC` hacia `dev` debe incluir:
 
 - Resumen de producto y arquitectura.
 - Historias/tickets cerrados.
@@ -519,7 +540,7 @@ Estos valores dependen de servicios externos y deben rellenarse manualmente desp
 
 | Recurso | Enlace pendiente | Dónde actualizarlo |
 |---|---|---|
-| PR final `finalproject-AAC` -> `main` | `<URL_PR_FINAL>` | Sección 7 de `readme.md` |
+| PR final `finalproject-AAC` -> `dev` | `<URL_PR_FINAL>` | Sección 7 de `readme.md` |
 | GitHub Release `v1.0-final-AAC` | `<URL_RELEASE_FINAL>` | Introducción o instalación de `readme.md` |
 | Vídeo de 2–3 minutos | `<URL_VIDEO_DEMO>` | Descripción de la PR, release y `readme.md` |
 | Rama final | `https://github.com/asensiodev/Carbura/tree/finalproject-AAC` | Formulario académico |

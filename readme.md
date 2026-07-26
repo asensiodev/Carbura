@@ -29,7 +29,7 @@ Carbura
 
 ### **0.3. Descripción breve del proyecto:**
 
-Carbura ofrece clientes funcionales Android y Desktop sobre una arquitectura Kotlin Multiplatform para gestionar los vehículos de un garaje familiar. Ambos trabajan local-first con SQLDelight y sincronizan vehículos, mantenimientos y recordatorios mediante Supabase. Android añade Google ID con Credential Manager y notificaciones locales; Desktop usa OAuth PKCE en navegador, almacenamiento seguro nativo y no programa alertas del sistema. La entrega validada incluye Android y macOS; MSI y ejecución Windows quedan fuera del alcance comprobado porque no se dispone de un PC Windows. iOS y Linux quedan fuera de la entrega.
+Carbura ofrece clientes funcionales Android y Desktop sobre una arquitectura Kotlin Multiplatform para gestionar vehículos, mantenimientos y recordatorios de una cuenta personal. Ambos trabajan local-first con SQLDelight y sincronizan datos mediante Supabase. Android añade Google ID con Credential Manager y notificaciones locales; Desktop usa OAuth PKCE en navegador, almacenamiento seguro nativo y no programa alertas del sistema. La entrega validada incluye Android y macOS; MSI y ejecución Windows quedan fuera del alcance comprobado porque no se dispone de un PC Windows. iOS y Linux quedan fuera de la entrega.
 
 ### **0.4. URL del proyecto:**
 
@@ -45,16 +45,16 @@ https://github.com/asensiodev/Carbura
 
 ### **1.1. Objetivo:**
 
-El objetivo de Carbura es centralizar el mantenimiento de los vehículos de una familia en una aplicación sencilla y utilizable sin conexión. Resuelve problemas cotidianos como recordar la próxima ITV, la renovación del seguro o una revisión por kilometraje, consultar cuándo se realizó un mantenimiento y conservar su coste, taller y notas.
+El objetivo de Carbura es centralizar el mantenimiento de los vehículos de una cuenta personal en una aplicación sencilla y utilizable sin conexión. Resuelve problemas cotidianos como recordar la próxima ITV, la renovación del seguro o una revisión por kilometraje, consultar cuándo se realizó un mantenimiento y conservar su coste, taller y notas.
 
-El valor principal consiste en reducir olvidos y pérdida de información mediante un historial ordenado por vehículo, recordatorios configurables y sugerencias proactivas. El usuario objetivo no es una flota profesional, sino una persona o familia que necesita control sin complejidad operativa.
+El valor principal consiste en reducir olvidos y pérdida de información mediante un historial ordenado por vehículo, recordatorios configurables y sugerencias proactivas. El usuario objetivo no es una flota profesional, sino una persona que necesita control sin complejidad operativa.
 
 ### **1.2. Características y funcionalidades principales:**
 
 Funcionalidades disponibles en Android y Desktop:
 
 - Autenticación Android con Google ID mediante Credential Manager y autenticación Desktop mediante navegador, Authorization Code y PKCE S256.
-- Creación o recuperación de una familia personal y su perfil con la RPC `ensure_user_profile`.
+- Creación o recuperación del perfil y de un espacio personal técnico con la RPC `ensure_user_profile`; esta versión no incluye invitaciones ni gestión de miembros.
 - Alta, consulta, edición y borrado lógico de vehículos.
 - Actualización rápida del odómetro, con confirmación cuando disminuye.
 - Registro, consulta, edición y borrado lógico de mantenimientos, incluidos coste opcional, taller, notas y próxima fecha.
@@ -70,7 +70,7 @@ Funcionalidades disponibles en Android y Desktop:
 Trabajo pendiente o evolución dentro del alcance descrito por las historias:
 
 - Calcular y presentar el coste acumulado por vehículo.
-- Completar la aceptación manual Android/Desktop, regenerar y validar los artefactos finales, grabar el vídeo y publicar las evidencias de release.
+- Regenerar y validar los artefactos finales, grabar el vídeo y publicar las evidencias de release.
 - Incorporar invitaciones familiares y exportación PDF/CSV en evoluciones posteriores.
 - Mantener iOS fuera del alcance actual.
 
@@ -89,7 +89,7 @@ El flujo principal disponible es:
 
 ```text
 Modo local o inicio de sesión
-  -> Crear o recuperar familia personal
+  -> Crear o recuperar perfil y espacio personal
   -> Añadir o editar vehículo
   -> Confirmar recordatorios proactivos del vehículo, si procede
   -> Registrar mantenimiento
@@ -477,7 +477,7 @@ operaciones:
 seguridad: JWT de usuario y rol authenticated
 ```
 
-Android intercambia Google ID mediante Credential Manager. Desktop realiza Authorization Code con PKCE S256 en el navegador del sistema y callback loopback exacto; ambos terminan en una sesión Supabase vinculada al mismo perfil familiar.
+Android intercambia Google ID mediante Credential Manager. Desktop realiza Authorization Code con PKCE S256 en el navegador del sistema y callback loopback exacto; ambos terminan en una sesión Supabase vinculada al mismo perfil y espacio personal técnico.
 
 ### **4.2. Sincronización de garaje**
 
@@ -714,10 +714,10 @@ El backlog completo está en [`docs/backlog.md`](docs/backlog.md). Los tickets r
 
 Esta sección conserva las tres Pull Requests exigidas por la plantilla y las alinea con las entregas académicas del proyecto.
 
-Para la Entrega 1 se utiliza una rama `dev` como base de comparación porque la documentación inicial ya se había sincronizado con `main`. La Entrega 2 mantiene la PR académica desde `feature-entrega2-AAC` hacia `dev`; la entrega final se integra desde `finalproject-AAC` hacia `main`.
+Para la Entrega 1 se utiliza una rama `dev` como base de comparación porque la documentación inicial ya se había sincronizado con `main`. La Entrega 2 mantiene la PR académica desde `feature-entrega2-AAC` hacia `dev`; la entrega final se integra desde `finalproject-AAC` hacia `dev`.
 
 Pull Requests oficiales:
 
 - **PR 1 - Entrega 1 / Documentación técnica:** [`feature-entrega1-AAC` hacia `dev`](https://github.com/asensiodev/Carbura/pull/1), con PRD, historias, arquitectura, modelo, API y tickets iniciales.
 - **PR 2 - Entrega 2 / MVP funcional:** [`feature-entrega2-AAC` hacia `dev`](https://github.com/asensiodev/Carbura/pull/2), con autenticación, datos, UI Android, sync v0, recordatorios y notificaciones locales.
-- **PR 3 - Entrega final:** pendiente de crear desde `finalproject-AAC` hacia `main` después de completar la aceptación, los artefactos y las evidencias descritas en la [`guía de entrega final`](docs/guia-entrega-final.md).
+- **PR 3 - Entrega final:** pendiente de crear desde `finalproject-AAC` hacia `dev` después de completar los artefactos y las evidencias descritas en la [`guía de entrega final`](docs/guia-entrega-final.md).

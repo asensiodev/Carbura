@@ -246,7 +246,7 @@ git commit -m "feat(vehicles): implement UC-02 add vehicle flow with tests"
 
 Los cambios se agrupan en las Pull Requests oficiales de entrega, no en una PR independiente por cada feature pequeña.
 
-Para la Entrega 1 se usara una rama `dev` como base temporal porque parte de la documentacion inicial ya fue sincronizada en `main`. La PR visible de Entrega 1 sera `feature-entrega1-AAC` -> `dev`. Despues de esa entrega, el flujo vuelve a ser `feature-*` -> `main` y no se trabajara directamente sobre `main`.
+Para la Entrega 1 se usara una rama `dev` como base temporal porque parte de la documentacion inicial ya fue sincronizada en `main`. Las tres PR academicas usan `dev` como destino y no se trabaja directamente sobre `main`.
 
 Ramas y PRs oficiales:
 
@@ -254,7 +254,7 @@ Ramas y PRs oficiales:
 |---|---|---|---|
 | Entrega 1 | `feature-entrega1-AAC` | `dev` | Documentacion tecnica: README, PRD, user stories, arquitectura, modelo de datos, API y tickets. |
 | Entrega 2 | `feature-entrega2-AAC` | `dev` | MVP funcional Android-first: frontend, backend/datos, base de datos, sync v0, notificaciones locales y flujo principal. |
-| Entrega final | `finalproject-AAC` | `main` | Version final con flujo E2E, tests, despliegue/evidencia y documentacion cerrada. |
+| Entrega final | `finalproject-AAC` | `dev` | Version final con flujo E2E, tests, despliegue/evidencia y documentacion cerrada. |
 
 ---
 

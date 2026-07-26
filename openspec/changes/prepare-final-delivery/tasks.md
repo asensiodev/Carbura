@@ -30,7 +30,7 @@
 
 - [x] 4.1 Update Desktop reminder copy to state that native alerts are delivered only by the mobile app
 - [x] 4.2 Verify Desktop-created reminders synchronize to Android and enter Android notification scheduling
-- [ ] 4.3 Complete manual acceptance for maintenance save-only and save-with-reminder flows
+- [x] 4.3 Complete manual acceptance for maintenance save-only and save-with-reminder flows
 - [x] 4.4 Update active OpenSpec checklists to reflect verified Google/Supabase configuration and final platform scope
 - [x] 4.5 Confirm no preview or unavailable interactive workflow remains in the Desktop shell
 
@@ -61,8 +61,8 @@
 - [x] 7.1 Verify same-account family identity and bidirectional vehicle create/update/delete propagation
 - [x] 7.2 Verify bidirectional maintenance create/update/delete propagation and individual cost presentation
 - [x] 7.3 Verify reminder create/complete/delete propagation and Android mobile notification scheduling
-- [ ] 7.4 Verify offline mutations, restart persistence, retry, and last-write-wins behavior
-- [ ] 7.5 Verify Desktop local-data import, exclusion, cancellation, and account switching without cross-family visibility
+- [x] 7.4 Verify offline mutations, restart persistence, retry, and last-write-wins behavior
+- [x] 7.5 Verify Desktop local-data import, exclusion, cancellation, and account switching without cross-family visibility
 - [x] 7.6 Verify Desktop session restoration, refresh, secure sign-out, and Android session independence
 - [ ] 7.7 Verify two-account RLS denial for reads, writes, tombstones, family reassignment, and profile/family administration
 - [ ] 7.8 Archive completed OpenSpec changes and publish the final verified revision
