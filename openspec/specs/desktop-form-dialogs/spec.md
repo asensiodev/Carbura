@@ -2,9 +2,7 @@
 
 ## Purpose
 Define integrated, reachable, and mutation-safe form dialogs for Desktop workflows.
-
 ## Requirements
-
 ### Requirement: Integrated transactional forms
 Desktop SHALL present vehicle, reminder, and maintenance creation or editing forms as modal overlays integrated into the main application window.
 
@@ -55,3 +53,10 @@ Desktop vehicle, maintenance, and reminder forms SHALL provide an integrated cal
 #### Scenario: User clears an optional Desktop date
 - **WHEN** the user activates Clear in an optional date selector
 - **THEN** the canonical field value becomes blank and remains blank when reopened
+
+### Requirement: Desktop date selection remains runtime-compatible
+The Desktop app SHALL provide an in-app date selector that opens and selects canonical dates with the resolved production dependency graph.
+
+#### Scenario: User opens a vehicle date selector
+- **WHEN** the user selects a date field while creating or editing a vehicle
+- **THEN** a localized calendar opens without a runtime linkage error and the confirmed day is stored as an ISO date

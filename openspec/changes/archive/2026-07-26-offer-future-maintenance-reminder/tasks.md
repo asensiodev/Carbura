@@ -23,4 +23,4 @@
 - [x] 4.1 Run affected common, Desktop, and Android unit tests.
 - [x] 4.2 Run affected Android instrumented tests on a connected device.
 - [x] 4.3 Run `qualityCheck`, `:app:android:assembleDebug`, OpenSpec strict validation, and `git diff --check`.
-- [ ] 4.4 Manually verify save-only and save-with-reminder behavior when a runnable authenticated environment is available.
+- [x] 4.4 Manually verify save-only and save-with-reminder behavior in the authenticated Android/Desktop acceptance.

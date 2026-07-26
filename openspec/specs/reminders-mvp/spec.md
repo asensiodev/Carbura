@@ -171,3 +171,25 @@ The system SHALL present vehicle filters as horizontally scrollable rounded cont
 #### Scenario: Filter selection is communicated
 - **WHEN** a filter is selected
 - **THEN** its visual styling and accessibility semantics communicate the selected state without displaying a selected checkmark icon
+
+### Requirement: Planned Maintenance Reminder Presentation
+The system SHALL present a consented future-maintenance reminder as one normal pending reminder with the source vehicle and maintenance date.
+
+#### Scenario: Planned maintenance reminder is pending
+- **WHEN** the user consents while saving future-dated maintenance
+- **THEN** the Reminders screen shows one pending reminder for that vehicle with `dueDate` equal to the maintenance date
+
+#### Scenario: Planned maintenance notification is scheduled
+- **WHEN** the planned-maintenance reminder is created with a future due date
+- **THEN** the app schedules its local notification for the maintenance date
+
+### Requirement: Visible manual reminder notification timing
+The system SHALL schedule a manually created reminder for its visible due date when the product does not expose a configurable notice period.
+
+#### Scenario: User creates a future manual reminder
+- **WHEN** the user creates a manual reminder with a future due date and no visible notice-period control
+- **THEN** Android schedules the notification for that due date instead of immediately after creation
+
+#### Scenario: Legacy notice period has already elapsed
+- **WHEN** Android schedules an existing manual reminder whose hidden notice instant has elapsed but whose due date remains in the future
+- **THEN** Android schedules the notification for the future due date instead of delivering it immediately

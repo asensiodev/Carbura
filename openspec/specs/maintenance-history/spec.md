@@ -89,3 +89,14 @@ Deleting a maintenance record SHALL also delete only the deterministic reminder 
 #### Scenario: Delete maintenance with generated reminder
 - **WHEN** the user confirms deletion of an ITV or insurance record that generated a reminder
 - **THEN** the record and generated reminder are retained as synchronization tombstones, their active UI entries disappear, and the generated reminder alerts are canceled
+
+### Requirement: Future Maintenance Reminder Consent
+The maintenance creation form SHALL pause a valid future-dated submission until the user chooses whether the save includes a reminder.
+
+#### Scenario: Save future maintenance with reminder
+- **WHEN** the user accepts the reminder offer
+- **THEN** the system saves the maintenance through the domain creation use case and requests a reminder for the saved record
+
+#### Scenario: Save future maintenance without reminder
+- **WHEN** the user declines the reminder offer using the save-only action
+- **THEN** the system saves the maintenance through the domain creation use case without requesting a planned-maintenance reminder

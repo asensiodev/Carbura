@@ -132,7 +132,7 @@ Comandos principales:
 
 Instalación de los artefactos publicados:
 
-1. Descargar `Carbura-Android-1.0.0-debug.apk`, `Carbura-1.0.0.dmg` y `SHA256SUMS.txt` desde la release `v1.0-final-AAC`.
+1. Obtener `Carbura-Android-1.0.0-debug.apk`, `Carbura-1.0.0.dmg` y `SHA256SUMS.txt` desde el paquete de artefactos compartido en la entrega académica.
 2. Comprobar su integridad desde el directorio de descarga con `shasum -a 256 -c SHA256SUMS.txt`.
 3. En Android, instalar la APK con `adb install -r Carbura-Android-1.0.0-debug.apk` o abrirla desde el dispositivo y autorizar temporalmente ese origen. Es una APK debug para evaluación académica, no una distribución de producción.
 4. En macOS, abrir `Carbura-1.0.0.dmg`, arrastrar Carbura a Aplicaciones y ejecutarla desde allí. El DMG usa firma ad-hoc y no está notarizado; si Gatekeeper bloquea el primer arranque, usar clic secundario sobre Carbura, **Abrir** y confirmar la excepción, sin desactivar globalmente la seguridad del sistema.
@@ -735,4 +735,4 @@ Pull Requests oficiales:
 
 - **PR 1 - Entrega 1 / Documentación técnica:** [`feature-entrega1-AAC` hacia `dev`](https://github.com/asensiodev/Carbura/pull/1), con PRD, historias, arquitectura, modelo, API y tickets iniciales.
 - **PR 2 - Entrega 2 / MVP funcional:** [`feature-entrega2-AAC` hacia `dev`](https://github.com/asensiodev/Carbura/pull/2), con autenticación, datos, UI Android, sync v0, recordatorios y notificaciones locales.
-- **PR 3 - Entrega final:** pendiente de crear desde `finalproject-AAC` hacia `dev`. El vídeo se entrega por correo y la release no se enlaza desde este README.
+- **PR 3 - Entrega final:** [`finalproject-AAC` hacia `dev`](https://github.com/asensiodev/Carbura/pull/3), con la aplicación Android/Desktop final, pruebas, empaquetado y documentación de entrega. El vídeo y los artefactos se entregan mediante el canal académico externo.
