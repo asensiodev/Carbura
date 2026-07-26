@@ -67,11 +67,11 @@ Funcionalidades disponibles en Android y Desktop:
 - Sesiones Desktop almacenadas solo en macOS Keychain o Windows Credential Manager.
 - Cierre de sesión local y eliminación permanente de cuenta con limpieza convergente en Android y Desktop.
 
-Trabajo pendiente o evolución dentro del alcance descrito por las historias:
+Evolución fuera del alcance del MVP entregado:
 
 - Calcular y presentar el coste acumulado por vehículo.
 - Incorporar invitaciones familiares y exportación PDF/CSV en evoluciones posteriores.
-- Mantener iOS fuera del alcance actual.
+- Incorporar clientes iOS y Linux y validar el paquete Windows en sus sistemas objetivo.
 
 La priorización se documenta en [`openspec/prd.md`](openspec/prd.md) y [`docs/user-stories.md`](docs/user-stories.md).
 
@@ -118,7 +118,7 @@ GOOGLE_CLIENT_ID=<WEB_CLIENT_ID>.apps.googleusercontent.com
 
 `SUPABASE_URL` y `SUPABASE_ANON_KEY` son configuración pública incorporada a los clientes; la autorización depende de RLS. Nunca deben incluirse `service_role`, contraseña de base de datos, Google Client Secret, tokens o sesiones. Desktop usa esas dos propiedades y mantiene el modo local si están vacías. Android necesita además `GOOGLE_CLIENT_ID`, correspondiente al cliente OAuth de tipo Web application. El cliente Android se registra para `com.asensiodev.carbura` con las huellas SHA-1 y, cuando proceda, SHA-256 obtenidas con `./gradlew :app:android:signingReport`.
 
-Google Cloud debe autorizar el callback de Supabase `https://<PROJECT_REF>.supabase.co/auth/v1/callback`. Supabase debe permitir exactamente el callback Desktop `http://127.0.0.1:43821/auth/callback`. Google vuelve a Supabase y Supabase vuelve al listener loopback de Desktop; no se debe registrar el loopback en Google ni sustituir `127.0.0.1` por `localhost`, `0.0.0.0` o comodines.
+Google Cloud debe autorizar el callback de Supabase `https://<PROJECT_REF>.supabase.co/auth/v1/callback`. Supabase debe permitir exactamente el callback Desktop `http://127.0.0.1:43821/auth/callback`. Google vuelve a Supabase y Supabase vuelve al listener loopback de Desktop; no se debe registrar el loopback en Google ni sustituir `127.0.0.1` por `localhost`, `0.0.0.0` o comodines. La candidata entregada usa la pantalla de consentimiento OAuth en Production; debe mantenerse así para que las cuentas de evaluación no necesiten estar registradas como usuarios de prueba.
 
 Comandos principales:
 
@@ -130,9 +130,9 @@ Comandos principales:
 ./gradlew :app:desktop:packageMsi   # Configurado, no validado: requiere Windows con jpackage
 ```
 
-Instalación de los artefactos publicados:
+Instalación de los artefactos entregados:
 
-1. Obtener `Carbura-Android-1.0.0-debug.apk`, `Carbura-1.0.0.dmg` y `SHA256SUMS.txt` desde el paquete de artefactos compartido en la entrega académica.
+1. Obtener `Carbura-Android-1.0.0-debug.apk`, `Carbura-1.0.0.dmg` y `SHA256SUMS.txt` desde el paquete de artefactos compartido por correo en la entrega académica.
 2. Comprobar su integridad desde el directorio de descarga con `shasum -a 256 -c SHA256SUMS.txt`.
 3. En Android, instalar la APK con `adb install -r Carbura-Android-1.0.0-debug.apk` o abrirla desde el dispositivo y autorizar temporalmente ese origen. Es una APK debug para evaluación académica, no una distribución de producción.
 4. En macOS, abrir `Carbura-1.0.0.dmg`, arrastrar Carbura a Aplicaciones y ejecutarla desde allí. El DMG usa firma ad-hoc y no está notarizado; si Gatekeeper bloquea el primer arranque, usar clic secundario sobre Carbura, **Abrir** y confirmar la excepción, sin desactivar globalmente la seguridad del sistema.
@@ -150,7 +150,7 @@ Verificación local equivalente a CI:
 
 ```bash
 ./gradlew qualityCheck test assembleDebug :app:desktop:jar --stacktrace
-openspec validate prepare-final-delivery --strict
+openspec validate --all --strict
 git diff --check
 ```
 
@@ -224,7 +224,7 @@ Sacrificios o riesgos:
 | Componente | Tecnología | Responsabilidad |
 |---|---|---|
 | Android App | Compose para Android | UI móvil, Credential Manager, ciclo de vida y notificaciones locales. |
-| Desktop App | Compose Desktop | UI macOS/Windows, OAuth PKCE, modo local, sync y almacenamiento seguro nativo. |
+| Desktop App | Compose Desktop | UI Desktop, OAuth PKCE, modo local, sync y almacenamiento seguro nativo; validada como paquete instalado en macOS. |
 | ViewModels + UiState | Kotlin Multiplatform | Estado de pantalla, eventos y coordinación con casos de uso. |
 | Use Cases | Kotlin común | Reglas de negocio para vehículos, mantenimientos, recordatorios y sesión. |
 | Domain Models | Kotlin común | Entidades e identificadores independientes de infraestructura. |
@@ -242,7 +242,7 @@ Carbura/
 ├── build-logic/               # Convention plugins Gradle
 ├── app/
 │   ├── android/               # Cliente funcional Android
-│   ├── desktop/               # Cliente funcional Desktop macOS/Windows
+│   ├── desktop/               # Cliente Desktop; macOS validado, Windows configurado
 │   └── shared/                # Rutas y contratos compartidos
 ├── core/
 │   ├── model/                 # Modelos e identificadores
@@ -283,7 +283,8 @@ No existe servidor propio. Supabase proporciona Auth, PostgreSQL, PostgREST y RL
 - `.github/workflows/ci.yml` se ejecuta en `push` y `pull_request` sobre Ubuntu con JDK 17.
 - El job real ejecuta `./gradlew qualityCheck test assembleDebug --stacktrace`.
 - `qualityCheck` agrega ktlint, detekt y `:quality:architecture:test`.
-- Una candidata DMG fue instalada y validada en macOS; el artefacto final debe regenerarse y volver a instalarse después de cerrar la aceptación manual.
+- La candidata DMG final fue generada y verificada en macOS antes de compartir el paquete académico.
+- La APK debug final `Carbura-Android-1.0.0-debug.apk` fue instalada y verificada en Android; SHA-256: `afdd3053650854796545ae8e2a5f28178b28f5a1437a5ac7be1b67a29805528f`.
 - El DMG macOS `Carbura-1.0.0.dmg` se generó con Amazon Corretto 17, incluye el icono nativo de Carbura y superó la verificación de imagen y firma interna; SHA-256: `69fb27f77cfd9337c677d9c0aa619daeafb2fb82618a7e573f9f02d60acb9235`.
 - El bundle actual tiene firma ad-hoc válida, pero Gatekeeper puede rechazar su distribución hasta disponer de Developer ID y notarización. Windows/MSI queda fuera del alcance validado de la entrega porque no se dispone de un PC Windows.
 - Las credenciales permanecen fuera del repositorio; CI no necesita secretos de producción para las comprobaciones actuales.
@@ -291,7 +292,7 @@ No existe servidor propio. Supabase proporciona Auth, PostgreSQL, PostgREST y RL
 ### **2.5. Seguridad**
 
 - Inicio de sesión con Google ID y Supabase Auth.
-- RPC `ensure_user_profile` ejecutable solo por el rol `authenticated` para crear o recuperar la familia personal.
+- RPC `ensure_user_profile` ejecutable solo por el rol `authenticated` para crear o recuperar el perfil y su espacio personal técnico.
 - RLS habilitado en las tablas públicas y políticas basadas en `can_access_family`.
 - `family_id` limita las operaciones remotas al garaje accesible por el JWT.
 - Variables sensibles excluidas del repositorio mediante `local.properties` y `.gitignore`.
@@ -459,7 +460,7 @@ Las migraciones vigentes son:
 7. `202607200001_maintenance_type_label.sql`: etiqueta estable para tipos personalizados de mantenimiento sincronizados.
 8. `202607220001_harden_family_profile_authorization.sql`: endurecimiento de familias/perfiles, columnas mutables y `ensure_user_profile`.
 
-La migración 8 debe estar aplicada antes de habilitar Desktop autenticado. La validación de backend debe incluir intentos hostiles con dos cuentas para confirmar la denegación entre familias.
+La migración 8 debe estar aplicada antes de habilitar Desktop autenticado. El repositorio incluye pruebas automatizadas hostiles de políticas y privilegios; la comprobación manual con dos sesiones A/B quedó fuera del alcance ejecutado y no se presenta como superada.
 
 SQLDelight mantiene `updatedAt`, `pendingSync` y `deletedAt` en las tres familias sincronizables. `deleted_at` representa tombstones y `updated_at` resuelve conflictos mediante `last-write-wins`.
 
@@ -509,7 +510,7 @@ Los borrados convergen como tombstones mediante `deleted_at`. El ciclo se activa
 
 ### **4.3. Invitación a garaje familiar**
 
-La invitación familiar no dispone de endpoint, RPC, caso de uso ni interfaz. El campo opcional `families.invite_code` forma parte del esquema inicial, pero no representa por sí mismo un contrato funcional. Su diseño se mantiene fuera del entregable Android actual y deberá especificar membresía, caducidad, permisos y aceptación antes de implementarse.
+La invitación familiar no dispone de endpoint, RPC, caso de uso ni interfaz. El campo opcional `families.invite_code` forma parte del esquema inicial, pero no representa por sí mismo un contrato funcional. Su diseño se mantiene fuera de la entrega actual y deberá especificar membresía, caducidad, permisos y aceptación antes de implementarse.
 
 ### **4.4. Especificación OpenAPI de los endpoints Supabase**
 
